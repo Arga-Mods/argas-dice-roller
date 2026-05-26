@@ -85,16 +85,29 @@ Bei aktivem SWADE-System werden automatisch zusätzliche Buttons freigeschaltet 
     <td align="center"><img src="screenshots/extra_fumble.png" height="300"></td>
   </tr>
   <tr>
-    <td align="center"><em>GM-Check for fumble</em></td>
+    <td align="center"><em>GM-Check for fumble (Theme: Fantasy)</em></td>
   </tr>
 </table>
 
 <br>
 
-- ***Request Roll (GM only):*** Der GM sendet Probenanforderungen an einen oder mehrere Akteure (an Spieler oder auch an auf dem Canvas befindliche NSC):
-  
-     - ***Individual Rolls:*** Jeder Akteur würfelt mit einer individuellen Eigenschaft. Es können vom GM auch Proben von mehreren Akteuern gleichzeitig angefordert werden. Sobald ein Akteur ausgewählt wird, werden alle Eigenschaften angezeigt, über die dieser Token verfügt.
-     - ***Group Check:*** Alle ausgewählten Spielercharaktere (diesmal nicht NSC) testen auf dieselbe Eigenschaft (z.B. Wahrnehmung). Solange noch kein Charakter ausgewählt wurde, werden unterhalb alle Eigenschaften angezeigt, über die zumindest einer der Charaktere verfügt. Dabei werden solche Eigenschaften gelb hervorgehoben, die nicht bei allen vorhanden sind. Bei Mouse over über einem Charakter werden solche Eigenschaften rot dargestellt, die dieser Charakter nicht hat. Und bei Mouse over über einer Eigenschaft wird ein Tooltipp mit allen Akteuren angezeigt, die diese Eigenschat haben. ***HINWEIS ZUR PROBENANFORDERUNG:*** Wenn nur die zu testenede Eigenschaft angeklickt wird, dann werden automatisch *alle* verfügbaren Spieler ausgewählt.
+### Request Roll (GM only): 
+Der GM sendet Probenanforderungen an einen oder mehrere Akteure (an Spieler oder auch an auf dem Canvas befindliche NSC):
+
+- ***Individual Rolls:*** Jeder Akteur würfelt mit einer individuellen Eigenschaft. Es können vom GM auch Proben von mehreren Akteuern gleichzeitig angefordert werden. Sobald ein Akteur ausgewählt wird, werden alle Eigenschaften angezeigt, über die dieser Token verfügt.
+
+ <table align="center">
+  <tr>
+    <td align="center"><img src="screenshots/request_f.png" height="300"></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Requested Roll (Theme: Fantasy)</em></td>
+  </tr>
+</table>
+
+<br>
+
+   - ***Group Check:*** Alle ausgewählten Spielercharaktere (diesmal nicht NSC) testen auf dieselbe Eigenschaft (z.B. Wahrnehmung). Solange noch kein Charakter ausgewählt wurde, werden unterhalb alle Eigenschaften angezeigt, über die zumindest einer der Charaktere verfügt. Dabei werden solche Eigenschaften gelb hervorgehoben, die nicht bei allen vorhanden sind. Bei Mouse over über einem Charakter werden solche Eigenschaften rot dargestellt, die dieser Charakter nicht hat. Und bei Mouse over über einer Eigenschaft wird ein Tooltipp mit allen Akteuren angezeigt, die diese Eigenschat haben. ***HINWEIS ZUR PROBENANFORDERUNG:*** Wenn nur die zu testenede Eigenschaft angeklickt wird, dann werden automatisch *alle* verfügbaren Spieler ausgewählt.
 
 <table align="center">
   <tr>
