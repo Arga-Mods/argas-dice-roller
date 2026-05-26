@@ -1,0 +1,323 @@
+{{!-- SPDX-License-Identifier: GPL-3.0-or-later --}}
+{{!-- Copyright (C) 2026 Arga-Mods --}}
+
+{{!-- templates/request-roll-form.hbs --}}
+<div class="adr-wrapper adr-request-wrapper">
+
+  <div class="adr-control-row">
+    <div class="app adr-toggle-box adr-mode-box">
+      <fieldset class="adr-field-set">
+        <legend>{{localize "argas-dice-roller.requestRoll.legendMode"}}</legend>
+        <div class="adr-mode-grid">
+          <button type="button" class="adr-mode-btn {{#if (eq mode 'single')}}selected{{/if}}"
+                  data-action="set-mode" data-mode="single"
+                  title="{{localize 'argas-dice-roller.requestRoll.modeSingleHint'}}">
+            {{localize "argas-dice-roller.requestRoll.modeSingle"}}
+          </button>
+          <button type="button" class="adr-mode-btn {{#if (eq mode 'group')}}selected{{/if}}"
+                  data-action="set-mode" data-mode="group"
+                  title="{{localize 'argas-dice-roller.requestRoll.modeGroupHint'}}">
+            {{localize "argas-dice-roller.requestRoll.modeGroup"}}
+          </button>
+          <button type="button" class="adr-mode-btn {{#if (eq mode 'opposed')}}selected{{/if}}"
+                  data-action="set-mode" data-mode="opposed"
+                  title="{{localize 'argas-dice-roller.requestRoll.modeOpposedHint'}}">
+            {{localize "argas-dice-roller.requestRoll.modeOpposed"}}
+          </button>
+          <button type="button" class="adr-mode-btn {{#if (eq mode 'dramatic')}}selected{{/if}}"
+                  data-action="set-mode" data-mode="dramatic"
+                  title="{{localize 'argas-dice-roller.requestRoll.modeDramaticHint'}}">
+            {{localize "argas-dice-roller.requestRoll.modeDramatic"}}
+          </button>
+        </div>
+      </fieldset>
+    </div>
+
+    <div class="adr-right-col">
+      <fieldset class="adr-field-set adr-modifier-fieldset">
+        <legend>{{localize "argas-dice-roller.requestRoll.modifierLabel"}}</legend>
+        <div class="adr-modifier-stepper">
+          <button type="button" class="adr-modifier-step-btn adr-modifier-step-minus"
+                  data-action="modifier-step" data-step="-1"
+                  title="{{localize "argas-dice-roller.requestRoll.modifierStepMinusTitle"}}">−</button>
+          <input type="text" class="adr-modifier-input" value="{{modifierValue}}"
+                 data-action="set-modifier" placeholder="0"
+                 inputmode="numeric" autocomplete="off" />
+          <button type="button" class="adr-modifier-step-btn adr-modifier-step-plus"
+                  data-action="modifier-step" data-step="+1"
+                  title="{{localize "argas-dice-roller.requestRoll.modifierStepPlusTitle"}}">+</button>
+        </div>
+      </fieldset>
+      <button type="button" class="adr-submit-btn-top" data-action="submit-request">
+        {{localize "argas-dice-roller.requestRoll.submit"}}
+      </button>
+    </div>
+  </div>
+
+  {{#if isDramaticMode}}
+  <div class="app adr-toggle-box adr-dramatic-box">
+    <fieldset class="adr-field-set adr-dramatic-fieldset">
+      <legend>{{localize "argas-dice-roller.requestRoll.modeDramatic"}}</legend>
+
+      <div class="adr-dramatic-description">{{dramaticDescription}}</div>
+      <div class="adr-dramatic-preview">{{dramaticPreview}}</div>
+
+      <div class="adr-dramatic-presets">
+        {{#each dramaticPresets}}
+        <button type="button"
+                class="adr-mode-btn adr-dramatic-preset-btn {{#if selected}}selected{{/if}}"
+                data-action="set-dramatic-preset"
+                data-preset="{{key}}">
+          {{label}}
+        </button>
+        {{/each}}
+      </div>
+
+      <div class="adr-dramatic-settings">
+        <div class="adr-dramatic-stepper">
+          <div class="adr-dramatic-stepper-label">{{localize "argas-dice-roller.requestRoll.dramatic.markersLabel"}}</div>
+          <div class="adr-dramatic-stepper-controls">
+            <button type="button" class="adr-dramatic-adjust-btn" data-action="dramatic-adjust" data-field="markers" data-delta="-1">−</button>
+            <div class="adr-dramatic-stepper-value">{{dramaticTargetMarkers}}</div>
+            <button type="button" class="adr-dramatic-adjust-btn" data-action="dramatic-adjust" data-field="markers" data-delta="1">+</button>
+          </div>
+        </div>
+
+        <div class="adr-dramatic-stepper">
+          <div class="adr-dramatic-stepper-label">{{localize "argas-dice-roller.requestRoll.dramatic.roundsLabel"}}</div>
+          <div class="adr-dramatic-stepper-controls">
+            <button type="button" class="adr-dramatic-adjust-btn" data-action="dramatic-adjust" data-field="rounds" data-delta="-1">−</button>
+            <div class="adr-dramatic-stepper-value">{{dramaticRounds}}</div>
+            <button type="button" class="adr-dramatic-adjust-btn" data-action="dramatic-adjust" data-field="rounds" data-delta="1">+</button>
+          </div>
+        </div>
+      </div>
+    </fieldset>
+  </div>
+  {{/if}}
+
+  {{#if isGroupMode}}
+  {{!-- ══════════════════════════════════════════════════════════════ --}}
+  {{!--  Gruppenprobe                                                   --}}
+  {{!-- ══════════════════════════════════════════════════════════════ --}}
+
+  <div class="app adr-toggle-box adr-actor-select-box">
+    <fieldset class="adr-field-set">
+      <legend>{{localize "argas-dice-roller.requestRoll.sectionPCs"}}</legend>
+      <div class="adr-actor-grid" style="--adr-cols: {{playerCols}};">
+        {{#each playerActors}}
+        <div class="adr-actor-chip {{#if checked}}adr-actor-chip-checked{{/if}} {{#if highlighted}}adr-actor-chip-highlighted{{/if}}"
+             data-action="highlight-group-actor" data-actor-id="{{id}}">
+          <input type="checkbox" {{#if checked}}checked{{/if}} tabindex="-1" />
+          <img class="adr-actor-chip-img" src="{{img}}" alt="" />
+          <span class="adr-actor-chip-name">{{name}}</span>
+        </div>
+        {{/each}}
+      </div>
+    </fieldset>
+  </div>
+
+  <div class="app adr-toggle-box adr-traits-box">
+    <fieldset class="adr-field-set adr-traits-fieldset">
+      <legend>{{localize "argas-dice-roller.requestRoll.legendTraitsGroup"}}</legend>
+
+      <div class="adr-traits-section-header">{{localize "argas-dice-roller.requestRoll.attributes"}}</div>
+      <div class="adr-traits-row">
+        {{#each unifiedAttributes}}
+        <button type="button"
+                class="adr-trait-btn {{#unless ../selectedTraitKey}}{{#unless allHave}}adr-trait-partial{{/unless}} {{#if warnNotAll}}adr-trait-warn{{/if}}{{/unless}} {{#if (eq ../selectedTraitKey key)}}{{#if (eq ../selectedTraitType 'attribute')}}selected{{/if}}{{/if}}"
+                data-action="select-trait" data-trait-type="attribute"
+                data-trait-key="{{key}}" data-trait-name="{{name}}"
+                title="{{tooltipText}}{{#unless ../selectedTraitKey}}{{#unless allHave}} — {{localize 'argas-dice-roller.requestRoll.partialHint'}}{{/unless}}{{/unless}}">
+          {{name}}
+        </button>
+        {{/each}}
+      </div>
+
+      <div class="adr-traits-section-header">{{localize "argas-dice-roller.requestRoll.skills"}}</div>
+
+      {{#if unifiedCoreSkills.length}}
+      <div class="adr-traits-row">
+        {{#each unifiedCoreSkills}}
+        <button type="button"
+                class="adr-trait-btn {{#if isUntrained}}adr-trait-untrained-skill{{/if}} {{#unless ../selectedTraitKey}}{{#unless allHave}}adr-trait-partial{{/unless}} {{#if warnNotAll}}adr-trait-warn{{/if}}{{/unless}} {{#if (eq ../selectedTraitKey key)}}{{#if (eq ../selectedTraitType 'skill')}}selected{{/if}}{{/if}}"
+                data-action="select-trait" data-trait-type="skill"
+                data-trait-key="{{key}}" data-trait-name="{{name}}"
+                title="{{tooltipText}}{{#unless ../selectedTraitKey}}{{#unless allHave}} — {{localize 'argas-dice-roller.requestRoll.partialHint'}}{{/unless}}{{/unless}}">
+          {{name}}
+        </button>
+        {{/each}}
+      </div>
+      {{/if}}
+
+      {{#if unifiedOtherSkills.length}}
+      <div class="adr-traits-grid">
+        {{#each unifiedOtherSkills}}
+        <button type="button"
+                class="adr-trait-btn {{#if isUntrained}}adr-trait-untrained-skill{{/if}} {{#unless ../selectedTraitKey}}{{#unless allHave}}adr-trait-partial{{/unless}} {{#if warnNotAll}}adr-trait-warn{{/if}}{{/unless}} {{#if (eq ../selectedTraitKey key)}}{{#if (eq ../selectedTraitType 'skill')}}selected{{/if}}{{/if}}"
+                data-action="select-trait" data-trait-type="skill"
+                data-trait-key="{{key}}" data-trait-name="{{name}}"
+                title="{{tooltipText}}{{#unless ../selectedTraitKey}}{{#unless allHave}} — {{localize 'argas-dice-roller.requestRoll.partialHint'}}{{/unless}}{{/unless}}">
+          {{name}}
+        </button>
+        {{/each}}
+      </div>
+      {{/if}}
+
+    </fieldset>
+  </div>
+
+  {{else}}
+  {{!-- ══════════════════════════════════════════════════════════════ --}}
+  {{!--  Individuelle / Vergleichende / Dramatische Aufgabe            --}}
+  {{!--  Gemeinsames Layout: pro Akteur eigene Trait-Auswahl            --}}
+  {{!-- ══════════════════════════════════════════════════════════════ --}}
+
+  <div class="app adr-toggle-box adr-actor-select-box">
+    <fieldset class="adr-field-set">
+      <legend>{{localize "argas-dice-roller.requestRoll.sectionPCs"}}</legend>
+      <div class="adr-actor-grid" style="--adr-cols: {{playerCols}};">
+        {{#each playerActors}}
+        <div class="adr-actor-chip {{#if checked}}adr-actor-chip-checked{{/if}} {{#if active}}adr-actor-chip-active{{/if}}">
+          <span class="adr-actor-chip-check-slot" data-action="uncheck-actor" data-actor-id="{{id}}">
+            <input type="checkbox" {{#if checked}}checked{{/if}} tabindex="-1" />
+          </span>
+          <div class="adr-actor-chip-label" data-action="activate-actor" data-actor-id="{{id}}">
+            <img class="adr-actor-chip-img" src="{{img}}" alt="" />
+            <span class="adr-actor-chip-name">{{name}}</span>
+          </div>
+        </div>
+        {{/each}}
+      </div>
+    </fieldset>
+  </div>
+
+  {{#each playerActors}}
+  {{#if active}}
+  <div class="app adr-toggle-box adr-traits-box">
+    <fieldset class="adr-field-set adr-traits-fieldset">
+      <legend>{{localize "argas-dice-roller.requestRoll.legendTraits"}} — {{name}}</legend>
+
+      <div class="adr-traits-section-header">{{localize "argas-dice-roller.requestRoll.attributes"}}</div>
+      <div class="adr-traits-row">
+        {{#each traits.attributes}}
+        <button type="button"
+                class="adr-trait-btn {{#if (eq ../selectedTrait.key key)}}{{#if (eq ../selectedTrait.type 'attribute')}}selected{{/if}}{{/if}}"
+                data-action="select-trait" data-actor-id="{{../id}}"
+                data-trait-type="attribute" data-trait-key="{{key}}" data-trait-name="{{name}}"
+                title="W{{dieSides}}">
+          {{name}}
+        </button>
+        {{/each}}
+      </div>
+
+      <div class="adr-traits-section-header">{{localize "argas-dice-roller.requestRoll.skills"}}</div>
+
+      {{#if traits.coreSkills.length}}
+      <div class="adr-traits-row">
+        {{#each traits.coreSkills}}
+        <button type="button"
+                class="adr-trait-btn {{#if isUntrained}}adr-trait-untrained-skill{{/if}} {{#if (eq ../selectedTrait.key key)}}{{#if (eq ../selectedTrait.type 'skill')}}selected{{/if}}{{/if}}"
+                data-action="select-trait" data-actor-id="{{../id}}"
+                data-trait-type="skill" data-trait-key="{{key}}" data-trait-name="{{name}}"
+                title="W{{dieSides}}">
+          {{name}}
+        </button>
+        {{/each}}
+      </div>
+      {{/if}}
+
+      {{#if traits.otherSkills.length}}
+      <div class="adr-traits-grid">
+        {{#each traits.otherSkills}}
+        <button type="button"
+                class="adr-trait-btn {{#if isUntrained}}adr-trait-untrained-skill{{/if}} {{#if (eq ../selectedTrait.key key)}}{{#if (eq ../selectedTrait.type 'skill')}}selected{{/if}}{{/if}}"
+                data-action="select-trait" data-actor-id="{{../id}}"
+                data-trait-type="skill" data-trait-key="{{key}}" data-trait-name="{{name}}"
+                title="W{{dieSides}}">
+          {{name}}
+        </button>
+        {{/each}}
+      </div>
+      {{/if}}
+    </fieldset>
+  </div>
+  {{/if}}
+  {{/each}}
+
+  {{#if showNPCs}}
+  <div class="app adr-toggle-box adr-actor-select-box adr-npc-select-box">
+    <fieldset class="adr-field-set">
+      <legend>{{localize "argas-dice-roller.requestRoll.sectionNPCs"}}</legend>
+      <div class="adr-actor-grid" style="--adr-cols: {{npcCols}};">
+        {{#each npcActors}}
+        <div class="adr-actor-chip {{#if checked}}adr-actor-chip-checked{{/if}} {{#if active}}adr-actor-chip-active{{/if}}">
+          <span class="adr-actor-chip-check-slot" data-action="uncheck-actor" data-actor-id="{{id}}">
+            <input type="checkbox" {{#if checked}}checked{{/if}} tabindex="-1" />
+          </span>
+          <div class="adr-actor-chip-label" data-action="activate-actor" data-actor-id="{{id}}">
+            <img class="adr-actor-chip-img" src="{{img}}" alt="" />
+            <span class="adr-actor-chip-name">{{name}}</span>
+          </div>
+        </div>
+        {{/each}}
+      </div>
+    </fieldset>
+  </div>
+
+  {{#each npcActors}}
+  {{#if active}}
+  <div class="app adr-toggle-box adr-traits-box adr-npc-traits-box">
+    <fieldset class="adr-field-set adr-traits-fieldset">
+      <legend>{{localize "argas-dice-roller.requestRoll.legendTraits"}} — {{name}}</legend>
+
+      <div class="adr-traits-section-header">{{localize "argas-dice-roller.requestRoll.attributes"}}</div>
+      <div class="adr-traits-row">
+        {{#each traits.attributes}}
+        <button type="button"
+                class="adr-trait-btn {{#if (eq ../selectedTrait.key key)}}{{#if (eq ../selectedTrait.type 'attribute')}}selected{{/if}}{{/if}}"
+                data-action="select-trait" data-actor-id="{{../id}}"
+                data-trait-type="attribute" data-trait-key="{{key}}" data-trait-name="{{name}}"
+                title="W{{dieSides}}">
+          {{name}}
+        </button>
+        {{/each}}
+      </div>
+
+      <div class="adr-traits-section-header">{{localize "argas-dice-roller.requestRoll.skills"}}</div>
+
+      {{#if traits.coreSkills.length}}
+      <div class="adr-traits-row">
+        {{#each traits.coreSkills}}
+        <button type="button"
+                class="adr-trait-btn {{#if isUntrained}}adr-trait-untrained-skill{{/if}} {{#if (eq ../selectedTrait.key key)}}{{#if (eq ../selectedTrait.type 'skill')}}selected{{/if}}{{/if}}"
+                data-action="select-trait" data-actor-id="{{../id}}"
+                data-trait-type="skill" data-trait-key="{{key}}" data-trait-name="{{name}}"
+                title="W{{dieSides}}">
+          {{name}}
+        </button>
+        {{/each}}
+      </div>
+      {{/if}}
+
+      {{#if traits.otherSkills.length}}
+      <div class="adr-traits-grid">
+        {{#each traits.otherSkills}}
+        <button type="button"
+                class="adr-trait-btn {{#if isUntrained}}adr-trait-untrained-skill{{/if}} {{#if (eq ../selectedTrait.key key)}}{{#if (eq ../selectedTrait.type 'skill')}}selected{{/if}}{{/if}}"
+                data-action="select-trait" data-actor-id="{{../id}}"
+                data-trait-type="skill" data-trait-key="{{key}}" data-trait-name="{{name}}"
+                title="W{{dieSides}}">
+          {{name}}
+        </button>
+        {{/each}}
+      </div>
+      {{/if}}
+    </fieldset>
+  </div>
+  {{/if}}
+  {{/each}}
+  {{/if}}
+
+  {{/if}}
+</div>

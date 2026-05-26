@@ -1,0 +1,104 @@
+{{!-- SPDX-License-Identifier: GPL-3.0-or-later --}}
+{{!-- Copyright (C) 2026 Arga-Mods --}}
+
+{{!-- templates/support-dialog-form.hbs --}}
+<div class="adr-wrapper adr-support-dialog-wrapper">
+
+  {{!-- Kopfzeile: Helfer-Bild + Name nebeneinander, Hinweis-Texte darunter --}}
+  <div class="adr-support-header">
+    <div class="adr-support-helper-row">
+      <img class="adr-support-helper-img" src="{{helper.actorImg}}" alt="" />
+      <span class="adr-support-helper-name">{{helper.actorName}}</span>
+    </div>
+    <p class="adr-support-bonus-info">{{{localize "argas-dice-roller.requestRoll.dramaticSupport.bonusInfoHTML"}}}</p>
+    <p class="adr-support-warning">{{{localize "argas-dice-roller.requestRoll.dramaticSupport.warningHTML"}}}</p>
+  </div>
+
+  {{!-- Zielauswahl --}}
+  <div class="app adr-toggle-box adr-actor-select-box adr-support-target-box">
+    <fieldset class="adr-field-set">
+      <legend>{{localize "argas-dice-roller.requestRoll.dramaticSupport.targetLabel"}}</legend>
+
+      {{#if availableTargets.length}}
+      <div class="adr-actor-grid" style="--adr-cols: {{targetCols}};">
+        {{#each availableTargets}}
+        <div class="adr-actor-chip adr-support-target-chip {{#if checked}}adr-actor-chip-checked{{/if}} {{#if active}}adr-actor-chip-active{{/if}}"
+             data-action="adr-support-select-target" data-actor-id="{{actorId}}">
+          <span class="adr-actor-chip-check-slot">
+            <input type="checkbox" {{#if checked}}checked{{/if}} tabindex="-1" />
+          </span>
+          <img class="adr-actor-chip-img" src="{{actorImg}}" alt="" />
+          <span class="adr-actor-chip-name">{{actorName}}</span>
+        </div>
+        {{/each}}
+      </div>
+      {{else}}
+      <div class="adr-support-empty">{{localize "argas-dice-roller.requestRoll.dramaticSupport.noTargetsAvailable"}}</div>
+      {{/if}}
+    </fieldset>
+  </div>
+
+  {{!-- Trait-Picker (nur sichtbar, wenn Ziel gewählt) --}}
+  {{#if selectedTargetId}}
+  <div class="app adr-toggle-box adr-traits-box adr-support-trait-box">
+    <fieldset class="adr-field-set adr-traits-fieldset">
+      <legend>{{localize "argas-dice-roller.requestRoll.dramaticSupport.traitLabel"}}</legend>
+
+      <div class="adr-traits-section-header">{{localize "argas-dice-roller.requestRoll.attributes"}}</div>
+      <div class="adr-traits-row">
+        {{#each traits.attributes}}
+        <button type="button"
+                class="adr-trait-btn {{#if (eq ../selectedTraitKey key)}}{{#if (eq ../selectedTraitType 'attribute')}}selected{{/if}}{{/if}}"
+                data-action="adr-support-select-trait"
+                data-trait-type="attribute" data-trait-key="{{key}}" data-trait-name="{{name}}"
+                title="W{{dieSides}}">
+          {{name}}
+        </button>
+        {{/each}}
+      </div>
+
+      <div class="adr-traits-section-header">{{localize "argas-dice-roller.requestRoll.skills"}}</div>
+
+      {{#if traits.coreSkills.length}}
+      <div class="adr-traits-row">
+        {{#each traits.coreSkills}}
+        <button type="button"
+                class="adr-trait-btn {{#if isUntrained}}adr-trait-untrained-skill{{/if}} {{#if (eq ../selectedTraitKey key)}}{{#if (eq ../selectedTraitType 'skill')}}selected{{/if}}{{/if}}"
+                data-action="adr-support-select-trait"
+                data-trait-type="skill" data-trait-key="{{key}}" data-trait-name="{{name}}"
+                title="W{{dieSides}}">
+          {{name}}
+        </button>
+        {{/each}}
+      </div>
+      {{/if}}
+
+      {{#if traits.otherSkills.length}}
+      <div class="adr-traits-grid">
+        {{#each traits.otherSkills}}
+        <button type="button"
+                class="adr-trait-btn {{#if isUntrained}}adr-trait-untrained-skill{{/if}} {{#if (eq ../selectedTraitKey key)}}{{#if (eq ../selectedTraitType 'skill')}}selected{{/if}}{{/if}}"
+                data-action="adr-support-select-trait"
+                data-trait-type="skill" data-trait-key="{{key}}" data-trait-name="{{name}}"
+                title="W{{dieSides}}">
+          {{name}}
+        </button>
+        {{/each}}
+      </div>
+      {{/if}}
+    </fieldset>
+  </div>
+  {{/if}}
+
+  {{!-- Aktions-Buttons --}}
+  <div class="adr-support-actions">
+    <button type="button" class="adr-support-cancel-btn" data-action="adr-support-cancel">
+      {{localize "argas-dice-roller.requestRoll.dramaticSupport.cancel"}}
+    </button>
+    <button type="button" class="adr-support-confirm-btn"
+            data-action="adr-support-confirm"
+            {{#unless canConfirm}}disabled{{/unless}}>
+      {{localize "argas-dice-roller.requestRoll.dramaticSupport.confirm"}}
+    </button>
+  </div>
+</div>

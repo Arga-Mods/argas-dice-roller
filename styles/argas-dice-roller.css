@@ -1,0 +1,871 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Arga-Mods */
+
+@font-face {
+  font-family: 'Roboto Slab';
+  src: url("../assets/fonts/RobotoSlab-VariableFont_wght.woff2") format("woff2");
+  font-weight: 100 900;
+  font-style: normal;
+}
+#dice-form,
+.window-app#dice-form,
+.argas-dice-roller-window {
+  font-family: 'Roboto Slab', sans-serif !important;
+}
+.adr-field-set {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  border: 2px solid #777;
+  padding: 6px 12px 12px 12px;
+  margin-bottom: 8px;
+}
+.adr-field-set legend {
+  /* Robuste Zentrierung: block-level mit auto-margin auf beiden Seiten —
+     unabhängig von Browser-/System-Defaults für <legend>. `text-align: center`
+     allein wirkt bei inline-block + width:auto nicht zuverlässig, weil der
+     Text-Anker dann den Container exakt füllt. */
+  display: block;
+  width: fit-content;
+  margin-inline: auto;
+  text-align: center;
+  padding: 0 12px;
+  font-size: 0.9em;
+  color: #ddd;
+  white-space: nowrap;
+  background: inherit;
+}
+.app.adr-form {
+  display: table !important;
+  width: auto !important;
+  overflow: hidden !important;
+  max-height: none !important;
+  height: auto !important;
+}
+
+
+
+
+
+
+.adr-form .adr-rows {
+  display: table-row !important;
+}
+.adr-form .adr-1stcol,
+.adr-form .adr-col {
+  display: table-cell !important;
+  vertical-align: middle;
+  height: 50px;
+  border: none;                 /* Zellen haben keinen vollen Rahmen mehr */
+  cursor: pointer;
+}
+
+
+.adr-form .adr-1stcol {
+  padding-left: 15px !important;
+  padding-right: 8px !important;
+  width: 135px !important;
+  white-space: nowrap;
+  text-align: left !important;
+  border-left: none !important;  /* Container liefert den Außenrahmen */
+}
+.adr-form .adr-col {
+  padding: 0 6px;
+  min-width: 50px;
+  text-align: center;
+  border-left: 1px solid #333;
+}
+
+
+.adr-form .adr-col:last-child{
+  border-right: 0;              /* Container liefert die rechte Linie */
+}
+
+
+/* Horizontale Innenlinien: ab der zweiten Zeile oben */
+.adr-form .adr-rows + .adr-rows .adr-1stcol,
+.adr-form .adr-rows + .adr-rows .adr-col {
+  border-top: 1px solid #333;
+}
+
+.adr-col i {
+  font-size: 32px;
+  display: inline-block;
+  width: 32px;
+  text-align: center;
+  margin-right: 0.5em;
+}
+/* SVG Würfel-Icons (game-icons.net) */
+.adr-dice-icon {
+  width: 38px;
+  height: 38px;
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 0.5em;
+  opacity: 0.85;
+  filter: sepia(0.25);
+  transition: filter 0.1s ease, opacity 0.1s ease;
+}
+.adr-dice-icon-small {
+  width: 32px;
+  height: 32px;
+  margin-right: 0;
+}
+.adr-col:hover .adr-dice-icon,
+.adr-col:active .adr-dice-icon {
+  opacity: 1;
+  filter: sepia(0) drop-shadow(0 0 6px rgb(159,255,159));
+}
+.dice-label {
+  font-weight: bold;
+  color: #eee;
+  font-size: 1.1em;
+}
+.adr-col:hover,
+.adr-col:active {
+  color: rgb(159,255,159);
+  /* nur interner Glow – nichts ragt aus der Zelle heraus */
+  box-shadow: inset 0 0 0 2px rgb(159,255,159), inset 0 0 12px rgba(159,255,159,0.35);
+  transition: box-shadow 0.1s ease, color 0.1s ease;
+}
+
+
+
+.app.adr-form .adr-rows:nth-child(even) .adr-col {
+  background-color: rgba(255,255,255,0.10);
+}
+
+
+.adr-toggle-box {
+  margin-bottom: 0px;
+  /* mehr Abstand NUR nach oben und rechts */
+  padding: 6px 10px 6px 10px !important; /* top right bottom left */
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  width: 100%;
+  justify-content: center;
+}
+
+/* Nur Zahl vergrößern, nicht die Zelle */
+.adr-col .adr-num{
+  display: inline-block;
+  line-height: 1;
+  font-size: 1.1em;
+  transition: transform 0.1s ease, color 0.1s ease;
+  transform-origin: center center;
+}
+.adr-col:hover .adr-num,
+.adr-col:active .adr-num{
+  transform: scale(1.50);
+  transition-duration: 120ms;   /* optional: etwas weicher */
+}
+.adr-1stcol .adr-dice-icon,
+.adr-1stcol .dice-label {
+  transition: transform 0.1s ease;
+  transform-origin: center center;
+}
+.adr-1stcol:hover .adr-dice-icon,
+.adr-1stcol:active .adr-dice-icon,
+.adr-1stcol:hover .dice-label,
+.adr-1stcol:active .dice-label {
+  transform: scale(1.15);
+  transition-duration: 120ms;
+}
+
+.adr-toggle {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #333;
+  border-radius: 6px;
+  background: rgba(0,0,0,0.4);
+  cursor: pointer;
+}
+.adr-toggle input[type="checkbox"],
+.adr-toggle input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  position: absolute;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  cursor: pointer;
+  z-index: 2;
+}
+.adr-toggle i {
+  pointer-events: auto;
+  z-index: 1;
+  font-size: 28px;
+  color: #aaa;
+  transition: color 0.2s, box-shadow 0.2s;
+}
+/* Hover/Checked der oberen Toggles – Optik wie Modifier/Fate-Button */
+.adr-toggle:hover i,
+.adr-toggle input:checked + i {
+  transform: scale(1.11);                    /* gleich wie Fate-Button (sanfter Zoom) */
+  transform-origin: center center;
+  transition: transform 0.1s ease, color 0.1s ease;
+}
+.adr-toggle:hover i {
+  color: rgb(159,255,159);
+}
+.adr-toggle:hover {
+  box-shadow: inset 0 0 10px rgba(159,255,159,0.5);
+  outline: 2px solid #9fff9f;
+  outline-offset: 2px;
+}
+.adr-toggle input:checked + i,
+.adr-toggle input:checked + svg {
+  color: rgb(159,255,159);
+  border-radius: 4px;
+}
+
+.adr-toggle:has(input:checked) {
+  outline: 2px solid #9fff9f !important;
+  outline-offset: 2px;
+  box-shadow: inset 0 0 10px rgba(159,255,159,0.5);
+}
+.d100-icons {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle !important;
+  margin-right: 0.4em;
+}
+.d100-icons i {
+  margin: 0;
+  padding: 0;
+}
+.d100-icons .adr-dice-icon-small + .adr-dice-icon-small {
+  margin-left: -8px;
+}
+.d100-icons i:first-child {
+  margin-right: -3px;
+}
+
+
+
+
+.adr-modifier-box {
+  display: flex;
+  justify-content: center;
+  margin-top: 8px;
+  /* mehr Außenabstand oben und rechts, wie bei den Toggles */
+  padding: 6px 10px 6px 10px !important; /* top right bottom left */
+}
+
+
+
+
+
+.adr-modifier-box .adr-field-set {
+  display: flex;
+  gap: 10px;
+  border: 2px solid #777;
+  padding: 6px 15px 14px 15px;
+}
+.adr-modifier {
+  background: transparent;
+  border: 2px solid #ccc;
+  padding: 4px 6px;
+  font-size: 1.1em;
+  cursor: pointer;
+  user-select: none;
+}
+.adr-modifier.first-positive {
+  /* Früher 19px Abstand zur Negativ-Gruppe; die optische Trennung
+     übernimmt jetzt das händische Eingabefeld in der Mitte der Leiste. */
+  margin-left: 0;
+}
+/* Händisches Modifikator-Eingabefeld (Mitte der Modifikator-Leiste).
+   Bewusst als vertieftes, abgerundetes Eingabefeld gestaltet — damit es
+   sich klar von den flachen, eckigen Buttons abhebt. Schmaler als das
+   Feld im Probenanforderungsfenster. */
+.adr-modifier-manual-input {
+  width: 52px;
+  margin: 0 10px;
+  padding: 4px 6px;
+  border: 1px solid rgba(255,255,255,0.35);
+  border-radius: 7px;
+  background: rgba(0,0,0,0.30);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.55);
+  color: inherit;
+  font-family: inherit;
+  font-size: 1.15em;
+  font-weight: 600;
+  text-align: center;
+  box-sizing: border-box;
+}
+.adr-modifier-manual-input:focus {
+  outline: none;
+  border-color: rgb(159,255,159);
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.55), 0 0 8px rgb(159,255,159);
+}
+/* Platzhalter-"0": erbt die (helle) Textfarbe statt des dunklen
+   Browser-Defaults — bleibt damit auf dunklem Hintergrund klar sichtbar. */
+.adr-modifier-manual-input::placeholder {
+  color: inherit;
+  opacity: 0.8;
+  font-weight: 600;
+}
+/* Modifikator-Buttons gesperrt, solange der GM von Hand ins Feld tippt */
+.adr-modifier.adr-modifier-disabled {
+  opacity: 0.35;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+.adr-modifier:hover,
+.adr-modifier.selected {
+  border: 2px solid rgb(159,255,159) !important;
+  box-shadow: 0 0 8px rgb(159,255,159);
+  transform: scale(1.25);
+  transition: transform 0.1s ease;
+}
+.adr-form .adr-1stcol i,
+.adr-form .adr-1stcol .dice-label {
+  display: inline-block;
+  vertical-align: middle;
+}
+.adr-modifier-box .adr-field-set legend {
+  display: block;
+  margin-bottom: 5px;
+}
+.dice-form .die-button {
+  display: inline-flex;
+  align-items: center;
+}
+/* ADR-Button: eigenständiges Top-Level-Control unten in der Spalte.
+   Position macht das injizierte <li> selbst (Inline-`order: 9999`), den
+   Abstand liefert der normale Flex-`gap` der Leiste — bewusst KEIN eigenes
+   margin, damit der ADR-Eintrag denselben Abstand hat wie alle übrigen
+   Buttons. (Frühere Regel `order: 999` + `margin-top: 0.5rem` traf nur den
+   inneren Button: order wirkungslos, margin verursachte den Zusatz-Abstand.) */
+[data-control="argas-dice-roller"] i {
+  color: #e56917 !important;
+  opacity: 1 !important;
+}
+/* Nur ADR-Würfelfenster, Dialoge unberührt lassen */
+.window-app#dice-form .window-header,
+#dice-form .window-header,
+.argas-dice-roller-window .window-header {
+  position: relative;
+}
+.window-app#dice-form .window-title,
+#dice-form .window-title,
+.argas-dice-roller-window .window-title {
+  flex: 1 1 0;
+  text-align: left;
+  font-weight: normal;
+  position: relative;
+  visibility: hidden;  /* nativen Titel verstecken, Platz bleibt erhalten */
+}
+/* nur Dice-Form: Titel mittig im Header */
+.window-app#dice-form .adrgs-title-extra,
+#dice-form .adrgs-title-extra,
+.argas-dice-roller-window .adrgs-title-extra {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.35em;
+  color: #e56917;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  pointer-events: none;
+  white-space: nowrap;
+  width: max-content;
+  z-index: 10;
+}
+
+.window-app#dice-form,
+#dice-form,
+.argas-dice-roller-window {
+  isolation: isolate;
+}
+
+/* Stil für „ja“ und „nein“ – wie Modifikator-Buttons */
+/* Stil für „ja“ und „nein“ – wie Modifikator-Buttons */
+.adr-group-button {
+  background: transparent;
+  border: 2px solid #ccc;
+  padding: 4px 6px;
+  font-size: 1.1em;
+  font-family: 'Roboto Slab', sans-serif;
+  cursor: pointer;
+  user-select: none;
+  color: #eee;
+  text-align: center;
+  min-width: 60px;
+  height: auto;
+  line-height: normal;
+  box-sizing: border-box;
+}
+
+.adr-group-button + .adr-group-button {
+  margin-left: 8px;
+}
+
+.adr-group-button:hover,
+.adr-group-button.selected {
+  border-color: rgb(159,255,159);
+  box-shadow: 0 0 8px rgb(159,255,159);
+  transform: scale(1.25);
+  transition: transform 0.1s ease;
+}
+
+.adr-button-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.adr-fate-button:hover,
+.adr-fate-button:active,
+.adr-fate-button:focus,
+.adr-request-roll-button:hover,
+.adr-request-roll-button:active,
+.adr-request-roll-button:focus {
+  border-color: rgb(159,255,159);
+  box-shadow: 0 0 8px rgb(159,255,159);
+  transform: scale(1.11); /* identisch zu .adr-modifier */
+}
+
+.adr-token-wrapper {
+  padding: 0 12px;
+  justify-content: center;
+}
+.adr-fate-button,
+.adr-request-roll-button {
+  font-family: "Roboto Slab", sans-serif;
+  font-size: 1.2em;
+  /* wie Modifikator-Kacheln */
+  background: transparent;
+  border: 2px solid #ccc;
+  padding: 6px 12px;
+  color: #eee;
+  cursor: pointer;
+  user-select: none;
+  border-radius: 10px;
+  transition: transform 0.1s ease, box-shadow 0.1s ease, border-color 0.1s ease, color 0.1s ease;
+}
+
+
+
+/* Fate Roll: äußerer Abstand wie gewünscht */
+.adr-toggle-box.adr-token-group-box {
+  margin-top: 8px;
+  padding: 6px 10px 6px 10px !important; /* top right bottom left */
+}
+
+
+/* Abstand der „???“ in maskierten ADR-Nachrichten */
+.chat-message[data-adr-hidden="true"] .adr-result-container {
+  display: flex;             
+  flex-direction: column;
+  align-items: center;
+}
+.chat-message[data-adr-hidden="true"] .adr-dice-value {
+  margin-top: -10px;          
+}
+
+/* Dice window: mehr Abstand zwischen den Blöcken */
+.window-app#dice-form .app + .app,
+.argas-dice-roller-window .app + .app {
+  margin-top: 10px; /* Abstand zwischen Modifiers, Random Token Selection, etc. */
+}
+
+/* ADR Chat: Ergebniszeile als 3-Spalten-Grid (links | Trenner | rechts) */
+.adr-chat .adr-dice-row{
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: start;
+  column-gap: 8px;
+}
+
+/* Trenner mittig ausrichten */
+.adr-chat .adr-dice-row .adr-iron-bar{
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Kritischer-Fehlschlag-Hinweis: volle Breite, zentriert, unter beiden Ergebnissen */
+.adr-chat .adr-dice-row .adr-critical-row{
+  grid-column: 1 / -1;   /* über alle Spalten */
+  justify-self: center;
+  text-align: center;
+  margin-top: 6px;
+  font-size: 0.6em;      /* deine gewünschte Größe */
+  /* Farbe kommt von .adr-highlight-ones, das bleibt erhalten */
+}
+
+
+
+
+/* ---------------------------------------------------------------- */
+/*  System-Schutzschild: Verhindert dass Spielsysteme (DSA, etc.)   */
+/*  die ADR-Fenster-Optik überschreiben. Alle Properties die        */
+/*  Systeme typischerweise auf generischen Selektoren setzen         */
+/*  (.window-app, .application, fieldset, legend, button, input)    */
+/*  werden hier explizit auf ADR-Werte festgenagelt.                */
+/* ---------------------------------------------------------------- */
+
+/* --- Äußerer Container --- */
+#dice-form.application,
+.argas-dice-roller-window {
+  border: none !important;
+  border-image: none !important;
+  border-radius: 4 !important;
+  color: #eee !important;
+  font-family: 'Roboto Slab', sans-serif !important;
+  font-size: 14px !important;
+  line-height: normal !important;
+  text-shadow: none !important;
+  filter: none !important;
+  gap: 4px !important;
+  box-shadow: 0 0 8px rgba(0,0,0,0.9) !important;
+}
+
+/* --- Titelleiste: System-Dekorationen blockieren --- */
+#dice-form .window-header,
+.argas-dice-roller-window .window-header {
+  border: none !important;
+  border-image: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  color: #eee !important;
+  font-family: 'Roboto Slab', sans-serif !important;
+  min-height: unset !important;
+  text-shadow: none !important;
+  top: 0 !important;
+}
+
+/* --- Window-Title --- */
+#dice-form .window-header .window-title,
+.argas-dice-roller-window .window-header .window-title {
+  color: #eee !important;
+  font-family: 'Roboto Slab', sans-serif !important;
+  font-size: inherit !important;
+  text-shadow: none !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+}
+
+/* --- Close-Button --- */
+#dice-form .window-header .header-control,
+#dice-form .window-header .close,
+.argas-dice-roller-window .window-header .header-control,
+.argas-dice-roller-window .window-header .close {
+  background: transparent !important;
+  border: none !important;
+  border-image: none !important;
+  box-shadow: none !important;
+  color: #eee !important;
+  text-shadow: none !important;
+}
+
+/* --- Window-Content --- */
+#dice-form > .window-content,
+.argas-dice-roller-window > .window-content {
+  border: none !important;
+  border-image: none !important;
+  border-radius: 0 !important;
+  padding: 0 !important;
+  color: #333 !important;
+  font-family: 'Roboto Slab', sans-serif !important;
+  text-shadow: none !important;
+}
+
+/* --- Fieldsets & Legends: Systeme stylen diese oft radikal um --- */
+#dice-form fieldset,
+.argas-dice-roller-window fieldset {
+  border: 2px solid #777 !important;
+  border-image: none !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  background-image: none !important;
+  margin: 0 !important;
+  color: inherit !important;
+  text-shadow: none !important;
+}
+#dice-form legend,
+.argas-dice-roller-window legend {
+  background: inherit !important;
+  background-image: none !important;
+  border: none !important;
+  border-image: none !important;
+  color: #ddd !important;
+  font-family: 'Roboto Slab', sans-serif !important;
+  font-size: 0.9em !important;
+  text-shadow: none !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  padding: 0 12px !important;
+}
+
+/* --- Buttons innerhalb des Dice-Fensters --- */
+#dice-form button,
+.argas-dice-roller-window button {
+  background-image: none !important;
+  border-image: none !important;
+  text-shadow: none !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+}
+
+/* --- Inputs (Checkboxen, Radios) --- */
+#dice-form input[type="checkbox"],
+#dice-form input[type="radio"],
+.argas-dice-roller-window input[type="checkbox"],
+.argas-dice-roller-window input[type="radio"] {
+  background: transparent !important;
+  background-image: none !important;
+  border-image: none !important;
+  box-shadow: none !important;
+}
+
+/* --- Icons innerhalb des Fensters: System-Farbübernahme verhindern --- */
+#dice-form .adr-toggle i,
+.argas-dice-roller-window .adr-toggle i {
+  text-shadow: none !important;
+}
+
+/* --- SVG Dice Icons: System-Overrides blockieren --- */
+#dice-form .adr-dice-icon,
+.argas-dice-roller-window .adr-dice-icon {
+  border: none !important;
+  border-image: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  background-image: none !important;
+}
+
+/* --- Allgemeine Pseudo-Elemente auf Fenster-Ebene abfangen --- */
+#dice-form *::before,
+#dice-form *::after,
+.argas-dice-roller-window *::before,
+.argas-dice-roller-window *::after {
+  border-image: none !important;
+  text-shadow: none !important;
+}
+
+/* ---------------------------------------------------------------- */
+/*  ApplicationV2 Overrides – V1-Texturen replizieren               */
+/* ---------------------------------------------------------------- */
+
+/* V2 Pseudo-Elemente komplett abschalten (Glaseffekt, backdrop etc.) */
+#dice-form.application::before,
+#dice-form.application::after,
+.argas-dice-roller-window .window-header::before,
+.argas-dice-roller-window .window-header::after,
+#dice-form > .window-content::before,
+#dice-form > .window-content::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* Äußerer Frame: Denim-Textur wie in V1, leicht aufgehellt */
+#dice-form.application {
+  background:
+    linear-gradient(rgba(255,255,255,0.10), rgba(255,255,255,0.10)),
+    #3e3e3e url("/ui/denim075.png") repeat !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+}
+
+/* Titelleiste: opak, aufgehellt, eigener Compositing-Layer erzwingen */
+.argas-dice-roller-window .window-header {
+  position: relative;
+  background:
+    linear-gradient(rgba(255,255,255,0.10), rgba(255,255,255,0.10)),
+    #3e3e3e url("/ui/denim075.png") repeat !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  transform: translateZ(0);
+}
+
+/* Window-Content: Pergament wie in V1, eigener Compositing-Layer */
+#dice-form > .window-content {
+  background: #b5a68c url("/ui/parchment.jpg") repeat !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  transform: translateZ(0);
+}
+
+/* Wrapper-Div aus dem Template */
+.argas-dice-roller-window .adr-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px;
+}
+
+/* Alle .app-Sektionen: Denim-Textur + leichte Aufhellung
+   In V1 war die Denim-Textur transparent vererbt, daher heller.
+   Hier wird ein 10% weißer Layer darübergelegt, um das zu replizieren. */
+.argas-dice-roller-window .adr-wrapper > .app {
+  background:
+    linear-gradient(rgba(255,255,255,0.25), rgba(255,255,255,0.25)),
+    #3e3e3e url("/ui/denim075.png") repeat;
+  box-shadow: 0 0 8px rgba(0,0,0,0.9) !important;
+  border: 1px solid #333;
+}
+
+/* .app + .app Regel: gap übernimmt den Abstand */
+.argas-dice-roller-window .adr-wrapper > .app + .app {
+  margin-top: 0;
+}
+
+/* UI-Scaling: Fenster an Foundry UI-Scale anpassen */
+#dice-form.adr-scaled {
+  transform: scale(var(--adr-ui-scale, 1)) !important;
+  transform-origin: top left !important;
+}
+
+/* Free-Roll Toggle-Zeile mit Benny-Button.
+   Greift NUR wenn der Benny-Button injiziert wurde (.adr-has-benny) —
+   so bleibt der bisherige Default-Look (Toggle als zentrierter
+   inline-block) für alle anderen Karten unverändert.
+
+   Layout: 3-Spalten-Grid `1fr auto 1fr`. Toggle sitzt in der mittleren
+   `auto`-Spalte (= echt mittig im Container, weil die zwei `1fr`-Spalten
+   gleich breit sind). Button sitzt in der rechten Spalte, ans linke Ende
+   gerückt mit fixem `margin-left` als Mindestabstand. Bei größerer Schrift
+   wächst der Toggle in der `auto`-Spalte, die `1fr`-Spalten schrumpfen
+   symmetrisch — Toggle bleibt mittig, Abstand zum Button bleibt fest.
+   Details ist über alle drei Spalten gespannt (eigene Zeile). */
+.adr-individual-toggle-container.adr-has-benny {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  grid-template-rows: auto auto;
+  align-items: center;
+}
+.adr-individual-toggle-container.adr-has-benny > .adr-individual-toggle {
+  grid-column: 2;
+  grid-row: 1;
+  justify-self: center;
+}
+.adr-individual-toggle-container.adr-has-benny > .adr-benny-btn {
+  grid-column: 3;
+  grid-row: 1;
+  justify-self: start;
+  margin-left: 0.5rem;
+}
+.adr-individual-toggle-container.adr-has-benny > .adr-individual-details {
+  grid-column: 1 / -1;
+  grid-row: 2;
+}
+
+/* ---------------------------------------------------------------- */
+/*  Multi-Würfel-Auswahl (Strg+Klick)                                */
+/*  Strg gedrückt → Hover-Highlight wird orange (statt grün).        */
+/*  Strg+Klick → Button bleibt orange selektiert (`.adr-multi-       */
+/*  selected`-Klasse). Bei Strg-Loslassen werden alle selektierten   */
+/*  Würfel als Pool gewürfelt (Logik in adr-dice-form.js).           */
+/*  Münze (dc) ist im Multi-Modus gesperrt → not-allowed-Cursor.     */
+/* ---------------------------------------------------------------- */
+
+/* Ctrl-Modus: Hover-Stil auf Würfelzellen wird orange (überschreibt
+   die Standard-Grün-Regel über höhere Spezifität: 2 Klassen vs 1). */
+.argas-dice-roller-window.adr-ctrl-active .adr-col:hover,
+.argas-dice-roller-window.adr-ctrl-active .adr-col:active {
+  color: rgb(255,165,80);
+  box-shadow: inset 0 0 0 2px rgb(255,165,80), inset 0 0 12px rgba(255,165,80,0.35);
+}
+.argas-dice-roller-window.adr-ctrl-active .adr-col:hover .adr-dice-icon,
+.argas-dice-roller-window.adr-ctrl-active .adr-col:active .adr-dice-icon {
+  opacity: 1;
+  filter: sepia(0) drop-shadow(0 0 6px rgb(255,165,80));
+}
+
+/* Selektierter Würfel-Button: bleibt orange (auch ohne Hover, auch
+   wenn Strg zwischenzeitlich losgelassen wurde). */
+.argas-dice-roller-window .adr-col.adr-multi-selected {
+  color: rgb(255,165,80);
+  box-shadow: inset 0 0 0 2px rgb(255,165,80), inset 0 0 12px rgba(255,165,80,0.35);
+}
+.argas-dice-roller-window .adr-col.adr-multi-selected .adr-num {
+  transform: scale(1.5);
+}
+.argas-dice-roller-window .adr-col.adr-multi-selected .adr-dice-icon {
+  opacity: 1;
+  filter: sepia(0) drop-shadow(0 0 6px rgb(255,165,80));
+}
+.argas-dice-roller-window .adr-col.adr-multi-selected .dice-label {
+  transform: scale(1.15);
+}
+
+/* Münze im Ctrl-Modus: nicht selektierbar (Spec-Entscheidung: dc
+   produziert 0/1 und passt nicht in eine numerische Mischpool-Summe).
+   Cursor + gedämpfte Optik signalisieren das. */
+.argas-dice-roller-window.adr-ctrl-active .adr-1stcol[data-dice-type="dc"],
+.argas-dice-roller-window.adr-ctrl-active .adr-col[data-dice-type="dc"] {
+  cursor: not-allowed;
+}
+.argas-dice-roller-window.adr-ctrl-active .adr-1stcol[data-dice-type="dc"]:hover,
+.argas-dice-roller-window.adr-ctrl-active .adr-col[data-dice-type="dc"]:hover {
+  color: inherit;
+  box-shadow: none;
+  opacity: 0.5;
+}
+.argas-dice-roller-window.adr-ctrl-active .adr-1stcol[data-dice-type="dc"]:hover .adr-dice-icon,
+.argas-dice-roller-window.adr-ctrl-active .adr-col[data-dice-type="dc"]:hover .adr-dice-icon {
+  filter: sepia(0.25);
+  opacity: 0.85;
+}
+
+/* Münze bei aktiven Modifikatoren: Münzwürfe nehmen keine Modifikatoren
+   an (Spec). Solange mindestens ein Modifikator gewählt ist, ist die
+   Münze gesperrt — gleiche Sperroptik wie im Ctrl-Modus: not-allowed-
+   Cursor signalisiert das durchgestrichene Symbol beim Hover. */
+.argas-dice-roller-window.adr-mod-active .adr-1stcol[data-dice-type="dc"],
+.argas-dice-roller-window.adr-mod-active .adr-col[data-dice-type="dc"] {
+  cursor: not-allowed;
+}
+.argas-dice-roller-window.adr-mod-active .adr-1stcol[data-dice-type="dc"]:hover,
+.argas-dice-roller-window.adr-mod-active .adr-col[data-dice-type="dc"]:hover {
+  color: inherit;
+  box-shadow: none;
+  opacity: 0.5;
+}
+.argas-dice-roller-window.adr-mod-active .adr-1stcol[data-dice-type="dc"]:hover .adr-dice-icon,
+.argas-dice-roller-window.adr-mod-active .adr-col[data-dice-type="dc"]:hover .adr-dice-icon {
+  filter: sepia(0.25);
+  opacity: 0.85;
+}
+
+/* ---------------------------------------------------------------- */
+/*  Multi-Pool: Detail-Anzeige im Chat-Toggle                        */
+/*  Pro Würfel-Kategorie eine eigene Zeile, mit Label „Nx Wn:".      */
+/* ---------------------------------------------------------------- */
+.adr-individual-multi .adr-multi-line {
+  display: block;
+  margin: 0.2rem 0;
+}
+.adr-individual-multi .adr-multi-cat-label {
+  font-weight: bold;
+  margin-right: 0.3rem;
+}
+.adr-individual-multi .adr-multi-line-extras {
+  margin-top: 0.4rem;
+}
+
+/* ================================================================ */
+/*  Foundry-Settings-Dialog: Number-Input für maxDiceCount          */
+/* ================================================================ */
+/* Foundry rendert Number-Inputs per Default mit voller Spaltenbreite,
+   was bei einem kurzen Zahlenwert die Beschriftung umbricht. Auf 100 px
+   fixieren und rechtsbündig ausrichten — der Wert ist immer 1–2-stellig. */
+input[type="number"][name="argas-dice-roller.maxDiceCount"] {
+  width: 100px;
+  text-align: right;
+}

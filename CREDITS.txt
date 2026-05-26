@@ -1,0 +1,43 @@
+CREDITS
+=======
+
+This module bundles third-party assets, listed below with their licenses.
+The module's own source code and original artwork are licensed under the
+GNU General Public License v3.0 - see the LICENSE file.
+
+
+Font Attribution
+----------------
+This module uses the "Roboto Slab" font, designed by Christian Robertson
+and published by Google. It is licensed under the Apache License 2.0.
+A copy of the Apache License 2.0 is included in the "licenses" folder.
+License: https://www.apache.org/licenses/LICENSE-2.0
+
+
+Icon Attribution
+----------------
+The dice icons in this module are from game-icons.net and are licensed
+under the Creative Commons Attribution 3.0 license (CC BY 3.0).
+Icons by Skoll (d4, d10, d12) and Delapouite (coin, d2, d6, d8, d20).
+The d2 icon was modified from the original.
+Source: https://game-icons.net
+License: https://creativecommons.org/licenses/by/3.0/
+
+
+Token Ring
+----------
+The token ring border used in "default_token.webp" was created with
+"Token Stamp 2" by RollAdvantage. The border artwork is
+(C) 2014-2024 RollAdvantage and is licensed under the Creative Commons
+Attribution 4.0 International license (CC BY 4.0). The final token image
+was assembled and modified from the border by Arga using GIMP.
+Source: https://rolladvantage.com/tokenstamp/
+License: https://creativecommons.org/licenses/by/4.0/
+
+
+Original Artwork
+----------------
+All remaining artwork (backgrounds, banners and bars) was created by
+my daughter and me using Photoshop, GIMP, and ibisPaint.
+It is licensed under the GNU General Public License v3.0, the same
+license as the module's source code - see the LICENSE file.

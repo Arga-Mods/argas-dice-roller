@@ -1,0 +1,84 @@
+{{!-- SPDX-License-Identifier: GPL-3.0-or-later --}}
+{{!-- Copyright (C) 2026 Arga-Mods --}}
+
+{{!-- templates/change-trait-dialog-form.hbs --}}
+<div class="adr-wrapper adr-change-trait-dialog-wrapper">
+
+  {{!-- Kopfzeile: Akteur-Bild + Name nebeneinander, Hinweis-Texte darunter --}}
+  <div class="adr-support-header adr-change-trait-header">
+    <div class="adr-support-helper-row">
+      <img class="adr-support-helper-img" src="{{actor.actorImg}}" alt="" />
+      <span class="adr-support-helper-name">{{actor.actorName}}</span>
+    </div>
+    <p class="adr-support-bonus-info">{{{localize "argas-dice-roller.requestRoll.dramaticChangeTrait.infoHTML"}}}</p>
+    <p class="adr-support-warning">{{{localize "argas-dice-roller.requestRoll.dramaticChangeTrait.noteHTML"}}}</p>
+    <p class="adr-change-trait-original-line">{{{originalTraitLineHTML}}}</p>
+  </div>
+
+  {{!-- Trait-Picker --}}
+  <div class="app adr-toggle-box adr-traits-box adr-change-trait-trait-box">
+    <fieldset class="adr-field-set adr-traits-fieldset">
+      <legend>{{localize "argas-dice-roller.requestRoll.dramaticChangeTrait.traitLabel"}}</legend>
+
+      <div class="adr-traits-section-header">{{localize "argas-dice-roller.requestRoll.attributes"}}</div>
+      <div class="adr-traits-row">
+        {{#each traits.attributes}}
+        <button type="button"
+                class="adr-trait-btn {{#if (eq ../selectedTraitKey key)}}{{#if (eq ../selectedTraitType 'attribute')}}selected{{/if}}{{/if}}"
+                data-action="adr-change-trait-select-trait"
+                data-trait-type="attribute" data-trait-key="{{key}}" data-trait-name="{{name}}"
+                title="W{{dieSides}}">
+          {{name}}
+        </button>
+        {{/each}}
+      </div>
+
+      <div class="adr-traits-section-header">{{localize "argas-dice-roller.requestRoll.skills"}}</div>
+
+      {{#if traits.coreSkills.length}}
+      <div class="adr-traits-row">
+        {{#each traits.coreSkills}}
+        <button type="button"
+                class="adr-trait-btn {{#if isUntrained}}adr-trait-untrained-skill{{/if}} {{#if (eq ../selectedTraitKey key)}}{{#if (eq ../selectedTraitType 'skill')}}selected{{/if}}{{/if}}"
+                data-action="adr-change-trait-select-trait"
+                data-trait-type="skill" data-trait-key="{{key}}" data-trait-name="{{name}}"
+                title="W{{dieSides}}">
+          {{name}}
+        </button>
+        {{/each}}
+      </div>
+      {{/if}}
+
+      {{#if traits.otherSkills.length}}
+      <div class="adr-traits-grid">
+        {{#each traits.otherSkills}}
+        <button type="button"
+                class="adr-trait-btn {{#if isUntrained}}adr-trait-untrained-skill{{/if}} {{#if (eq ../selectedTraitKey key)}}{{#if (eq ../selectedTraitType 'skill')}}selected{{/if}}{{/if}}"
+                data-action="adr-change-trait-select-trait"
+                data-trait-type="skill" data-trait-key="{{key}}" data-trait-name="{{name}}"
+                title="W{{dieSides}}">
+          {{name}}
+        </button>
+        {{/each}}
+      </div>
+      {{/if}}
+    </fieldset>
+  </div>
+
+  {{!-- Aktions-Buttons --}}
+  <div class="adr-support-actions adr-change-trait-actions">
+    <button type="button" class="adr-support-cancel-btn" data-action="adr-change-trait-cancel">
+      {{localize "argas-dice-roller.requestRoll.dramaticChangeTrait.cancel"}}
+    </button>
+    {{#if canReset}}
+    <button type="button" class="adr-change-trait-reset-btn" data-action="adr-change-trait-reset">
+      {{localize "argas-dice-roller.requestRoll.dramaticChangeTrait.reset"}}
+    </button>
+    {{/if}}
+    <button type="button" class="adr-support-confirm-btn"
+            data-action="adr-change-trait-confirm"
+            {{#unless canConfirm}}disabled{{/unless}}>
+      {{localize "argas-dice-roller.requestRoll.dramaticChangeTrait.confirm"}}
+    </button>
+  </div>
+</div>

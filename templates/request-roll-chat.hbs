@@ -1,0 +1,317 @@
+{{!-- SPDX-License-Identifier: GPL-3.0-or-later --}}
+{{!-- Copyright (C) 2026 Arga-Mods --}}
+
+{{!-- templates/request-roll-chat.hbs --}}
+<div class="adr-request-roll-msg {{#if (eq mode 'dramatic')}}adr-dramatic-task-msg{{/if}}">
+
+{{#if (eq mode "dramatic")}}
+  <div class="adr-request-trait-line adr-dramatic-title-line">
+    <div class="adr-request-trait-name">~ {{localize "argas-dice-roller.requestRoll.modeDramatic"}} ~</div>
+    {{#if showModifier}}<div class="adr-request-trait-die"><span class="adr-request-mod-label">{{localize "argas-dice-roller.requestRoll.modifierLabel"}}</span>&nbsp;&nbsp;<span class="adr-request-modifier {{modifierClass}}">{{modifierStr}}</span></div>{{/if}}
+  </div>
+
+  <div class="adr-dramatic-summary">
+    <div class="adr-dramatic-summary-row">
+      <span class="adr-dramatic-summary-label">{{localize "argas-dice-roller.requestRoll.dramaticRoundLabel"}}</span>
+      <span class="adr-dramatic-summary-value">{{currentRound}} / {{roundsTotal}}</span>
+    </div>
+    <div class="adr-dramatic-summary-row">
+      <span class="adr-dramatic-summary-label">{{localize "argas-dice-roller.requestRoll.dramaticMarkerLabel"}}</span>
+      <span class="adr-dramatic-summary-value">{{totalMarkers}} / {{targetMarkers}}</span>
+    </div>
+  </div>
+
+  <div class="adr-dramatic-entries">
+    {{#each entries}}
+    <div class="adr-dramatic-entry {{#if roundState.card.isComplication}}adr-dramatic-entry-complication{{/if}} {{#if dramaticIsSupporter}}adr-dramatic-entry-supporter{{/if}}" data-actor-id="{{actorId}}">
+
+      <img class="adr-dramatic-entry-img" src="{{actorImg}}" alt="" />
+
+      <div class="adr-dramatic-row1">
+        <span class="adr-dramatic-entry-name">{{actorName}}</span>
+        <span class="{{dramaticCardClass}}">{{roundState.card.rankLabel}}<span class="adr-dramatic-card-suit">{{roundState.card.suitSymbol}}</span></span>
+      </div>
+
+      {{#if dramaticIsSupporter}}
+      {{!-- Helfer hat unterstützt: Sub-Zeile mit Ergebnis + Benny-Button rechts --}}
+      <div class="adr-dramatic-row2 adr-dramatic-support-row">
+        {{#if dramaticSupporterShowResult}}
+        <span class="adr-dramatic-action">
+          <button type="button"
+                  class="adr-roll-btn adr-rolled"
+                  data-action="adr-roll-trait"
+                  data-actor-id="{{actorId}}"
+                  data-request-id="{{../requestId}}"
+                  disabled>
+            <span class="adr-result-value {{dramaticSupporterResultClass}}">{{dramaticSupporterResult}}</span>{{{dramaticSupporterResultRaisesHTML}}}
+          </button>
+          <button type="button"
+                  class="adr-benny-btn{{#unless dramaticSupporterShowBenny}} adr-hidden{{/unless}}{{#if dramaticSupporterBennyFumble}} adr-benny-fumble{{/if}}{{#if dramaticSupporterBennyUsed}} adr-benny-used{{/if}}"
+                  data-action="adr-use-benny"
+                  data-actor-id="{{actorId}}"
+                  {{#if dramaticSupporterBennyFumble}}disabled{{/if}}
+                  title="{{#if dramaticSupporterBennyFumble}}{{localize "argas-dice-roller.chat.critical-failure-no-benny"}}{{else}}{{localize "argas-dice-roller.requestRoll.bennyTooltip"}}{{/if}}">
+            <img src="systems/swade/assets/benny/benny-chip-front.png" alt="Benny" />
+          </button>
+        </span>
+        {{/if}}
+        <span class="adr-dramatic-support-line">{{{dramaticSupportLineHTML}}}</span>
+      </div>
+      {{#if dramaticSupporterShowFumbleCheck}}
+      <div class="adr-dramatic-support-fumble-check-row">
+        <button type="button"
+                class="adr-fumble-check-btn adr-dramatic-fumble-check-btn"
+                data-action="adr-fumble-check-dramatic-support"
+                data-actor-id="{{actorId}}">
+          {{localize "argas-dice-roller.requestRoll.fumbleCheckBtn1"}} {{localize "argas-dice-roller.requestRoll.fumbleCheckBtn2"}}
+        </button>
+      </div>
+      {{/if}}
+      {{#if dramaticSupporterFumbleCheckHTML}}
+      <div class="adr-fumble-check-result adr-dramatic-support-fumble-check-result">{{{dramaticSupporterFumbleCheckHTML}}}</div>
+      {{/if}}
+      {{else}}
+      <div class="adr-dramatic-row2">
+        <span class="adr-dramatic-trait-text"><span class="adr-dramatic-arrow">&rarr;</span><span class="adr-dramatic-trait-content">{{traitName}} <span class="adr-dramatic-values">{{#if isUntrained}}<em>(<span class="adr-dramatic-die">{{traitDieLabel}}</span>{{#if isWildcard}}<span class="adr-dramatic-sep">·</span><span class="adr-dramatic-wild">WD</span>{{/if}})-2</em>{{else}}(<span class="adr-dramatic-die">{{traitDieLabel}}</span>{{#if isWildcard}}<span class="adr-dramatic-sep">·</span><span class="adr-dramatic-wild">WD</span>{{/if}}){{/if}}</span>{{#if roundState.card.isJoker}} <span class="adr-dramatic-joker-bonus">(+2)</span>{{/if}}{{#if ../showModifier}} <span class="adr-dramatic-mod {{dramaticModClass}}">({{../modifierStr}})</span>{{/if}}</span></span>
+        <span class="adr-dramatic-action">
+          {{#if dramaticShowResult}}
+            <button type="button"
+                    class="adr-roll-btn adr-rolled"
+                    data-action="adr-roll-trait"
+                    data-actor-id="{{actorId}}"
+                    data-request-id="{{../requestId}}">
+              <span class="adr-result-value {{dramaticResultClass}}">{{roundState.result}}</span>{{{dramaticResultRaisesHTML}}}
+            </button>
+            <button type="button"
+                    class="adr-benny-btn{{#unless dramaticShowBenny}} adr-hidden{{/unless}}{{#if dramaticBennyFumble}} adr-benny-fumble{{/if}}{{#if dramaticBennyUsed}} adr-benny-used{{/if}}"
+                    data-action="adr-use-benny"
+                    data-actor-id="{{actorId}}"
+                    {{#if dramaticBennyFumble}}disabled{{/if}}
+                    title="{{#if dramaticBennyFumble}}{{localize "argas-dice-roller.chat.critical-failure-no-benny"}}{{else}}{{localize "argas-dice-roller.requestRoll.bennyTooltip"}}{{/if}}">
+              <img src="systems/swade/assets/benny/benny-chip-front.png" alt="Benny" />
+            </button>
+          {{else}}{{#unless roundState.skipped}}
+            <button type="button"
+                    class="adr-roll-btn {{#unless dramaticCanRoll}}adr-hidden{{/unless}}"
+                    data-action="adr-roll-trait"
+                    data-actor-id="{{actorId}}"
+                    data-request-id="{{../requestId}}">
+              🎲 {{localize "argas-dice-roller.requestRoll.chatRollButton"}}
+            </button>
+          {{/unless}}{{/if}}
+        </span>
+      </div>
+      {{/if}}
+
+      {{#if dramaticHasReceivedSupport}}
+      {{!-- Empfangene Boni am Ziel-Eintrag --}}
+      <div class="adr-dramatic-received-support">
+        {{#each dramaticReceivedSupportLines}}
+        <div class="adr-dramatic-received-support-line {{#if isFumble}}adr-dramatic-received-support-fumble{{/if}}">{{{html}}}</div>
+        {{/each}}
+      </div>
+      {{/if}}
+
+      {{#unless dramaticIsSupporter}}
+      <div class="adr-dramatic-row3">
+        {{#if dramaticShowFumbleCheck}}
+          <div class="adr-dramatic-marker adr-dramatic-marker-zero">{{localize "argas-dice-roller.requestRoll.dramaticNoSuccess"}}</div>
+          <button type="button"
+                  class="adr-fumble-check-btn adr-dramatic-fumble-check-btn"
+                  data-action="adr-fumble-check-dramatic"
+                  data-actor-id="{{actorId}}">
+            {{localize "argas-dice-roller.requestRoll.fumbleCheckBtn1"}} {{localize "argas-dice-roller.requestRoll.fumbleCheckBtn2"}}
+          </button>
+        {{else}}{{#if dramaticShowResult}}
+          {{#if roundState.complicationFailure}}
+            <span class="adr-dramatic-marker adr-dramatic-marker-negative">{{localize "argas-dice-roller.requestRoll.dramaticTaskFailedLabel"}}</span>
+          {{else}}{{#if (eq roundState.markersDelta -1)}}
+            <span class="adr-dramatic-marker adr-dramatic-marker-negative">{{localize "argas-dice-roller.requestRoll.dramaticLostMarkerLabelTitle"}}<br><span class="adr-dramatic-marker-detail">{{localize "argas-dice-roller.requestRoll.dramaticLostMarkerLabelDetail"}}</span></span>
+          {{else}}{{#if roundState.markersDelta}}
+            <span class="adr-dramatic-marker">+{{roundState.markersDelta}} {{localize "argas-dice-roller.requestRoll.dramaticMarkerLabel"}}</span>
+          {{else}}
+            <span class="adr-dramatic-marker adr-dramatic-marker-zero">{{localize "argas-dice-roller.requestRoll.dramaticNoSuccess"}}</span>
+          {{/if}}{{/if}}{{/if}}
+        {{else}}{{#if roundState.skipped}}
+          <span class="adr-dramatic-skipped">{{localize "argas-dice-roller.requestRoll.dramaticSkippedLabel"}}</span>
+        {{else}}
+          {{#if dramaticCanSkip}}
+          <span class="adr-dramatic-options">
+            <span class="adr-dramatic-options-label">{{localize "argas-dice-roller.requestRoll.dramaticOptionsLabel"}}</span>
+            <span class="adr-dramatic-options-row1">
+              <a class="adr-dramatic-change-trait-link" data-action="adr-change-trait-dramatic" data-actor-id="{{actorId}}" data-request-id="{{../requestId}}">{{localize "argas-dice-roller.requestRoll.dramaticChangeTraitButton"}}</a>
+            </span>
+            <span class="adr-dramatic-options-row2">
+              <a class="adr-dramatic-skip-link" data-action="adr-skip-dramatic" data-actor-id="{{actorId}}" data-request-id="{{../requestId}}">{{localize "argas-dice-roller.requestRoll.dramaticSkipButton"}}</a>
+              <span class="adr-dramatic-option-sep">·</span>
+              <a class="adr-dramatic-support-link" data-action="adr-open-support" data-actor-id="{{actorId}}" data-request-id="{{../requestId}}">{{localize "argas-dice-roller.requestRoll.dramaticSupportButton"}}</a>
+            </span>
+          </span>
+          {{/if}}
+        {{/if}}{{/if}}{{/if}}
+        {{#if dramaticFumbleCheckPassed}}
+          <div class="adr-fumble-check-result">{{{dramaticFumbleCheckPassedHTML}}}</div>
+        {{/if}}
+      </div>
+      {{/unless}}
+    </div>
+    {{/each}}
+  </div>
+
+  {{#if dramaticHistoryGroups.length}}
+  <div class="adr-group-toggle-container adr-dramatic-history-container">
+    <div class="adr-group-divider"></div>
+    <div class="adr-individual-toggle-container">
+      <div class="adr-individual-toggle">{{{localize "argas-dice-roller.requestRoll.dramaticHistoryToggle"}}}</div>
+      <div class="adr-individual-details adr-individual-hidden">
+        {{#each dramaticHistoryGroups}}
+          <div class="adr-dramatic-history-round">{{localize "argas-dice-roller.requestRoll.dramaticRoundLabel"}} {{round}}</div>
+          <ul class="adr-dramatic-history-list">
+            {{#each entries}}
+            <li class="adr-dramatic-history-item">
+              <div class="adr-dramatic-history-head">{{actorName}} &middot; {{cardRank}}<span class="adr-dramatic-card-suit">{{cardSuit}}</span>{{#if cardIsJoker}} <span class="adr-dramatic-joker-bonus">(+2)</span>{{/if}}:</div>
+              <div class="adr-dramatic-history-body">{{{diceHTML}}}<span class="adr-dramatic-history-outcome {{resultClass}}">{{resultText}}</span></div>
+            </li>
+            {{/each}}
+          </ul>
+        {{/each}}
+      </div>
+    </div>
+  </div>
+  {{/if}}
+
+  <div class="adr-request-status adr-dramatic-task-status">{{{dramaticStatusHTML}}}</div>
+
+  {{#if pendingOutcome}}
+  <div class="adr-dramatic-controls">
+    <button type="button" class="adr-dramatic-advance-btn" data-action="adr-advance-dramatic-round">
+      {{#if (eq pendingOutcome "readyNextRound")}}
+        {{localize "argas-dice-roller.requestRoll.dramaticNextRoundButton"}}
+      {{else}}
+        {{localize "argas-dice-roller.requestRoll.dramaticConfirmFailureButton"}}
+      {{/if}}
+    </button>
+  </div>
+  {{/if}}
+
+{{else}}
+  {{#if groupTraitName}}
+  {{!-- ══ Gruppenprobe: Trait einmal oben, kompaktes Layout ══ --}}
+  <div class="adr-request-trait-line">
+    <div class="adr-request-trait-name">~ {{groupTraitName}} ~</div>
+    {{#if showModifier}}<div class="adr-request-trait-die"><span class="adr-request-mod-label">{{localize "argas-dice-roller.requestRoll.modifierLabel"}}</span>&nbsp;&nbsp;<span class="adr-request-modifier {{modifierClass}}">{{modifierStr}}</span></div>{{/if}}
+  </div>
+
+  <div class="adr-request-entries">
+    {{#each entries}}
+    <div class="adr-request-entry adr-group-entry" data-actor-id="{{actorId}}">
+      <div class="adr-request-actor-row">
+        <img class="adr-request-actor-img" src="{{actorImg}}" alt="" />
+        <div class="adr-request-actor-info">
+          <span class="adr-request-actor-name">{{actorName}}</span>
+          <div class="adr-request-trait-detail">→ {{#if isUntrained}}<em>(<span class="adr-request-die-label">{{traitDieLabel}}</span>{{#if isWildcard}}·WD{{/if}})-2</em>{{else}}(<span class="adr-request-die-label">{{traitDieLabel}}</span>{{#if isWildcard}}·WD{{/if}}){{/if}}{{#if ../showModifier}} <span class="adr-request-modifier {{../modifierClass}}">{{../modifierStr}}</span>{{/if}}</div>
+        </div>
+        <div class="adr-request-result-area">
+          <button type="button"
+                  class="adr-roll-btn"
+                  data-action="adr-roll-trait"
+                  data-actor-id="{{actorId}}"
+                  data-request-id="{{../requestId}}">
+            🎲 {{localize "argas-dice-roller.requestRoll.chatRollButton"}}
+          </button>
+          <button type="button"
+                  class="adr-benny-btn adr-hidden"
+                  data-action="adr-use-benny"
+                  data-actor-id="{{actorId}}"
+                  title="{{localize "argas-dice-roller.requestRoll.bennyTooltip"}}">
+            <img src="systems/swade/assets/benny/benny-chip-front.png" alt="Benny" />
+          </button>
+        </div>
+      </div>
+    </div>
+    {{/each}}
+  </div>
+
+{{else}}
+  {{#if (eq mode "opposed")}}
+  {{!-- ══ Vergleichende Probe: Duell-Layout (zwei Akteure nebeneinander, VS-Badge in der Mitte) ══ --}}
+  <div class="adr-opposed-arena">
+    {{#each entries}}
+    <div class="adr-request-entry adr-opposed-side" data-actor-id="{{actorId}}" data-opposed-index="{{@index}}">
+      <div class="adr-request-actor-row adr-opposed-actor-row">
+        <img class="adr-request-actor-img adr-opposed-portrait" src="{{actorImg}}" alt="" />
+        <div class="adr-request-actor-info adr-opposed-info">
+          <span class="adr-request-actor-name adr-opposed-name">{{actorName}}</span>
+          <div class="adr-opposed-trait{{#if isUntrained}} adr-opposed-trait-untrained{{/if}}">{{traitName}}</div>
+          <div class="adr-request-trait-detail adr-opposed-trait-detail">{{#if isUntrained}}<em>(<span class="adr-request-die-label">{{traitDieLabel}}</span>{{#if isWildcard}}·WD{{/if}})-2</em>{{else}}(<span class="adr-request-die-label">{{traitDieLabel}}</span>{{#if isWildcard}}·WD{{/if}}){{/if}}{{#if ../showModifier}} <span class="adr-request-modifier {{../modifierClass}}">{{../modifierStr}}</span>{{/if}}</div>
+        </div>
+        <div class="adr-request-result-area adr-opposed-result-area">
+          <button type="button"
+                  class="adr-roll-btn"
+                  data-action="adr-roll-trait"
+                  data-actor-id="{{actorId}}"
+                  data-request-id="{{../requestId}}">
+            🎲 {{localize "argas-dice-roller.requestRoll.chatRollButton"}}
+          </button>
+          <button type="button"
+                  class="adr-benny-btn adr-hidden"
+                  data-action="adr-use-benny"
+                  data-actor-id="{{actorId}}"
+                  title="{{localize "argas-dice-roller.requestRoll.bennyTooltip"}}">
+            <img src="systems/swade/assets/benny/benny-chip-front.png" alt="Benny" />
+          </button>
+        </div>
+      </div>
+    </div>
+    {{/each}}
+    <div class="adr-opposed-vs" aria-hidden="true">
+      <span class="adr-opposed-vs-badge">VS</span>
+    </div>
+  </div>
+
+  {{else}}
+  {{!-- ══ Einzelprobe: Trait-Header pro Eintrag, darunter kompakt wie Gruppenprobe ══ --}}
+  <div class="adr-request-entries">
+    {{#each entries}}
+    <div class="adr-request-entry" data-actor-id="{{actorId}}">
+      <div class="adr-request-trait-line">
+        <div class="adr-request-trait-name">~ {{traitName}} ~</div>
+        {{#if ../showModifier}}<div class="adr-request-trait-die"><span class="adr-request-mod-label">{{localize "argas-dice-roller.requestRoll.modifierLabel"}}</span>&nbsp;&nbsp;<span class="adr-request-modifier {{../modifierClass}}">{{../modifierStr}}</span></div>{{/if}}
+      </div>
+      <div class="adr-request-actor-row">
+        <img class="adr-request-actor-img" src="{{actorImg}}" alt="" />
+        <div class="adr-request-actor-info">
+          <span class="adr-request-actor-name">{{actorName}}</span>
+          <div class="adr-request-trait-detail">→ {{#if isUntrained}}<em>(<span class="adr-request-die-label">{{traitDieLabel}}</span>{{#if isWildcard}}·WD{{/if}})-2</em>{{else}}(<span class="adr-request-die-label">{{traitDieLabel}}</span>{{#if isWildcard}}·WD{{/if}}){{/if}}{{#if ../showModifier}} <span class="adr-request-modifier {{../modifierClass}}">{{../modifierStr}}</span>{{/if}}</div>
+        </div>
+        <div class="adr-request-result-area">
+          <button type="button"
+                  class="adr-roll-btn"
+                  data-action="adr-roll-trait"
+                  data-actor-id="{{actorId}}"
+                  data-request-id="{{../requestId}}">
+            🎲 {{localize "argas-dice-roller.requestRoll.chatRollButton"}}
+          </button>
+          <button type="button"
+                  class="adr-benny-btn adr-hidden"
+                  data-action="adr-use-benny"
+                  data-actor-id="{{actorId}}"
+                  title="{{localize "argas-dice-roller.requestRoll.bennyTooltip"}}">
+            <img src="systems/swade/assets/benny/benny-chip-front.png" alt="Benny" />
+          </button>
+        </div>
+      </div>
+    </div>
+    {{/each}}
+  </div>
+  {{/if}}
+  {{/if}}
+{{/if}}
+
+{{#unless (eq mode "dramatic")}}
+  <div class="adr-request-status">
+    {{localize "argas-dice-roller.requestRoll.chatPending"}}
+  </div>
+{{/unless}}
+
+</div>

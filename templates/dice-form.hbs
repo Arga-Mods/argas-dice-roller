@@ -1,0 +1,160 @@
+{{!-- SPDX-License-Identifier: GPL-3.0-or-later --}}
+{{!-- Copyright (C) 2026 Arga-Mods --}}
+
+{{!-- templates/dice-form.hbs --}}
+<div class="adr-wrapper">
+
+{{!-- Toggle Controls Section --}}
+{{#if (or enableHiddenRolls showExplodingToggle showWildToggle)}}
+  <div class="app adr-toggle-box">
+    {{#if enableHiddenRolls}}
+      <fieldset class="adr-field-set">
+        <legend>{{localize "argas-dice-roller.legend.hiddenRolls"}}</legend>
+        <div class="adr-toggle" title="{{localize 'argas-dice-roller.tooltip.makeGMRoll'}}">
+          <input type="checkbox" name="hiddenRoll" id="makeGMRoll" {{#if isGMRoll}}checked{{/if}}/>
+          <i class="fa-solid fa-user-secret"></i>
+        </div>
+        <div class="adr-toggle" title="{{localize 'argas-dice-roller.tooltip.makeBlindRoll'}}">
+          <input type="checkbox" name="hiddenRoll" id="makeBlindRoll" {{#if isBlindRoll}}checked{{/if}}/>
+          <i class="fa-solid fa-eye-slash"></i>
+        </div>
+        <div class="adr-toggle" title="{{localize 'argas-dice-roller.tooltip.makeSelfRoll'}}">
+          <input type="checkbox" name="hiddenRoll" id="makeSelfRoll" {{#if isSelfRoll}}checked{{/if}}/>
+          <i class="fa-solid fa-user"></i>
+        </div>
+      </fieldset>
+    {{/if}}
+
+    {{#if showExplodingToggle}}
+      <fieldset class="adr-field-set">
+        <legend>{{localize "argas-dice-roller.legend.explodingDiceRolls"}}</legend>
+        <div class="adr-toggle" title="{{localize 'argas-dice-roller.tooltip.explodingDice'}}">
+          <input type="checkbox" id="explodingDice" {{#if isExploding}}checked{{/if}}/>
+          <i class="fa-solid fa-explosion"></i>
+        </div>
+      </fieldset>
+    {{/if}}
+
+    {{#if showWildToggle}}
+      <fieldset class="adr-field-set">
+        <legend>{{localize "argas-dice-roller.legend.wildDie"}}</legend>
+        <div class="adr-toggle" title="{{localize 'argas-dice-roller.tooltip.wildDie'}}">
+          <input type="checkbox" id="wildDie" {{#if isWildDie}}checked{{/if}}/>
+          <i class="fa-solid fa-dice-six"></i>
+        </div>
+      </fieldset>
+    {{/if}}
+  </div>
+{{/if}}
+
+{{!-- Dice Roll Buttons Section --}}
+<div class="app adr-form">
+  {{#each diceRows}}
+    <div class="adr-rows">
+      <div class="adr-col adr-1stcol rollable"
+           data-dice-type="{{diceType}}"
+           data-dice-roll="1"
+           {{#if (isD100 diceType)}}title="{{localize 'argas-dice-roller.legend.d100Rolls'}}"{{/if}}>
+
+        {{#if (isCoin diceType)}}
+          <img class="adr-dice-icon" src="{{../modulePath}}/assets/icons/coin.svg" alt="Coin">
+          <span class="dice-label">{{diceLabel}}</span>
+        {{else if (isD2 diceType)}}
+          <img class="adr-dice-icon" src="{{../modulePath}}/assets/icons/d2.svg" alt="D2">
+          <span class="dice-label">{{diceLabel}}</span>
+        {{else if (isD100 diceType)}}
+          <span class="d100-icons">
+            <img class="adr-dice-icon adr-dice-icon-small" src="{{../modulePath}}/assets/icons/d10.svg" alt="d10">
+            <img class="adr-dice-icon adr-dice-icon-small" src="{{../modulePath}}/assets/icons/d10.svg" alt="d10">
+          </span>
+          <span class="dice-label">{{diceLabel}}</span>
+        {{else}}
+          <img class="adr-dice-icon" src="{{../modulePath}}/assets/icons/{{diceType}}.svg" alt="{{diceType}}">
+          <span class="dice-label">{{diceLabel}}</span>
+        {{/if}}
+
+      </div>
+ {{#each rolls}}
+        <div class="adr-col rollable"
+             data-dice-type="{{../diceType}}"
+             data-dice-roll="{{this}}">
+          <span class="adr-num">{{this}}</span>
+        </div>
+      {{/each}}
+      {{#each placeholders}}
+        <div class="adr-col adr-placeholder" aria-hidden="true"></div>
+      {{/each}}
+
+    </div>              {{!-- schließt .adr-rows --}}
+  {{/each}}             {{!-- schließt #each diceRows --}}
+</div>                  {{!-- schließt .app.adr-form --}}
+
+{{#if showModifiers}}
+
+<div class="app adr-modifier-box">
+  <fieldset class="adr-field-set">
+    <legend>{{localize "argas-dice-roller.legend.modifiers"}}</legend>
+    <div class="adr-modifier" data-modifier="-6">−6</div>
+    <div class="adr-modifier" data-modifier="-4">−4</div>
+    <div class="adr-modifier" data-modifier="-2">−2</div>
+    <div class="adr-modifier" data-modifier="-1">−1</div>
+    <input type="text" class="adr-modifier-manual-input"
+           data-action="set-manual-modifier" value="{{modifierDisplay}}"
+           placeholder="0" inputmode="numeric" autocomplete="off" maxlength="3" />
+    <div class="adr-modifier first-positive" data-modifier="+1">+1</div>
+    <div class="adr-modifier" data-modifier="+2">+2</div>
+    <div class="adr-modifier" data-modifier="+4">+4</div>
+    <div class="adr-modifier" data-modifier="+6">+6</div>
+  </fieldset>
+</div>
+{{/if}}
+{{#if user.isGM}}
+  {{#if enableFateRollButton}}
+<div class="app adr-toggle-box adr-token-group-box">
+
+  <!-- Fate Roll Button -->
+  <fieldset class="adr-field-set">
+    <legend>{{localize "argas-dice-roller.legend.tokenSelection"}}</legend>
+    <div class="adr-button-wrapper adr-token-wrapper">
+          <button type="button"
+              class="adr-token-button adr-fate-button"
+              title="{{localize 'argas-dice-roller.settings.enableFateRollButton.hint'}}"
+              data-action="fate-roll">
+        {{{localize "argas-dice-roller.settings.enableFateRollButton.labelHtml"}}}
+      </button>
+    </div>
+  </fieldset>
+
+  {{#if enableRequestRoll}}
+  <!-- Request Roll Button -->
+  <fieldset class="adr-field-set">
+    <legend>{{localize "argas-dice-roller.requestRoll.legend"}}</legend>
+    <div class="adr-button-wrapper adr-token-wrapper">
+      <button type="button"
+              class="adr-token-button adr-request-roll-button"
+              data-action="open-request-roll">
+        {{{localize "argas-dice-roller.requestRoll.button"}}}
+      </button>
+    </div>
+  </fieldset>
+  {{/if}}
+
+    {{!-- ADR-FATE-CANDIDATES-UI-DISABLED - Zum Reaktivieren die Kommentare entfernen
+  <fieldset class="adr-field-set">
+    <legend>{{localize "argas-dice-roller.legend.showGroupSelection"}}</legend>
+    <div class="adr-button-wrapper">
+      <button type="button"
+              class="adr-group-button"
+              data-value="yes"
+              title="{{localize 'argas-dice-roller.settings.groupSelectionYes.hint'}}">
+        {{localize "argas-dice-roller.settings.groupSelectionYes.name"}}
+      </button>
+    </div>
+  </fieldset>
+  ADR-FATE-CANDIDATES-UI-DISABLED --}}
+
+</div>
+  {{/if}}
+{{/if}}
+
+</div>

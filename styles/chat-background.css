@@ -1,0 +1,817 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Arga-Mods */
+
+@font-face {
+  font-family: 'Roboto Slab';
+  src: url('../assets/fonts/RobotoSlab-VariableFont_wght.woff2') format('woff2');
+  font-weight: 100 900;
+  font-style: normal;
+}
+.adr-chat :not(.message-delete):not(.message-delete *):not(.fa):not([class*="fa-"]),
+.adr-chat *:not(.message-delete):not(.message-delete *):not(.fa):not([class*="fa-"]) {
+  font-family: 'Roboto Slab', sans-serif !important;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Hintergrund per border-image (9-Slice) statt gestrecktem
+   background-image. Vorteil: Ecken bleiben formstabil, Bild
+   wird nicht mehr in die Länge gezogen wenn die Nachricht
+   wächst (z.B. bei Gruppenproben mit vielen Spielern).
+
+   Tuning-Werte (zentral, falls Du justieren willst):
+   - border-width: Wie breit der Bild-Rand auf der Bildschirm-
+     seite gerendert wird.
+   - border-image-slice: Wie viele Pixel vom Original-Bild
+     als Eck/Kanten-Bereich verwendet werden.
+   - border-image-repeat: Wie der Kanten-Bereich gefüllt wird
+     (round = passende Wiederholung, stretch = gestreckt,
+      repeat = pixelweise wiederholt).
+   ──────────────────────────────────────────────────────────── */
+
+.adr-chat {
+  background-image: none;
+  border-style: solid;
+  border-color: transparent;
+  border-width: 24px;
+  border-image-source: url("../assets/layout/background_f.webp");
+  border-image-slice: 80 fill;     /* 944x944 Original, Pergament-Zacken ≈ 80px */
+  border-image-repeat: round;       /* Zacken-Wiederholung */
+  border-image-width: 1;            /* 1x border-width — verhindert Quetschen durch Systeme (z.B. DSA: 30px) */
+  box-sizing: border-box;
+  padding: 0.1rem 0.4rem 0.1rem 0.4rem;
+}
+.adr-chat.scifi {
+  border-width: 48px;               /* TEST: war 32px — größere Breite = schärfere Ecken */
+  border-image-source: url("../assets/layout/background_sf.webp");
+  border-image-slice: 130 fill;     /* 907x921 Original, Eck-Geometrie ≈ 130px */
+  border-image-repeat: stretch;     /* glatte Linien — stretch unauffällig */
+  border-image-width: 1;            /* 1x border-width — verhindert Quetschen durch Systeme (z.B. DSA: 30px) */
+}
+
+li.chat-message.adr-chat.adr-fate {
+  background-image: none !important;
+  background-color: transparent !important;
+  padding: 0 !important;
+}
+
+li.chat-message.adr-chat:not(.adr-fate),
+li.chat-message.adr-chat.whisper:not(.adr-fate),
+li.chat-message.adr-chat.blind:not(.adr-fate),
+li.chat-message.adr-chat.blind.whisper:not(.adr-fate),
+li.chat-message.adr-chat.whisper.blind:not(.adr-fate),
+li.chat-message.adr-chat.blind.roll:not(.adr-fate),
+li.chat-message.adr-chat.whisper.roll:not(.adr-fate),
+li.chat-message.adr-chat.blind.whisper.roll:not(.adr-fate) {
+  background-image: none !important;
+  border-style: solid !important;
+  border-color: transparent !important;
+  border-width: 24px !important;
+  border-image-source: url("../assets/layout/background_f.webp") !important;
+  border-image-slice: 80 fill !important;
+  border-image-repeat: round !important;
+  border-image-width: 1 !important;  /* 1x border-width — DSA setzt sonst 30px und quetscht das Eckbild */
+  box-sizing: border-box !important;
+  padding: 0.1rem 0.4rem 0.1rem 0.4rem !important;
+}
+li.chat-message.adr-chat.scifi:not(.adr-fate),
+li.chat-message.adr-chat.whisper.scifi:not(.adr-fate),
+li.chat-message.adr-chat.blind.scifi:not(.adr-fate),
+li.chat-message.adr-chat.blind.whisper.scifi:not(.adr-fate),
+li.chat-message.adr-chat.whisper.blind.scifi:not(.adr-fate),
+li.chat-message.adr-chat.blind.roll.scifi:not(.adr-fate),
+li.chat-message.adr-chat.whisper.roll.scifi:not(.adr-fate),
+li.chat-message.adr-chat.blind.whisper.roll.scifi:not(.adr-fate) {
+  border-width: 48px !important;    /* TEST: war 32px — größere Breite = schärfere Ecken */
+  border-image-source: url("../assets/layout/background_sf.webp") !important;
+  border-image-slice: 130 fill !important;
+  border-image-repeat: stretch !important;
+  border-image-width: 1 !important;  /* 1x border-width — DSA setzt sonst 30px und quetscht das Eckbild */
+}
+
+.adr-chat .message-header h4 {
+  margin: 0 0 0.4rem 0;
+  color: #000;
+  font-size: 0.8rem !important;
+}
+
+.adr-chat .adr-actor-img {
+  position: relative;
+  margin: -0.6rem auto -1.0rem;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  object-fit: contain;
+  border: 0.0625rem solid rgba(0,0,0,0.2);
+  z-index: 2;
+}
+.adr-chat.scifi .adr-actor-img {
+  margin-top: -1.0rem;
+}
+
+.adr-chat .adr-actor-name {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  background-image: url("../assets/layout/banner_f.webp");
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: 100% 100%;
+  font-size: 1.8rem;
+  font-weight: bold;
+  color: #000;
+  line-height: 1.2;
+  margin-top: -0.1rem;
+  margin-right: auto;
+  margin-bottom: 1.5rem;
+  margin-left: auto;
+  padding-left: 0.4rem;
+  padding-right: 0.4rem;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+  position: relative;
+  word-break: break-word;
+  white-space: normal;
+  text-align: center;
+  width: auto;
+  max-width: 85%;
+  border-radius: 0.3rem;
+  filter: drop-shadow(0 0 0.4rem rgba(0,0,0,0.4));
+}
+
+.adr-chat .adr-actor-name-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.adr-chat.scifi .adr-actor-name,
+li.chat-message.adr-chat.scifi .adr-actor-name,
+li.chat-message.adr-chat.whisper.scifi .adr-actor-name,
+li.chat-message.adr-chat.blind.scifi .adr-actor-name,
+li.chat-message.adr-chat.blind.whisper.scifi .adr-actor-name,
+li.chat-message.adr-chat.whisper.blind.scifi .adr-actor-name,
+li.chat-message.adr-chat.blind.roll.scifi .adr-actor-name,
+li.chat-message.adr-chat.whisper.roll.scifi .adr-actor-name,
+li.chat-message.adr-chat.blind.whisper.roll.scifi .adr-actor-name {
+  background-image: url("../assets/layout/banner_sf.webp") !important;
+  max-width: 100% !important;       /* war 95% — Plakette breiter, mehr Platz für den Namen */
+}
+.adr-chat .adr-actor-name[title] {
+  pointer-events: none !important;
+}
+.adr-chat .adr-actor-name::after {
+  content: "";
+  display: none !important;
+}
+.adr-chat .message-content,
+.adr-chat .message-content .dice-result {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+.adr-chat .message-content {
+  text-align: center !important;
+}
+.adr-chat .flavor-text {
+  text-align: center;
+  margin-top: 0.1rem;
+  margin-bottom: 0.5rem;
+  color: #000;
+}
+.adr-chat .adr-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  margin-top: 0.5rem;
+  gap: 0.3rem;
+}
+.adr-chat .adr-dice-box {
+  flex: 1;
+  margin: 0 0.5rem;
+}
+.adr-chat .adr-value {
+  font-size: 1.25rem;
+  font-weight: bold;
+}
+.adr-chat .dice-total {
+  text-align: center;
+  font-size: 1.2rem;
+  margin-top: 0.5rem;
+}
+.adr-chat .adr-summary {
+  font-style: italic;
+  text-align: center;
+  margin: 0.5rem 1rem;
+}
+.adr-chat .adr-dice-row {
+  display: flex;
+  justify-content: center;
+  gap: 1.8rem;
+  margin-bottom: 0.5rem;
+  position: relative;
+}
+.adr-chat .adr-dice-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 6rem;
+  text-align: center;
+}
+.adr-chat .adr-summary-total {
+  font-weight: bold;
+  font-size: 2.2rem;
+  text-align: center;
+  margin-top: -0.5rem;
+}
+.adr-chat .adr-dice-info {
+  text-align: center;
+  margin: -0.7rem 0;
+  font-size: 0.9rem;
+  color: #000;
+  white-space: nowrap;
+  position: relative;
+  padding-bottom: 1rem;
+}
+.adr-chat .adr-dice-info .adr-dice-mod {
+  font-weight: bold;
+  margin-left: 0.2rem;
+}
+.adr-chat .adr-dice-info .adr-dice-mod-pos {
+  color: #1a8a1a;
+}
+.adr-chat .adr-dice-info .adr-dice-mod-neg {
+  color: #d10000;
+}
+.adr-chat .adr-ex,
+.adr-chat .adr-result .adr-ex {
+  font-size: 0.6em;
+  vertical-align: super;
+  font-weight: normal;
+  letter-spacing: -0.02em;
+}
+.adr-chat .adr-dice-info::after {
+  content: "";
+  display: block;
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 100%;
+  height: 0.3rem;
+  background-color: #5b3a29;
+  margin-bottom: 0.7rem;
+}
+.adr-chat.scifi .adr-dice-info::after {
+  background-color: #5c636a;
+}
+.adr-result {
+  text-align: center;
+}
+.adr-total {
+  font-size: 2.2rem;
+  font-weight: bold;
+}
+.adr-chat .adr-iron-bar {
+  position: absolute;
+  left: 50%;
+  top: -0.8rem;
+  transform: translateX(-50%);
+  z-index: 1;
+}
+.adr-chat .adr-iron-bar img {
+  height: 4.4rem;
+  width: auto;
+  display: block;
+  margin: 0;
+  border: none;
+}
+.adr-individual {
+  font-family: 'Roboto Slab', var(--font-primary), serif;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin-top: 0.2rem;
+}
+.adr-label {
+  margin-right: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: normal;
+  color: #222;
+}
+.adr-individual-details .min { color: red; font-weight: bold; }
+.adr-individual-details .max { color: green; font-weight: bold; }
+
+/* Tatsächlich angewandter Modifikator (kann vom Spieler im SWADE-Dialog
+   geändert worden sein — daher in der Einzelergebnis-Liste dokumentiert) */
+.adr-applied-mod-pos { color: green; font-weight: bold; }
+.adr-applied-mod-neg { color: red; font-weight: bold; }
+.adr-applied-mod-zero { color: #888; font-weight: normal; }
+.adr-individual + .adr-individual {
+  margin-top: -0.2rem;
+}
+.adr-individual-toggle {
+  font-weight: normal;
+  font-size: 0.8rem;
+  cursor: pointer;
+  margin-bottom: 0.2rem;
+  margin-top: 0.1rem;
+  color: #444;
+  background: #ede6d6;
+  border-radius: 0.5rem;
+  padding: 0.125rem 0.5rem;
+  display: inline-block;
+  box-shadow: 0 0.125rem 0.375rem rgba(60, 40, 10, 0.4);
+}
+li.chat-message.adr-chat.scifi .adr-individual-toggle {
+  background: #e5e3df;
+  box-shadow: 0 0.125rem 0.375rem rgba(20, 30, 40, 0.4);
+}
+
+.adr-individual-details.adr-individual-hidden {
+  display: none;
+}
+.adr-individual-details {
+  margin-top: 0;
+  margin-bottom: 0.1rem;
+  padding-left: 0.6875rem;
+  padding-right: 0.6875rem;
+}
+.adr-highlight-ones {
+  color: #d10000 !important;
+  font-weight: bold;
+}
+li.chat-message.adr-chat .dice-result {
+  position: relative;
+  overflow: visible;
+}
+li.chat-message.adr-chat .dice-result .dice-terms {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 100%;
+  margin: 0;
+  z-index: 10;
+  background: inherit;
+}
+li.chat-message.adr-chat:not(.adr-fate) {
+  background-color: #e5e2db !important;
+  background-clip: padding-box !important;
+  box-shadow: none !important;
+  border-radius: 0 !important;
+  margin: 0.4rem 0 !important;
+}
+
+[data-adr-hidden="true"] .adr-dice-value {
+  font-size: 2.5rem;
+  font-weight: bold;
+  margin-top: -0.6rem;
+  font-family: var(--chat-font-family, "Signika");
+}
+
+[data-adr-hidden="true"] .adr-dice-label {
+  font-family: 'Roboto Slab', sans-serif;
+  color: #e56917;
+  font-weight: bold;
+  font-size: 0.9rem;
+  margin-top: 0.3rem;
+  line-height: 1.2;
+  letter-spacing: 0.02rem;
+}
+
+/* "Versteckter Wurf"-Hinweistext: jede Zeile als Block, Beschriftung ohne
+   Umbruch. font-size hier direkt am Zeilen-Element — damit ist die Größe
+   unabhängig vom Wrapper (Pfad A nutzt Inline-Style auf .adr-hidden-info,
+   Pfad B nutzt .adr-dice-label) und die beiden Render-Pfade liefern stets
+   identische Schriftgröße. */
+.adr-hidden-info-line {
+  display: block;
+  text-align: center;
+  font-size: 0.9rem;
+  line-height: 1.2;
+}
+.adr-hidden-info-label {
+  white-space: nowrap;
+}
+
+.adr-chat .adr-actor-banner {
+  display: block;
+  margin: 0 auto;
+  width: 75%;
+  height: auto;
+  padding-top: 0.2rem;
+}
+
+li.chat-message.adr-fate { position: relative !important; }
+li.chat-message.adr-fate .adr-fate-bg { filter: brightness(1.05); }
+
+li.chat-message.adr-fate header.message-header {
+  position: absolute !important;
+  top: 0.5rem !important;
+  left: 0.5rem !important;
+  right: -1rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 0.5rem !important;
+  pointer-events: auto !important;
+  padding-right: 1.75rem !important;
+  z-index: 5 !important;
+  background: transparent !important;
+}
+li.chat-message.adr-fate header.message-header .message-sender { font-weight: normal !important; }
+li.chat-message.adr-fate header.message-header .adr-header-label {
+  color: #eee !important;
+}
+li.chat-message.adr-fate header.message-header time.message-timestamp {
+  color: #eee !important;
+  margin-left: auto !important;
+  white-space: nowrap !important;
+  flex: 0 0 auto !important;
+  text-align: right !important;
+}
+li.chat-message.adr-fate header.message-header a.message-delete {
+  color: #eee !important;
+  margin-left: 0.25rem !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 0.375rem !important;
+  transition: background-color 120ms ease !important;
+  pointer-events: auto !important;
+}
+
+li.chat-message.adr-fate .adr-fate {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+li.chat-message.adr-fate .adr-fate-name {
+  font-size: 2.0rem;
+  font-weight: 700;
+  margin-top: 11.8rem;
+  line-height: 1.1;
+  color: #eee;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+li.chat-message.adr-fate .adr-fate-sub { font-size: 1.05rem; margin-top: 0.25rem; color: #eee; }
+li.chat-message.adr-fate .adr-fate-candidates { margin-top: 1.5rem; }
+
+li.chat-message.adr-fate::before,
+li.chat-message.adr-fate::after,
+li.chat-message.adr-fate .message-content::before,
+li.chat-message.adr-fate .message-content::after { display: none !important; content: none !important; }
+li.chat-message.adr-fate .message-content,
+li.chat-message.adr-fate .dice-result,
+li.chat-message.adr-fate .chat-card,
+li.chat-message.adr-fate .card-content { background: transparent !important; background-image: none !important; box-shadow: none !important; }
+
+.adr-fate.adr-chat { background-image: none !important; }
+
+li.chat-message.adr-chat:not(.adr-fate) header.message-header {
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+li.chat-message.adr-chat:not(.adr-fate) .message-header::before,
+li.chat-message.adr-chat:not(.adr-fate) .message-header::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* --- Header-Kinder verstecken: Portraits, Sender, Autoren etc. --- */
+li.chat-message.adr-chat:not(.adr-fate) .message-header .message-portrait,
+li.chat-message.adr-chat:not(.adr-fate) .message-header .message-sender:not(h4),
+li.chat-message.adr-chat:not(.adr-fate) .message-header .message-author,
+li.chat-message.adr-chat:not(.adr-fate) .message-header .avatar,
+li.chat-message.adr-chat:not(.adr-fate) .message-header .actor-icon,
+li.chat-message.adr-chat:not(.adr-fate) .message-header .subtitle,
+li.chat-message.adr-chat:not(.adr-fate) .message-header small,
+li.chat-message.adr-chat:not(.adr-fate) .message-header img {
+  display: none !important;
+}
+
+li.chat-message.adr-chat:not(.adr-fate) .message-header * {
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+/* --- Fate-Header: gleiche Elemente verstecken --- */
+li.chat-message.adr-fate .message-header .message-portrait,
+li.chat-message.adr-fate .message-header .avatar,
+li.chat-message.adr-fate .message-header .actor-icon,
+li.chat-message.adr-fate .message-header .subtitle,
+li.chat-message.adr-fate .message-header .message-author,
+li.chat-message.adr-fate .message-header small,
+li.chat-message.adr-fate .message-header img {
+  display: none !important;
+}
+/* Hinweiszeile unter beiden Ergebnissen */
+.adr-dice-row .adr-critical-row{
+  /* Grid: über alle Spalten zentrieren */
+  grid-column: 1 / -1;
+  justify-self: center;
+
+  /* Flex-Fallback */
+  flex-basis: 100%;
+  width: 100%;
+
+  display: block;
+  text-align: center;
+  white-space: nowrap;
+  margin-top: 4px;
+  font-size: 0.6em;
+  color: #b30000; /* identisch zu Rot der Einsen */
+  writing-mode: horizontal-tb;
+  transform: none;
+}
+
+/* ---------------------------------------------------------------- */
+/*  Münzwurf: etwas mehr Abstand über dem Ergebnis als beim Würfel  */
+/*  (gilt nur für echte Münzzellen — sonst würde jeder Wurf ohne    */
+/*  Wild Die diesen Extra-Abstand bekommen.)                         */
+/* ---------------------------------------------------------------- */
+.adr-chat .adr-dice-cell.adr-coin-cell .adr-summary-total {
+  margin-top: -0.2rem !important;
+}
+
+/* ---------------------------------------------------------------- */
+/*  System-Schutzschild (Chat): Verhindert dass Spielsysteme        */
+/*  (DSA, Warhammer, etc.) die ADR-Chat-Nachrichten umgestalten.    */
+/*  Systeme greifen auf generische Selektoren wie .chat-message,    */
+/*  .message-header, .message-content, .dice-result etc. zu.        */
+/*  Alle ADR-Nachrichten tragen .adr-chat — darüber wird isoliert.  */
+/* ---------------------------------------------------------------- */
+
+/* --- Äußere Nachricht: Reset (außer Border — den setzen wir oben selbst) --- */
+li.chat-message.adr-chat:not(.adr-fate) {
+  border-radius: 0 !important;
+  text-shadow: none !important;
+  filter: drop-shadow(0 0.3rem 1.0rem rgba(0, 0, 0, 0.8)) !important;
+  font-family: 'Roboto Slab', sans-serif !important;
+  font-size: 1rem !important;
+  line-height: 1.5 !important;
+  letter-spacing: normal !important;
+  text-transform: none !important;
+  color: #000 !important;
+  overflow: visible !important;
+}
+li.chat-message.adr-chat.adr-fate {
+  border: none !important;
+  border-image: none !important;
+  border-radius: 0 !important;
+  text-shadow: none !important;
+  background: transparent !important;
+  filter: none !important;
+  font-family: 'Roboto Slab', sans-serif !important;
+  font-size: 1rem !important;
+  line-height: 1.5 !important;
+  letter-spacing: normal !important;
+  text-transform: none !important;
+  color: #000 !important;
+}
+
+/* --- System-Pseudo-Elemente auf der Nachricht selbst --- */
+li.chat-message.adr-chat::before,
+li.chat-message.adr-chat::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* --- Message-Header: System-Dekoration + Typografie blockieren --- */
+li.chat-message.adr-chat .message-header {
+  background: transparent !important;
+  background-image: none !important;
+  border: none !important;
+  border-image: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  filter: none !important;
+  font-family: 'Roboto Slab', sans-serif !important;
+  font-size: 0.8rem !important;
+  line-height: 1.4 !important;
+  letter-spacing: normal !important;
+  text-transform: none !important;
+  color: #000 !important;
+  padding: 0.1rem 0.2rem !important;
+  margin: -0.5rem -0.4rem 0.3rem -0.4rem !important;
+  height: 1.6rem !important;
+  box-sizing: border-box !important;
+  gap: 0 !important;
+}
+li.chat-message.adr-chat.scifi .message-header {
+  padding: 0rem 0rem !important;
+  margin: -0.7rem -0.7rem 0.7rem -0.7rem !important;
+}
+li.chat-message.adr-chat .message-header::before,
+li.chat-message.adr-chat .message-header::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* --- Message-Header H4: Titel-Zeile festnageln --- */
+li.chat-message.adr-chat .message-header h4 {
+  font-family: 'Roboto Slab', sans-serif !important;
+  font-size: 0.8rem !important;
+  font-weight: normal !important;
+  line-height: 1.4 !important;
+  letter-spacing: normal !important;
+  text-transform: none !important;
+  color: #000 !important;
+  text-shadow: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+/* --- H4 in ADR-Nachrichten verstecken, eigenes Label zeigen --- */
+li.chat-message.adr-chat .message-header h4 {
+  display: none !important;
+}
+li.chat-message.adr-chat .message-header .adr-header-label {
+  display: inline !important;
+  font-family: 'Roboto Slab', sans-serif !important;
+  font-size: 0.8rem !important;
+  font-weight: normal !important;
+  line-height: 1.4 !important;
+  color: #777 !important;
+  text-shadow: none !important;
+  letter-spacing: normal !important;
+  text-transform: none !important;
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+
+/* --- Message-Content: System-Hintergründe/Rahmen/Schrift blockieren --- */
+li.chat-message.adr-chat .message-content {
+  border: none !important;
+  border-image: none !important;
+  border-radius: 0 !important;
+  color: #000 !important;
+  font-family: 'Roboto Slab', sans-serif !important;
+  font-size: 1rem !important;
+  line-height: 1.5 !important;
+  letter-spacing: normal !important;
+  text-transform: none !important;
+  text-shadow: none !important;
+  filter: none !important;
+  overflow: visible !important;
+}
+li.chat-message.adr-chat .message-content::before,
+li.chat-message.adr-chat .message-content::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* --- Dice-Result / Dice-Total: System-Styling blockieren --- */
+li.chat-message.adr-chat .dice-result,
+li.chat-message.adr-chat .dice-total {
+  background: transparent !important;
+  background-image: none !important;
+  border: none !important;
+  border-image: none !important;
+  box-shadow: none !important;
+  color: inherit !important;
+  text-shadow: none !important;
+  font-family: inherit !important;
+}
+
+/* --- Metadata-Zeile: System-Deko + Typografie entfernen --- */
+li.chat-message.adr-chat .message-metadata {
+  background: transparent !important;
+  background-image: none !important;
+  border: none !important;
+  border-image: none !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+  font-family: 'Roboto Slab', sans-serif !important;
+  font-size: 0.75rem !important;
+  line-height: 1.4 !important;
+  letter-spacing: normal !important;
+  text-transform: none !important;
+  color: #000 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  transform: none !important;
+}
+li.chat-message.adr-chat .message-metadata::before,
+li.chat-message.adr-chat .message-metadata::after {
+  content: none !important;
+  display: none !important;
+}
+
+/* --- Timestamp + Delete-Button: Schrift festnageln --- */
+li.chat-message.adr-chat .message-header time.message-timestamp {
+  font-family: 'Roboto Slab', sans-serif !important;
+  font-size: 0.75rem !important;
+  font-weight: normal !important;
+  line-height: 1.4 !important;
+  letter-spacing: normal !important;
+  text-transform: none !important;
+  color: #777 !important;
+  text-shadow: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+li.chat-message.adr-chat .message-header a.message-delete {
+  font-family: inherit !important;
+  font-size: 0.75rem !important;
+  color: #777 !important;
+  text-shadow: none !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+/* --- Header-Layout: einzeilig erzwingen (Warhammer-Fix) --- */
+li.chat-message.adr-chat:not(.adr-fate) .message-header {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: flex-start !important;
+  flex-wrap: nowrap !important;
+  justify-content: space-between !important;
+  overflow: hidden !important;
+}
+li.chat-message.adr-chat:not(.adr-fate) .message-header h4 {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+}
+li.chat-message.adr-chat:not(.adr-fate) .message-header .message-metadata {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  flex-wrap: nowrap !important;
+  flex: 0 0 auto !important;
+  gap: 0.25rem !important;
+  margin-left: auto !important;
+}
+li.chat-message.adr-chat:not(.adr-fate) .message-header time.message-timestamp {
+  flex: 0 0 auto !important;
+  order: 0 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+li.chat-message.adr-chat:not(.adr-fate) .message-header a.message-delete {
+  flex: 0 0 auto !important;
+  order: 1 !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+li.chat-message.adr-chat .message-metadata .chatIndicator,
+li.chat-message.adr-chat .message-metadata .privateMessageIndicator {
+  display: none !important;
+}
+li.chat-message.adr-chat .message-header .whisper-to,
+li.chat-message.adr-chat .message-header .message-target,
+li.chat-message.adr-chat .message-header [data-tooltip="Recipients"],
+li.chat-message.adr-chat .message-metadata .whisper-to,
+li.chat-message.adr-chat .message-metadata .message-target {
+  display: none !important;
+}
+
+/* --- Innere ADR-Elemente: Schrift und Farbe festnageln --- */
+li.chat-message.adr-chat .adr-actor-name {
+  font-family: 'Roboto Slab', sans-serif !important;
+  text-shadow: none !important;
+}
+li.chat-message.adr-chat .adr-dice-cell,
+li.chat-message.adr-chat .adr-dice-info,
+li.chat-message.adr-chat .adr-summary-total {
+  font-family: 'Roboto Slab', sans-serif !important;
+  text-shadow: none !important;
+}
+li.chat-message.adr-chat .adr-individual-toggle {
+  font-family: 'Roboto Slab', sans-serif !important;
+  text-shadow: none !important;
+}
+li.chat-message.adr-chat .adr-individual {
+  font-family: 'Roboto Slab', sans-serif !important;
+  text-shadow: none !important;
+}
+li.chat-message.adr-chat .adr-fumble-check-btn {
+  font-family: 'Roboto Slab', sans-serif !important;
+  font-size: 0.8rem !important;
+  text-shadow: none !important;
+}
+li.chat-message.adr-chat .adr-fumble-check-result {
+  font-family: 'Roboto Slab', sans-serif !important;
+  font-size: 0.8rem !important;
+  text-shadow: none !important;
+}
+
+/* --- Wildcard: border-image + text-shadow auf allen Kindelementen --- */
+li.chat-message.adr-chat * {
+  border-image: none !important;
+  text-shadow: none !important;
+}

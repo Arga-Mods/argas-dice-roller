@@ -1,0 +1,363 @@
+{
+  "argas-dice-roller": {
+    "title": "Würfelfenster",
+    "legend": {
+      "hiddenRolls": "Verdeckte Würfe",
+      "explodingDiceRolls": "Explosionswürfel",
+      "coin": "Münze",
+      "wildDie": "Wild Die",
+      "d2Rolls": "D2-Würfel",
+      "d100Rolls": "D100-Würfel",
+      "modifiers": "Modifikatoren (Mehrfachauswahl möglich)",
+      "freeRollLabel": "Freies Würfeln",
+      "wildDieChat": "Wild Die",
+      "tokenSelection": "Zufällige Tokenauswahl",
+      "showGroupSelection": "Kandidaten anzeigen?"
+    },
+    "controlTitle": "Arga's Dice Roller",
+    "tooltip": {
+      "makeGMRoll": "Privater SL-Wurf (sichtbar nur für SL und Dich)",
+      "makeBlindRoll": "Verdeckter SL-Wurf (sichtbar nur für SL)",
+      "makeSelfRoll": "Privater Wurf (sichtbar nur für Dich)",
+      "explodingDice": "Alle Würfel können explodieren",
+      "wildDie": "Wildcard-Würfel (W6) mitwürfeln"
+    },
+    "warn": {
+      "cannotRollAsGroupOrVehicle": "Man kann nicht als 'Gruppe' oder 'Fahrzeug' würfeln.",
+      "coinNotInMulti": "Die Münze kann nicht in einem Mehrfach-Wurf gemischt werden.",
+      "coinNoModifier": "Münzwürfe nehmen keine Modifikatoren an. Bitte zuerst die Modifikatoren abwählen.",
+      "selectToken": "Bitte wähle mindestens einen Token aus."
+    },
+    "chat": {
+      "fateTitle": "Schicksalswurf",
+      "fateChosen": "... wurde vom Schicksal auserwählt",
+      "fateCandidates": "(Kandidaten waren: {names})",
+      "coin-heads": "Kopf",
+      "coin-tails": "Zahl",
+      "coin-roll-label": "Münzwurf",
+      "critical-failure": "Kritischer Fehlschlag",
+      "critical-failure-short": "Kritischer Fehlschlag",
+      "critical-failure-prefix": "Falls der Wurf eine Eigenschaftsprobe<br>war, dann war sie ein",
+      "critical-failure-no-benny": "Kritische Fehlschläge können nicht mittels Benny wiederholt werden",
+      "multiDiceMixed": "div. Würfel",
+      "multiDicePlus": "(+)",
+      "flavorResult": "Ergebnis: {total}",
+      "flavorMain": "Haupt: {main} | Wild Die: {wild}",
+      "flavorMulti": "Multi-Pool: {total}",
+      "flavorMultiWild": "Multi-Pool: {total} | Wild Die: {wild}",
+      "rollName": "Probe",
+      "fumbleCheckName": "Patzer-Check"
+    },
+    "multiSelect": {
+      "tooltipHint": "Mit gedrückter Strg-Taste können mehrere verschiedene Würfel zum gleichzeitigen Wurf ausgewählt werden."
+    },
+    "hiddenInfo": {
+      "gmRoll": "~ Privater SL-Wurf ~\n(sichtbar nur für SL\nund für Dich)",
+      "gmRollViewedByGM": "~ Privater SL-Wurf ~\n(sichtbar nur für SL\nund den Würfelnden)",
+      "blindRoll": "~ Verdeckter SL-Wurf ~\n(sichtbar nur für SL)",
+      "selfRoll": "~ Privater Wurf ~\n(sichtbar nur für Dich)",
+      "gmToPlayerRoll": "~ Privater SL-Wurf ~\n(sichtbar nur für SL)"
+    },
+    "dialogs": {
+      "reload": {
+        "title": "Neuladen erforderlich",
+        "content": "Einige der geänderten Einstellungen erfordern ein Neuladen der Anwendung, damit sie wirksam werden. Möchtest du jetzt neu laden?"
+      }
+    },
+    "requestRoll": {
+      "legendMode": "Modus",
+      "legend": "Würfelproben",
+      "button": "Proben anfordern",
+      "windowTitle": "Probenanforderung",
+      "modeSingle": "Individuelle Proben",
+      "modeSingleHint": "Von jedem angehakten Akteur kann eine unterschiedliche Probe angefordert werden.",
+      "modeGroup": "Gruppenprobe",
+      "modeGroupHint": "Von allen angehakten Akteuren wird die gleiche Eigenschaftsprobe angefordert. Gelbe Eigenschaften stehen nicht allen Akteuren zur Verfügung. Wer über eine angeforderte Eigenschaft nicht verfügt, wird automatisch zu einer 'ungeübten' Probe aufgefordert.",
+      "modeOpposed": "Vergleichende Probe",
+      "modeOpposedHint": "Zwei Akteure treten mit einer individuell ausgewählten Eigenschaft gegeneinander an.",
+      "modeDramatic": "Dramatische Aufgabe",
+      "modeDramaticHint": "Startet eine eigenständige Dramatische Aufgabe mit Presets, Runden- und Markerlogik.",
+      "sectionPCs": "Spielercharaktere",
+      "sectionNPCs": "NSC (auf der aktuellen Szene)",
+      "attributes": "Attribute",
+      "skills": "Fertigkeiten",
+      "legendTraits": "Eigenschaften",
+      "legendTraitsGroup": "Alle Eigenschaften, die mindestens einer der Charaktere hat",
+      "partialHint": "Nicht alle Akteure besitzen diesen Trait (wird als 'Ungeübt' gewürfelt)",
+      "untrained": "Ungeübt",
+      "modifier": "Modifikatoren (Mehrfachauswahl möglich)",
+      "visibility": "Sichtbarkeit",
+      "submit": "Probe(n) anfordern",
+      "chatTitle": "Probenanforderung",
+      "chatHeaderLabel": "Angeforderte Probe",
+      "opposedChatHeaderLabel": "Vergleichende Probe",
+      "modifierLabel": "Modifikator:",
+      "modifierStepMinusTitle": "Modifikator um 1 verringern",
+      "modifierStepPlusTitle": "Modifikator um 1 erhöhen",
+      "diePrefix": "W",
+      "chatRollButton": "Wurf",
+      "chatPending": "Ausstehend…",
+      "chatNoPermission": "Keine Berechtigung",
+      "chatComplete": "Abgeschlossen",
+      "bennyTooltip": "Probe mittels Benny wiederholen",
+      "bennyTooltipNPC": "Probe mittels GM-Benny wiederholen",
+      "fumbleCheckBtn1": "mit W6 auf",
+      "fumbleCheckBtn2": "Patzer prüfen?",
+      "fumbleCheckNone": "<u>kein</u> kritischer Fehlschlag",
+      "fumbleCheckYes": "kritischer Fehlschlag",
+      "fumbleCheckTextNo": "Eine zusätzliche Prüfung ergab, dass {result}&nbsp; vorliegt.",
+      "fumbleCheckTextYes": "Eine zusätzliche Prüfung ergab, dass ein {result}&nbsp; vorliegt.",
+      "fumbleCheckTextNoShort": "Eine zusätzliche Prüfung ergab: {result}",
+      "fumbleCheckTextYesShort": "Eine zusätzliche Prüfung ergab: {result}",
+      "fumbleCheckDieLabel": "Prüfwürfel",
+      "acceptResultBtn": "Würfelergebnis annehmen",
+      "keepBetterResultBtn": "Besseres Ergebnis behalten",
+      "orChoice": "oder",
+      "pendingFumblePotentialHint": "Der Benny-Wiederholungswurf dieses Statisten war eine 1, was ein Patzer sein könnte.",
+      "pendingFumblePotentialHintN": "Der {n}. Benny-Wiederholungswurf dieses Statisten war eine 1, was ein Patzer sein könnte.",
+      "bennyProtectedHint": "Der Benny-Wiederholungswurf war <u>nicht besser</u>. Das alte Ergebnis bleibt bestehen.",
+      "bennyProtectedHintN": "Der {n}. Benny-Wiederholungswurf war <u>nicht besser</u>. Das alte Ergebnis bleibt bestehen.",
+      "bennyProtectedHintExtraOne": "Allerdings war der Wiederholungswurf dieses Statisten eine 1:",
+      "bennyProtectedHintFumble": "Der Benny-Wiederholungswurf war ein kritischer Fehlschlag",
+      "bennyProtectedHintFumbleN": "Der {n}. Benny-Wiederholungswurf war ein kritischer Fehlschlag",
+      "bennyProtectedHintFumblePotential": "Falls der Wurf eine Eigenschaftsprobe<br>war, war der Benny-Wiederholungswurf ein",
+      "bennyProtectedHintFumblePotentialN": "Falls der Wurf eine Eigenschaftsprobe<br>war, war der {n}. Benny-Wiederholungswurf ein",
+      "bennyImprovedHint": "Der Benny-Wiederholungswurf war <u>besser</u>. Das neue Ergebnis gilt.",
+      "bennyImprovedHintN": "Der {n}. Benny-Wiederholungswurf war <u>besser</u>. Das neue Ergebnis gilt.",
+      "bennyProtectedHintNamed": "Der Benny-Wiederholungswurf von {actor} war <u>nicht besser</u>. Das alte Ergebnis bleibt bestehen.",
+      "bennyProtectedHintNamedN": "Der {n}. Benny-Wiederholungswurf von {actor} war <u>nicht besser</u>. Das alte Ergebnis bleibt bestehen.",
+      "bennyProtectedHintExtraOneNamed": "Allerdings war der Wiederholungswurf des Statisten {actor} eine 1:",
+      "bennyProtectedHintFumbleNamed": "Der Benny-Wiederholungswurf von {actor} war ein kritischer Fehlschlag",
+      "bennyProtectedHintFumbleNamedN": "Der {n}. Benny-Wiederholungswurf von {actor} war ein kritischer Fehlschlag",
+      "bennyProtectedHintFumblePotentialNamed": "Falls der Wurf von {actor} eine Eigenschaftsprobe<br>war, war der Benny-Wiederholungswurf ein",
+      "bennyProtectedHintFumblePotentialNamedN": "Falls der Wurf von {actor} eine Eigenschaftsprobe<br>war, war der {n}. Benny-Wiederholungswurf ein",
+      "bennyImprovedHintNamed": "Der Benny-Wiederholungswurf von {actor} war <u>besser</u>. Das neue Ergebnis gilt.",
+      "bennyImprovedHintNamedN": "Der {n}. Benny-Wiederholungswurf von {actor} war <u>besser</u>. Das neue Ergebnis gilt.",
+      "firstRollFumbleNamed": "{actor} erzielt einen kritischen Fehlschlag",
+      "bennyCoinHint": "Der Benny-Wiederholungswurf ersetzt das alte Ergebnis.",
+      "bennyCoinHintN": "Der {n}. Benny-Wiederholungswurf ersetzt das alte Ergebnis.",
+      "bennyFumbleOverwriteHint": "Der Benny-Wiederholungswurf war eine 1, das alte Ergebnis wird verworfen.",
+      "bennyFumbleOverwriteHintN": "Der {n}. Benny-Wiederholungswurf war eine 1, das alte Ergebnis wird verworfen.",
+      "bennyFumbleOverwriteHintConfirmed": "Der Benny-Wiederholungswurf war eine 1 und eine zusätzliche Prüfung hat ergeben, dass ein {result}&nbsp; vorliegt.",
+      "bennyFumbleOverwriteHintConfirmedN": "Der {n}. Benny-Wiederholungswurf war eine 1 und eine zusätzliche Prüfung hat ergeben, dass ein {result}&nbsp; vorliegt.",
+      "bennyFumbleOverwriteHintCritical": "Der Benny-Wiederholungswurf war ein kritischer Fehlschlag, das alte Ergebnis wird verworfen.",
+      "bennyFumbleOverwriteHintCriticalN": "Der {n}. Benny-Wiederholungswurf war ein kritischer Fehlschlag, das alte Ergebnis wird verworfen.",
+      "warn": {
+        "noActor": "Bitte wähle mindestens einen Akteur aus.",
+        "noTrait": "Bitte wähle für alle ausgewählten Akteure eine Fertigkeit oder ein Attribut.",
+        "groupMin": "Bei einer Gruppenprobe bitte mindestens zwei Akteure auswählen.",
+        "opposedTwo": "Bei einer vergleichenden Probe bitte genau zwei Akteure auswählen.",
+        "singleNeed": "Wähle mindestens einen Akteur und eine Eigenschaft aus.",
+        "groupNeed": "Wähle mindestens zwei Akteure mit ihrer jeweiligen Eigenschaft aus.",
+        "opposedNeed": "Wähle zwei Akteure mit ihrer jeweiligen Eigenschaft aus.",
+        "dramaticNeed": "Wähle mindestens einen Akteur und eine Eigenschaft aus.",
+        "notOwner": "Du bist nicht berechtigt, für diesen Charakter zu würfeln.",
+        "alreadyRolled": "Dieser Wurf wurde bereits durchgeführt.",
+        "rollError": "Fehler beim Würfeln. Bitte versuche es erneut.",
+        "bennyUsed": "Für diesen Wurf wurde bereits ein Benny eingesetzt.",
+        "noBennies": "Keine Bennies mehr vorhanden.",
+        "noGMBennies": "Der Spielleiter hat keine Bennys mehr.",
+        "invalidModifier": "Gib einen Wert zwischen {min} und {max} ein."
+      },
+      "dramatic": {
+        "presetStandard": "Standard (3/3)",
+        "presetChallenging": "Herausfordernd (4/3)",
+        "presetHard": "Schwierig (6/4)",
+        "presetComplex": "Komplex (8/5)",
+        "customPreset": "Benutzerdefiniert",
+        "description": "{preset}: Jeder Teilnehmer muss im Schnitt {markers} Marker innerhalb von {rounds} Runden sammeln.",
+        "preview": "{participants} Teilnehmer · {target} Marker · {rounds} Runden",
+        "markersLabel": "Aufgabenmarker",
+        "roundsLabel": "Runden",
+        "statusActive": "Läuft",
+        "statusSuccess": "Erfolgreich abgeschlossen",
+        "statusFailure": "Gescheitert",
+        "statusFailureComplication": "Gescheitert durch Fehlschlag bei Komplikation",
+        "chatHeaderLabel": "Dramatische Aufgabe",
+        "chatRollButton": "Wurf",
+        "chatPassButton": "Aussetzen",
+        "chatWaiting": "Wartet …",
+        "passed": "Ausgesetzt",
+        "markerProgress": "Marker: {current} / {target}",
+        "roundProgress": "Runde: {current} / {total}",
+        "summary": "{preset} · {participants} Teilnehmer · {target} Marker in {rounds} Runden",
+        "cardComplication": "Komplikation (–2)",
+        "cardJoker": "Joker (+2)",
+        "resultSuccess": "+{markers} Marker",
+        "resultFailure": "Keine Marker",
+        "resultCriticalFailure": "−1 Marker",
+        "resultComplicationFailure": "Fehlschlag bei Komplikation — Aufgabe scheitert",
+        "resultComplicationCriticalFailure": "Kritischer Fehlschlag bei Komplikation — Aufgabe scheitert",
+        "roundLabel": "Runde {round}"
+      },
+      "dramaticChatHeaderLabel": "Dramatische Aufgabe",
+      "dramaticRoundLabel": "Runde",
+      "dramaticMarkerLabel": "Marker",
+      "dramaticJokerLabel": "Joker +2",
+      "dramaticComplicationLabel": "Komplikation −2",
+      "dramaticSkipButton": "Aussetzen",
+      "dramaticSkippedLabel": "Ausgesetzt",
+      "dramaticOptionsLabel": "Optionen:",
+      "dramaticChangeTraitButton": "Eigenschaft ändern",
+      "dramaticSupportButton": "Unterstützen",
+      "dramaticChangeTrait": {
+        "title": "~ Eigenschaft ändern ~",
+        "infoHTML": "Wähle eine andere Eigenschaft für die <em>aktuelle</em> Runde der Dramatischen Aufgabe. Solange du in dieser Runde noch nicht gewürfelt hast, kannst du die Wahl beliebig oft ändern.",
+        "noteHTML": "<strong>HINWEIS:</strong>  Bitte mit der SL abklären, ob die gewählte Eigenschaft im Kontext der Aufgabe geeignet ist. In der nächsten Runde gilt deine zuletzt getroffene Wahl als Standard — du kannst sie dort wieder ändern.",
+        "traitLabel": "Welche Eigenschaft proben?",
+        "confirm": "Bestätigen",
+        "cancel": "Abbrechen",
+        "reset": "Auf ursprüngliche Eigenschaft zurücksetzen",
+        "originalTraitLine": "Ursprünglich von der SL angefordert: <strong>{trait}</strong>",
+        "noLongerPossible": "Nicht mehr möglich — du hast in dieser Runde bereits gehandelt."
+      },
+      "dramaticSupport": {
+        "title": "~ Probe unterstützen ~",
+        "bonusInfoHTML": "Eine erfolgreiche Unterstützung gewährt dem Ziel <strong><em>in der aktuellen Runde</em></strong> einen Bonus von +1 (bei Steigerung +2) bei seiner Probe. Es können also nur diejenigen Akteure unterstützt werden, die in dieser Runde noch nicht gewürfelt haben.",
+        "warningHTML": "<strong>HINWEIS:</strong>  Es muss mit der SL abgesprochen werden, ob deine hier ausgewählte Eigenschaft auch geeignet ist, die Probe des anderen Akteurs zu unterstützen.",
+        "targetLabel": "Wer soll unterstützt werden?",
+        "traitLabel": "Mit welcher Eigenschaft möchtest du unterstützen?",
+        "confirm": "Unterstützen",
+        "cancel": "Abbrechen",
+        "noTargetsAvailable": "Keine Ziele verfügbar — alle Teilnehmer haben in dieser Runde bereits gehandelt oder ausgesetzt.",
+        "noLongerPossible": "Unterstützen nicht mehr möglich — das Ziel hat in der Zwischenzeit gehandelt.",
+        "helperLineSuccess": "Unterstützung von <strong>{target}</strong> mittels <em>{trait}</em> war <span class=\"adr-dramatic-support-success-text\">erfolgreich:  {delta}</span>",
+        "helperLineFailure": "Unterstützung von <strong>{target}</strong> mittels <em>{trait}</em> war <span class=\"adr-dramatic-support-failure-text\">erfolglos</span>",
+        "helperLineFumble": "Unterstützung von <strong>{target}</strong> mittels <em>{trait}</em> war ein <span class=\"adr-dramatic-support-fumble-text\">kritischer Fehlschlag</span>",
+        "helperLinePendingFumble": "Unterstützung von <strong>{target}</strong> mittels <em>{trait}</em>: <span class=\"adr-dramatic-support-pending-text\">Patzer-Prüfung ausstehend</span>",
+        "helperLineTooLate": "Unterstützung nicht mehr möglich, Ziel hat schon gehandelt",
+        "helperLineCapExceeded": "Unterstützung nicht möglich, Limit von +4 bereits erreicht",
+        "targetLineSuccess": "<strong>{helper}</strong> unterstützt dich mit <strong>{delta}</strong>",
+        "targetLineFailure": "<strong>{helper}</strong> schafft es nicht, dich zu unterstützen",
+        "targetLineFumble": "<strong>{helper}</strong> behindert deine Probe mit <strong>−2</strong>",
+        "targetLinePendingFumble": "<strong>{helper}</strong>: Patzer-Prüfung ausstehend"
+      },
+      "dramaticNoSuccess": "Kein Erfolg",
+      "dramaticHistoryToggle": "Einzelergebnisse <i>(klick)</i>",
+      "dramaticTaskFailedLabel": "Dramatische Aufgabe fehlgeschlagen",
+      "dramaticGainedMarkerLabel": "+{count} Marker",
+      "dramaticHistoryLostMarkerLabel": "−1 Marker",
+      "dramaticLostMarkerLabelTitle": "Kritischer Fehlschlag:",
+      "dramaticLostMarkerLabelDetail": "−1 Marker (sofern welche vorhanden)",
+      "dramaticHistoryComplicationFailureLabel": "Fehlschlag",
+      "dramaticHistorySupportSuccess": "Unterstützt {target} mit {delta}",
+      "dramaticHistorySupportFailure": "Unterstützung von {target} erfolglos",
+      "dramaticHistorySupportFumble": "Patzer beim Unterstützen — −2 für {target}",
+      "dramaticHistorySupportTooLate": "Unterstützung von {target} zu spät",
+      "dramaticHistorySupportCapExceeded": "Unterstützung von {target} über Limit",
+      "dramaticNoMarkerLabel": "Kein Marker",
+      "dramaticPendingCheckLabel": "Patzer-Prüfung ausstehend",
+      "dramaticComplicationFailedLabel": "Fehlschlag bei Komplikation",
+      "dramaticRoundReadyLine1": "Runde {round} beendet.",
+      "dramaticRoundReadyLine2": "Weiter mit Runde {nextRound}",
+      "dramaticRoundFailurePendingLine1": "Letzte Runde beendet",
+      "dramaticRoundFailurePendingLine2": "Aufgabe gescheitert",
+      "dramaticComplicationFailurePendingLine1": "Fehlschlag bei Komplikation",
+      "dramaticComplicationFailurePendingLine2": "Aufgabe gescheitert",
+      "dramaticNextRoundButton": "Nächste Runde",
+      "dramaticConfirmFailureButton": "Scheitern bestätigen",
+      "dramaticTaskSuccessLine1": "Ziel erreicht",
+      "dramaticTaskSuccessLine2": "Aufgabe erfolgreich abgeschlossen!",
+      "dramaticTaskFailureRoundsLine1": "Ziel nicht erreicht",
+      "dramaticTaskFailureRoundsLine2": "Aufgabe gescheitert",
+      "dramaticTaskFailureComplicationLine1": "Fehlschlag bei Komplikation",
+      "dramaticTaskFailureComplicationLine2": "Aufgabe gescheitert"
+    },
+    "swadeSettings": {
+      "windowTitle": "Spielmechanik SWADE-System",
+      "menuName": "Spielmechanik SWADE-System",
+      "menuLabel": "Einstellungen (nur SL)",
+      "save": "Speichern"
+    },
+    "settings": {
+      "chatDesign": {
+        "name": "Chat-Design",
+        "hint": "Lege fest, in welchem Stil die Würfelergebnisse im Chat dargestellt werden.",
+        "choices": {
+          "fantasy": "Fantasy",
+          "modern": "Modern",
+          "standard": "Standard (Foundry)"
+        }
+      },
+      "enableHiddenRolls": {
+        "name": "Schaltflächen \"Verdeckte Würfe\"",
+        "hint": "Buttons für den 'Privaten SL-Wurf', den 'Verdeckten SL-Wurf' sowie den 'Privaten Wurf' hinzufügen."
+      },
+      "explodingMode": {
+        "name": "Schaltfläche \"Explosionswürfel\"",
+        "hint": "Aktiviert oder deaktiviert einen Button, der beim Anwählen die Explosionsmechanik bei Würfeln anwendet (Würfel, die den höchstmöglichen Wert zeigen, werden erneut gewürfelt und die jeweiligen Ergebnisse werden addiert).",
+        "choices": {
+          "multi": "Mehrfach explodierend",
+          "once": "Nur 1x explodierend",
+          "off": "Schaltfläche ausgeblendet"
+        }
+      },
+      "explodingDefault": {
+        "name": "\"Explosionswürfel\" immer aktiv",
+        "hint": "Die Schaltfläche \"Explosionswürfel\" ist standardmäßig aktiviert."
+      },
+      "enableWildDie": {
+        "name": "Schaltfläche \"Wild Die\"",
+        "hint": "Fügt einen Button für den 'Savage Worlds' Wildcard-Würfel hinzu. Dieser kann immer explodieren, unabhängig von der Schaltfläche 'Explosionswürfel'."
+      },
+      "enableModifiers": {
+        "name": "Schaltfläche \"Modifikatoren\"",
+        "hint": "Ermöglicht das Hinzufügen von Würfel-Modifikatoren. Mehrere Werte lassen sich kombinieren."
+      },
+      "enableFirstColumn": {
+        "name": "Zusätzliche Spalte für \"1\" Würfel",
+        "hint": "HINWEIS: Auch die Würfelsymbole sind anklickbar und würfeln jeweils 1 Würfel."
+      },
+      "closeFormOnRoll": {
+        "name": "Fenster schließt automatisch",
+        "hint": "Wenn aktiviert, wird das Würfelfenster nach jedem Würfelwurf geschlossen."
+      },
+      "maxDiceCount": {
+        "name": "Maximale Anzahl an Würfeln:",
+        "hint": "Anzahl der Würfel, die zeitgleich geworfen werden können."
+      },
+      "enableCoins": {
+        "name": "Aktiviere \"Münzwurf\"",
+        "hint": "Die 'Münze' liefert die Ergebnisse ~Kopf~ oder ~Zahl~."
+      },
+      "enableD2Rolls": {
+        "name": "Aktiviere \"W2\" - Würfe",
+        "hint": "Macht die Zeile mit den 'W2'-Würfeln sichtbar."
+      },
+      "enableD100Rolls": {
+        "name": "Aktiviere \"W100\" - Würfe",
+        "hint": "Macht die Zeile mit den 'W100'-Würfeln sichtbar."
+      },
+      "enableFateRollButton": {
+        "name": "Schaltfläche \"Schicksalswurf\"",
+        "hint": "Wählt aus allen markierten Token zufällig einen Token aus und verkündet den Namen im Chat.",
+        "labelHtml": "Schicksalswurf"
+      },
+      "enableGroupSelection": {
+        "name": "Kandidaten anzeigen?",
+        "hint": "Zeigt oder verbirgt in der Chatausgabe, wer insgesamt zur Auswahl stand."
+      },
+      "groupSelectionYes": {
+        "name": "ja",
+        "hint": "Im Chat werden alle Token-Namen angezeigt, die zur Auswahl standen."
+      },
+      "groupSelectionNo": {
+        "name": "nein",
+        "hint": "Im Chat wird ausschließlich der Name des ausgewählten Tokens verkündet."
+      },
+      "highlightNaturalOnes": {
+        "name": "Patzer-Mechanik einschalten",
+        "hint": "Wenn aktiviert, gilt die Savage Worlds Regel für 'kritische Fehlschläge' auch für das 'Freie Würfeln' und nicht nur für die angeforderten Proben. Die Regel: Zeigt ein geworfener Würfel eine natürliche Eins, wird das Endergebnis rot markiert, auch wenn es anschließend durch Modifikatoren verändert wurde. Bei mehreren Würfeln gilt dies nur, wenn mehr als die Hälfte aller Würfel (zur Anzahl zählt auch ein möglicher Wild Die) eine natürliche Eins zeigen. Bei einer Wildcard liegt nur dann ein 'Kritischer Fehlschlag' vor, wenn auch der Wild Die eine natürliche Eins zeigt."
+      },
+      "enableRequestRoll": {
+        "name": "Probenanforderung aktivieren",
+        "hint": "Durch die SL können Einzelproben, Gruppenproben, Vergleichsproben und Proben für 'Dramatische Aufgaben' angefordert werden."
+      }
+    },
+    "individualResults": {
+      "toggle": "Einzelergebnisse <i>(klick)</i>",
+      "appliedModifierLabel": "Modifikator",
+      "appliedModifierLabelShort": "Mod."
+    }
+  }
+}

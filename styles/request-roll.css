@@ -1,0 +1,2348 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+/* Copyright (C) 2026 Arga-Mods */
+
+/* ── Parchment-Hintergrund (Dark-Mode-sicher, wie Hauptfenster) ── */
+
+.adr-request-roll-window {
+  background:
+    linear-gradient(rgba(255,255,255,0.10), rgba(255,255,255,0.10)),
+    #3e3e3e url("/ui/denim075.png") repeat !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  /* Fenster nie höher als der Viewport — kleine Bildschirme: Inhalt scrollt statt rauszuragen */
+  max-height: calc(100vh - 40px);
+}
+.adr-request-roll-window .window-content {
+  background: #b5a68c url("/ui/parchment.jpg") repeat !important;
+  color-scheme: light !important;
+  opacity: 1 !important;
+  backdrop-filter: none !important;
+  transform: translateZ(0);
+  /* Scrollleiste erscheint nur, wenn der Inhalt das Fenster überragt */
+  overflow-y: auto;
+}
+
+.adr-request-roll-window .adr-request-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Obere Steuerzeile (Modus + Modifikator + Submit) bleibt beim Scrollen sichtbar */
+.adr-request-roll-window .adr-control-row {
+  position: sticky;
+  top: 0;
+  /* z-index hoch genug, um sicher über alle scrollenden Inhalte zu liegen.
+     Vorher auf 5 gesetzt — reichte nicht, weil .adr-toggle-box-Elemente
+     darunter in einigen Konstellationen impliziten Stacking-Kontext
+     bekommen und den Header visuell überlagern. 100 ist großzügig genug,
+     ohne in Foundry-Overlays (Tooltip-Layer u. ä.) reinzuschlagen. */
+  z-index: 100;
+  /* Opaker Hintergrund, damit darunter scrollende Elemente nicht durchscheinen */
+  background: #b5a68c url("/ui/parchment.jpg") repeat;
+  /* Leichter Schatten nach unten als visueller Trenner beim Scrollen */
+  box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+  padding-bottom: 4px;
+}
+
+/* ── Checkboxen: beigefarbener Ton ── */
+.adr-request-roll-window input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 1px solid rgba(181, 166, 140, 0.6);
+  border-radius: 3px;
+  background: rgba(181, 166, 140, 0.25);
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+}
+.adr-request-roll-window input[type="checkbox"]:checked {
+  background: rgba(181, 166, 140, 0.6);
+  border-color: rgba(181, 166, 140, 0.9);
+}
+.adr-request-roll-window input[type="checkbox"]:checked::after {
+  content: "✓";
+  display: block;
+  text-align: center;
+  font-size: 11px;
+  line-height: 14px;
+  color: #fff;
+  font-weight: bold;
+}
+
+/* ── Steuerleiste (Modus + rechte Spalte) ── */
+
+.adr-control-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+.adr-control-row > .adr-toggle-box {
+  width: auto;
+}
+
+/* ── Modus 2×2 Grid ── */
+
+.adr-mode-box {
+  flex: 0 1 auto;
+}
+.adr-mode-box.app {
+  background:
+    linear-gradient(rgba(255,255,255,0.25), rgba(255,255,255,0.25)),
+    #3e3e3e url("/ui/denim075.png") repeat;
+  box-shadow: 0 0 8px rgba(0,0,0,0.9) !important;
+  border: 1px solid #333;
+}
+.adr-mode-box .adr-field-set {
+  padding: 6px 8px 8px !important;
+}
+
+.adr-mode-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.adr-mode-btn {
+  padding: 6px 16px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 4px;
+  background: rgba(0,0,0,0.3);
+  color: #ccc;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, box-shadow 0.12s;
+  text-align: center;
+  white-space: nowrap;
+}
+.adr-mode-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  box-shadow: inset 0 0 6px rgba(159,255,159,0.3);
+  outline: 1px solid rgba(159,255,159,0.5);
+  outline-offset: 2px;
+}
+.adr-mode-btn.selected {
+  background: rgba(180, 90, 30, 0.6);
+  color: #fff;
+  border-color: rgba(220, 130, 50, 0.6);
+}
+
+/* ── Rechte Spalte: Modifikator + Submit, zentriert ── */
+
+.adr-right-col {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+/* Modifikator-Fieldset */
+.adr-modifier-fieldset {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px !important;
+  border: 1px solid rgba(0,0,0,0.2);
+  border-radius: 4px;
+}
+.adr-modifier-fieldset legend {
+  color: #222 !important;
+  font-size: 0.8rem;
+}
+/* Stepper: [−] [Input] [+] in einer Zeile */
+.adr-modifier-stepper {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+}
+.adr-modifier-step-btn {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 1px solid rgba(0,0,0,0.25);
+  border-radius: 4px;
+  background: rgba(255,255,255,0.4);
+  color: #222;
+  font-size: 1.1rem;
+  font-weight: bold;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.1s, border-color 0.1s;
+}
+.adr-modifier-step-btn:hover {
+  background: rgba(255,255,255,0.65);
+  border-color: rgba(180,90,30,0.6);
+}
+.adr-modifier-step-btn:active {
+  background: rgba(180,90,30,0.2);
+}
+.adr-modifier-input {
+  width: 70px;
+  padding: 3px 6px;
+  border: 1px solid rgba(0,0,0,0.25);
+  border-radius: 4px;
+  background: rgba(255,255,255,0.4);
+  color: #222;
+  font-size: 1rem;
+  text-align: center;
+  box-sizing: border-box;
+}
+.adr-modifier-input:focus {
+  outline: none;
+  border-color: rgba(180,90,30,0.6);
+}
+
+/* Submit-Button (rötlich, abgerundet) */
+.adr-submit-btn-top {
+  padding: 18px 24px;
+  border: 2px solid rgba(180, 60, 60, 0.6);
+  border-radius: 10px;
+  background: rgba(160, 45, 45, 0.65);
+  color: #fff;
+  font-family: "Roboto Slab", sans-serif;
+  font-size: 1.2em;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s ease;
+  text-align: center;
+  line-height: 1.3;
+}
+.adr-submit-btn-top:hover {
+  background: rgba(190, 60, 60, 0.8);
+  transform: scale(1.08);
+}
+
+/* ── Akteur-Auswahl (Chips-Grid) ── */
+
+.adr-actor-select-box.adr-toggle-box {
+  flex-direction: column;
+}
+
+.adr-actor-grid {
+  /* Grid mit fester Chip-Referenzbreite (immer 1/4 der Gesamtbreite).
+     Die tatsächliche Anzahl Spalten richtet sich nach --adr-cols (1–4); der
+     Container wird über max-width auf die entsprechende Breite begrenzt und
+     horizontal zentriert, damit die einzelnen Chips nicht wachsen, wenn
+     weniger Akteure vorhanden sind.
+     Siehe _actorGridColumns() in adr-request-roll-form.js. */
+  display: grid;
+  grid-template-columns: repeat(var(--adr-cols, 4), 1fr);
+  gap: 8px;
+  width: 100%;
+  max-width: calc(var(--adr-cols, 4) / 4 * 100%);
+  margin: 0 auto;
+}
+
+.adr-actor-chip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 6px;
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #ccc;
+  transition: background 0.12s, border-color 0.12s, box-shadow 0.12s;
+  overflow: hidden;
+  min-width: 0;
+  box-sizing: border-box;
+}
+.adr-actor-chip:hover {
+  background: rgba(255,255,255,0.12);
+  border-color: rgba(80, 180, 80, 0.5);
+  box-shadow: inset 0 0 6px rgba(159,255,159,0.3);
+  outline: 1px solid rgba(159,255,159,0.5);
+  outline-offset: 2px;
+}
+.adr-actor-chip input[type="checkbox"] {
+  margin: 0;
+  flex-shrink: 0;
+  pointer-events: none;
+}
+
+/* Klickbarer Haken-Slot: GM kann durch Klick einen angehakten Akteur entfernen.
+   Bei noch nicht angehaktem Akteur passiert nichts (Cursor-Feedback entsprechend). */
+.adr-actor-chip-check-slot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  padding: 2px;
+  border-radius: 3px;
+}
+.adr-actor-chip-checked .adr-actor-chip-check-slot {
+  cursor: pointer;
+}
+.adr-actor-chip-checked .adr-actor-chip-check-slot:hover {
+  background: rgba(255,80,80,0.2);
+}
+
+/* Klickbarer Name/Bild-Bereich (Individual Mode) */
+.adr-actor-chip-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+  flex: 1;
+  min-width: 0;
+}
+
+.adr-actor-chip-img {
+  width: 24px;
+  height: 24px;
+  border-radius: 3px;
+  object-fit: contain;
+  border: 1px solid rgba(255,255,255,0.12);
+  flex-shrink: 0;
+}
+
+.adr-actor-chip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 0 0 auto;
+  width: 14ch;
+}
+
+/* ── Grüne Hinterlegung: Angehakt (checked) — gleicher Ton wie Trait-Selected ── */
+.adr-actor-chip-checked {
+  background: rgba(60, 140, 60, 0.5);
+  border-color: rgba(80, 180, 80, 0.5);
+}
+
+/* ── Grüne Hinterlegung: Vorgemerkt (Gruppenprobe, grün ohne Haken) ── */
+.adr-actor-chip-highlighted {
+  background: rgba(60, 140, 60, 0.35);
+  border-color: rgba(80, 180, 80, 0.5);
+  box-shadow: inset 0 0 0 1px rgba(60, 160, 60, 0.2);
+}
+/* Gruppenprobe: Checkbox nur visuell, nicht direkt klickbar */
+[data-action="highlight-group-actor"] input[type="checkbox"] {
+  pointer-events: none;
+}
+
+/* ── Grüne Hinterlegung: Aktiv (Traits sichtbar, Individual Mode) ── */
+.adr-actor-chip-active {
+  background: rgba(60, 140, 60, 0.35);
+  border-color: rgba(80, 180, 80, 0.5);
+  box-shadow: inset 0 0 0 1px rgba(60, 160, 60, 0.2);
+}
+.adr-actor-chip-checked.adr-actor-chip-active {
+  background: rgba(60, 140, 60, 0.5);
+  border-color: rgba(80, 180, 80, 0.6);
+}
+
+/* NPC-Box: leicht andere Akzentfarbe */
+.adr-npc-select-box .adr-actor-chip-checked {
+  background: rgba(50, 90, 160, 0.4);
+  border-color: rgba(70, 120, 200, 0.5);
+}
+.adr-npc-select-box .adr-actor-chip-active {
+  background: rgba(50, 90, 160, 0.3);
+  border-color: rgba(70, 120, 200, 0.5);
+}
+.adr-npc-select-box .adr-actor-chip-checked.adr-actor-chip-active {
+  background: rgba(50, 90, 160, 0.4);
+  border-color: rgba(70, 120, 200, 0.6);
+}
+
+/* NPC-Trait-Panel: blaue Hinterlegung für ausgewählten Trait */
+.adr-npc-traits-box .adr-trait-btn.selected {
+  background: rgba(50, 90, 160, 0.4);
+  border-color: rgba(70, 120, 200, 0.5);
+  color: #fff;
+}
+
+/* ── Trait-Panel (zweigeteiltes Layout) ── */
+
+/* ── Trait-Layout (neu: horizontale 5er-Reihen) ── */
+
+.adr-traits-box.adr-toggle-box {
+  flex-direction: column;
+}
+
+.adr-traits-fieldset {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 0 !important;
+  width: 100%;
+  padding: 4px 8px 8px !important;
+}
+
+.adr-traits-section-header {
+  font-size: 0.75rem;
+  color: #999;
+  margin: 6px 0 3px 0;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.adr-traits-section-header:first-child {
+  margin-top: 2px;
+}
+
+/* Fixe 5er-Reihe (Attribute + Kernfertigkeiten) */
+.adr-traits-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 3px;
+}
+
+/* Fließendes 5er-Grid (gelernte Fertigkeiten) */
+.adr-traits-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 3px;
+}
+
+/* Ungeübt-Zeile */
+.adr-traits-untrained {
+  margin-top: 6px;
+  border-top: 1px solid rgba(255,255,255,0.08);
+  padding-top: 6px;
+}
+
+.adr-trait-btn-untrained {
+  font-style: italic;
+  color: #999;
+}
+
+/* Trait-Buttons */
+
+.adr-trait-btn {
+  padding: 2px 6px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 3px;
+  background: rgba(0,0,0,0.25);
+  color: #bbb;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s, border-color 0.12s, box-shadow 0.12s;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.adr-trait-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+  border-color: rgba(80, 180, 80, 0.5);
+  box-shadow: inset 0 0 6px rgba(159,255,159,0.3);
+  outline: 1px solid rgba(159,255,159,0.5);
+  outline-offset: 2px;
+}
+
+.adr-trait-btn.selected {
+  background: rgba(60, 140, 60, 0.5);
+  color: #fff;
+  border-color: rgba(80, 180, 80, 0.5);
+}
+
+.adr-trait-partial {
+  border-color: rgba(200, 80, 60, 0.35);
+  color: #d07060;
+}
+.adr-trait-partial:hover {
+  color: #e88070;
+}
+.adr-trait-partial.selected {
+  background: rgba(60, 140, 60, 0.5);
+  border-color: rgba(80, 180, 80, 0.5);
+  color: #d4a84a;
+}
+
+/* Warnung: nicht alle PCs haben diesen Trait (kein Akteur angehakt) */
+.adr-trait-warn {
+  border-color: rgba(200, 160, 50, 0.35);
+  color: #d4a84a;
+}
+.adr-trait-warn:hover {
+  color: #f0c860;
+}
+.adr-trait-warn.selected {
+  background: rgba(60, 140, 60, 0.5);
+  border-color: rgba(80, 180, 80, 0.5);
+  color: #d4a84a;
+}
+
+/* Mouseover-Prüfung: Akteur hat diesen Trait NICHT */
+.adr-trait-hover-missing {
+  border-color: rgba(220, 60, 40, 0.5) !important;
+  color: #e06050 !important;
+  background: rgba(200, 50, 40, 0.15) !important;
+}
+
+/* Während Mouseover: Warn/Partial-Farben unterdrücken (nur ein Akteur wird betrachtet) */
+.adr-trait-hover-active .adr-trait-warn:not(.adr-trait-hover-missing),
+.adr-trait-hover-active .adr-trait-partial:not(.adr-trait-hover-missing) {
+  border-color: rgba(255,255,255,0.12);
+  color: #bbb;
+}
+
+/* Ungeübt / Ungeübter Versuch — gelb hervorgehoben */
+/* Ungeübt / Ungeübter Versuch — kursiv */
+.adr-trait-untrained-skill {
+  font-style: italic;
+}
+
+/* Ungeübt */
+.adr-untrained-btn {
+  font-style: italic;
+  color: #a88;
+}
+.adr-untrained-btn.selected {
+  background: rgba(140, 60, 60, 0.5);
+  border-color: rgba(180, 80, 80, 0.5);
+  color: #fff;
+}
+
+/* ================================================================ */
+/*  Request Roll — Chat-Nachricht                                    */
+/* ================================================================ */
+
+.adr-request-roll-chat {
+  background-color: transparent !important;
+}
+
+/* ── Chat-Header: Hauptmodul-CSS übernehmen, nur Sender + Flavor verstecken ── */
+.adr-request-roll-chat .message-header .message-sender {
+  display: none !important;
+}
+.adr-request-roll-chat .message-header .flavor-text {
+  display: none !important;
+}
+
+.adr-request-roll-msg {
+  padding: 6px 8px;
+
+  /* ── Zentrale Stellschrauben für Gradient-Trennlinien ───────────────
+     Alle Trennlinien (zwischen Eigenschaft/Spielern/Einzelergebnissen) in
+     den vier Modi der Angeforderten Probe nutzen diese Variablen. Eine
+     Änderung hier wirkt sich überall einheitlich aus.
+
+     • pad-oben:    Padding vor dem oberen Strich am Container
+     • pad-unten:   Padding nach dem unteren Strich am Container
+     • offset-oben: Strich-Position vom Container-Top
+                     → effektive Lücke unter Strich = pad-oben − offset-oben
+     • offset-unten: Strich-Position vom Container-Boden
+                     → effektive Lücke über Strich = pad-unten − offset-unten
+
+     Sonderfälle nutzen calc() auf diesen Variablen:
+     • Dramatic-Top (.adr-dramatic-summary hat margin-bottom 0.5rem):
+       padding-top und top je um 0.5rem reduziert.
+     • Opposed-Bottom (Wurf-Button braucht extra Platz):
+       padding-bottom um 0.3rem erhöht. */
+  --adr-strich-pad-oben: 1.2rem;
+  --adr-strich-pad-unten: 1.2rem;
+  --adr-strich-offset-oben: 0.7rem;
+  --adr-strich-offset-unten: 0.5rem;
+  --adr-strich-color: rgba(0, 0, 0, 0.22);
+  --adr-strich-gradient: linear-gradient(
+    to right,
+    transparent 0%,
+    var(--adr-strich-color) 50%,
+    transparent 100%
+  );
+  /* Abstand zwischen unterem Strich und dem darauf folgenden Toggle-Container
+     ("Einzelergebnisse (klick)"). Wirkt in allen vier Modi identisch — bei
+     Single über `.adr-individual-toggle-container` innerhalb `.adr-request-entry`,
+     bei Group/Opposed/Dramatic über `.adr-group-toggle-container`. */
+  --adr-strich-zu-toggle: 1.1rem;
+}
+
+/* ── Inhaltsbreite maximieren — beide Themes gleich behandeln.            ── */
+/* ── Selektoren namentlich getrennt: falls später nur ein Theme abweichen ── */
+/* ── soll, einer der beiden Selektoren rausziehen und eigene Werte geben. ── */
+/* ── margin: 0 -0.4rem kompensiert das .adr-chat-Padding (0.4rem) und     ── */
+/* ── rückt Inhalt bündig an die Frame-Innenkante — Token bekommt mehr     ── */
+/* ── Platz nach links, Name-Spalte mehr Breite.                           ── */
+li.chat-message.adr-chat.scifi .adr-request-roll-msg,
+li.chat-message.adr-chat:not(.scifi):not(.adr-fate) .adr-request-roll-msg {
+  padding: 6px 0;
+  margin: 0 -0.4rem;
+}
+li.chat-message.adr-chat.scifi .adr-request-entry,
+li.chat-message.adr-chat:not(.scifi):not(.adr-fate) .adr-request-entry {
+  padding: 5px 0;
+}
+li.chat-message.adr-chat.scifi .adr-request-actor-row,
+li.chat-message.adr-chat:not(.scifi):not(.adr-fate) .adr-request-actor-row {
+  gap: 4px;
+}
+
+/* ── Token+Name-Block horizontal versetzen — themespezifisch.            ── */
+/* ── margin-left nur am Avatar-Bild: Name folgt automatisch via flex-gap, ── */
+/* ── Wurf-Button bleibt rechts unverändert.                               ── */
+li.chat-message.adr-chat:not(.scifi):not(.adr-fate) .adr-request-actor-img {
+  margin-left: 0.3rem;
+}
+li.chat-message.adr-chat.scifi .adr-request-actor-img {
+  margin-left: -0.2rem;
+}
+
+/* ── Einzelner Eintrag ── */
+
+.adr-request-entry {
+  padding: 5px 4px;
+  border-bottom: 1px solid rgba(0,0,0,0.08);
+}
+.adr-request-entry:last-child {
+  border-bottom: none;
+}
+
+/* Trait-Zeile: ~ Athletics ~ (nur Gruppenprobe-Header) */
+.adr-request-trait-line {
+  text-align: center;
+  margin-top: -0.4rem;
+  padding-bottom: 0.9rem;
+}
+
+/* Einzelprobe + Gruppenprobe: dezente Trennlinie zwischen Eigenschaft-Block   */
+/* und Inhalt darunter.                                                         */
+/* - Einzelprobe: .adr-request-trait-line liegt innerhalb von .adr-request-entry */
+/* - Gruppenprobe: .adr-request-trait-line liegt top-level in .adr-request-roll-msg */
+/* - Vergleichend: keine trait-line vorhanden — nicht betroffen.                */
+/* - Dramatisch: trait-line hat .adr-dramatic-title-line → ausgeschlossen.      */
+.adr-request-entry > .adr-request-trait-line,
+.adr-request-roll-msg > .adr-request-trait-line:not(.adr-dramatic-title-line) {
+  position: relative;
+  padding-bottom: var(--adr-strich-pad-unten);
+}
+.adr-request-entry > .adr-request-trait-line::after,
+.adr-request-roll-msg > .adr-request-trait-line:not(.adr-dramatic-title-line)::after {
+  content: "";
+  position: absolute;
+  left: 20%;
+  right: 20%;
+  bottom: var(--adr-strich-offset-unten);
+  height: 2px;
+  background: var(--adr-strich-gradient);
+  pointer-events: none;
+}
+.adr-request-trait-name {
+  font-family: 'Roboto Slab', var(--font-primary), serif;
+  font-size: 1.15rem;
+  font-weight: bold;
+  color: #333;
+}
+.adr-request-trait-die {
+  font-family: 'Roboto Slab', var(--font-primary), serif;
+  font-size: 0.9rem;
+  color: #555;
+}
+.adr-request-modifier {
+  font-weight: normal;
+  font-size: 0.85rem;
+  color: #666;
+}
+.adr-request-modifier.adr-request-modifier-pos {
+  color: #1a8a1a;
+  font-weight: 600;
+}
+.adr-request-modifier.adr-request-modifier-neg {
+  color: #d10000;
+  font-weight: 600;
+}
+.adr-request-mod-label {
+  font-weight: normal;
+  font-size: 0.85rem;
+  color: #555;
+}
+
+/* Akteur-Zeile: Token + Name + Result/Benny */
+.adr-request-actor-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Klickbare Akteur-Bilder: Cursor + dezenter Hover-Effekt + Bildtonung */
+.adr-request-actor-img,
+.adr-dramatic-entry-img {
+  cursor: pointer;
+  filter: brightness(1.10) contrast(1.10);
+  transition: filter 0.12s ease, transform 0.12s ease;
+}
+.adr-request-actor-img:hover,
+.adr-dramatic-entry-img:hover {
+  filter: brightness(1.25) contrast(1.10);
+  transform: scale(1.05);
+}
+
+.adr-request-actor-img {
+  width: 42px;
+  height: 42px;
+  border-radius: 4px;
+  object-fit: contain;
+  border: none;
+  flex-shrink: 0;
+}
+
+.adr-request-actor-name {
+  display: block;
+  font-weight: normal;
+  color: #111;
+  font-size: 1rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+
+/* Wrapper: Name + Trait-Detail als Block (alle Modi) */
+.adr-request-actor-info {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  margin-left: 0.1rem;
+}
+
+/* Einzelergebnisse-Toggle: volle Breite unter dem Eintrag */
+.adr-request-entry .adr-individual-toggle-container {
+  padding-left: 0.25rem;
+  margin-top: var(--adr-strich-zu-toggle);
+  /* margin-bottom auf den Container statt nur auf die expanded Details, */
+  /* damit der Abstand zum nächsten Block auch im collapsed-Zustand greift. */
+  margin-bottom: 0.6rem;
+}
+.adr-request-entry .adr-individual-details:not(.adr-individual-hidden) {
+  margin-bottom: 0.6rem;
+}
+
+/* ── Ergebnis-Bereich (Button + Benny) ── */
+
+.adr-request-result-area {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+/* ── Würfel-Button ── */
+
+.adr-roll-btn {
+  padding: 4px 12px;
+  border: 1px solid rgba(60, 140, 60, 0.5);
+  border-radius: 4px;
+  background: rgba(40, 100, 40, 0.5);
+  color: #dfd;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+  flex-shrink: 0;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.adr-roll-btn:hover {
+  background: rgba(60, 140, 60, 0.7);
+}
+
+.adr-roll-btn.adr-rolled {
+  background: rgba(240, 240, 240, 0.9);
+  border-color: rgba(180, 180, 180, 0.5);
+  cursor: default;
+  padding: 0.2rem 0.5rem;
+}
+
+.adr-roll-btn.adr-not-mine {
+  background: rgba(60, 60, 60, 0.3);
+  color: #777;
+  border-color: rgba(100, 100, 100, 0.3);
+  cursor: not-allowed;
+}
+.adr-roll-btn.adr-not-mine:hover {
+  background: rgba(60, 60, 60, 0.3);
+}
+
+/* ── Ergebnis-Werte (Erfolgsstufen) ── */
+
+.adr-result-value {
+  font-weight: bold;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.adr-result-fail {
+  color: #222;
+}
+
+.adr-result-success {
+  color: #1a8a1a;
+}
+
+.adr-result-raises {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  font-size: 0.7rem;
+  line-height: 0.85;
+  color: #1a8a1a;
+  font-weight: bold;
+  margin-left: 2px;
+  vertical-align: middle;
+}
+
+.adr-result-fumble {
+  color: #d10000 !important;
+}
+
+/* "Kein Erfolg" — bei NSC-natürlicher-1 vor Patzer-Prüfung */
+.adr-result-pending {
+  font-style: italic;
+  font-weight: 400;
+  color: #6a6a6a;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+/* "Kein Erfolg"-Zeile in Single/Group bei pending Patzer-Prüfung */
+.adr-request-no-success {
+  text-align: center;
+  font-style: italic;
+  font-weight: 400;
+  color: #6a6a6a;
+  font-size: 0.85rem;
+  margin-top: 0.3rem;
+}
+
+/* ── Kritischer Fehlschlag — Label ── */
+
+.adr-fumble-label {
+  text-align: center;
+  font-family: 'Roboto Slab', var(--font-primary), serif;
+  font-size: 0.85rem;
+  font-weight: bold;
+  font-style: italic;
+  color: #d10000;
+  margin-top: 0.4rem;
+}
+
+/* ── Patzer-Prüfung (GM-Button + Ergebnis-Text) ── */
+
+.adr-fumble-check-btn {
+  display: inline-block;
+  margin: 0.5em auto 0;
+  font-size: 0.8rem;
+  padding: 4px 10px 4px 10px;
+  border: 1px solid rgba(0,0,0,0.25);
+  border-radius: 4px;
+  background: rgba(150,30,30,0.55);
+  color: #fff;
+  cursor: pointer;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+}
+/* Grüner Annehmen-Button — gleiche Geometrie wie der rote Patzer-Button,
+   nur in der Modul-Grün-Farbpalette. Wird beim Initial-Wurf-Fall einer 1
+   sowie beim Reroll-1-Fall (Pending-Entscheidung) als „Würfelergebnis
+   annehmen" angeboten. */
+.adr-accept-result-btn {
+  display: inline-block;
+  margin: 0 auto;
+  font-size: 0.8rem;
+  padding: 4px 10px 4px 10px;
+  border: 1px solid rgba(0,0,0,0.25);
+  border-radius: 4px;
+  background: rgba(26,138,26,0.55);
+  color: #fff;
+  cursor: pointer;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+}
+li.chat-message.adr-chat .adr-accept-result-btn {
+  padding: 4px 10px 4px 10px !important;
+  min-height: 0 !important;
+  height: auto !important;
+  line-height: 1.2 !important;
+}
+li.chat-message.adr-chat.scifi .adr-accept-result-btn {
+  background-color: transparent;
+  background-image: url("../assets/layout/banner_sf.webp");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
+  color: #0f172a;
+  border: none;
+  padding: 0.3em 0.8em;
+  box-shadow: 0 0.125em 0.375em rgba(0,0,0,0.35), inset 0 0 0 9999px rgba(255,255,255,0.15);
+}
+li.chat-message.adr-chat.scifi .adr-accept-result-btn:hover {
+  box-shadow: 0 0.2em 0.5em rgba(0,0,0,0.5), inset 0 0 0 9999px rgba(255,255,255,0.2);
+}
+/* Container für die „annehmen oder prüfen?"-Entscheidung. Stapelt
+   grünen Button, „oder"-Label und roten Button vertikal zentriert. */
+.adr-fumble-choice-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  margin-top: 0.5em;
+}
+.adr-fumble-choice-container .adr-fumble-check-btn,
+.adr-fumble-choice-container .adr-accept-result-btn {
+  margin-top: 0;
+}
+.adr-fumble-choice-or {
+  font-style: italic;
+  font-size: 0.75rem;
+  color: #555;
+  text-align: center;
+}
+/* Vergleichende Probe (Opposed-Mode): enge Spalte — beide Buttons im
+   Choice-Container dürfen umbrechen, damit „Würfelergebnis annehmen"
+   nicht ins Nachbarfeld ragt. */
+.adr-fumble-choice-container.adr-fumble-choice-multiline .adr-accept-result-btn,
+.adr-fumble-choice-container.adr-fumble-choice-multiline .adr-fumble-check-btn {
+  white-space: normal;
+}
+/* Opposed-Mode: zweizeiliger Button, damit er nicht ins Nachbarfeld ragt */
+.adr-fumble-check-btn.adr-fumble-check-btn-multiline {
+  white-space: normal;
+}
+li.chat-message.adr-chat .adr-fumble-check-btn {
+  padding: 4px 10px 4px 10px !important;
+  min-height: 0 !important;
+  height: auto !important;
+  line-height: 1.2 !important;
+}
+li.chat-message.adr-chat.scifi .adr-fumble-check-btn {
+  background-color: transparent;
+  background-image: url("../assets/layout/banner_sf.webp");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 100% 100%;
+  color: #0f172a;
+  border: none;
+  padding: 0.3em 0.8em;
+  box-shadow: 0 0.125em 0.375em rgba(0,0,0,0.35), inset 0 0 0 9999px rgba(255,255,255,0.15);
+}
+li.chat-message.adr-chat.scifi .adr-fumble-check-btn:hover {
+  box-shadow: 0 0.2em 0.5em rgba(0,0,0,0.5), inset 0 0 0 9999px rgba(255,255,255,0.2);
+}
+
+.adr-fumble-check-result {
+  text-align: center;
+  font-family: 'Roboto Slab', var(--font-primary), serif;
+  font-size: 0.8rem;
+  color: #444;
+  margin-top: 0.3rem;
+}
+.adr-fumble-confirmed-text {
+  color: #d10000;
+  font-weight: bold;
+  font-style: italic;
+}
+.adr-fumble-denied-text {
+  font-weight: bold;
+  font-style: italic;
+}
+
+/* Inline-Prüfwürfel: kleiner Span direkt rechts neben der 1 in der
+   Einzelergebnis-Zeile. Optisch kompakt (kleiner als der Hauptwürfel,
+   leicht abgesetzt durch helleren Ton), bricht aber nicht in eine
+   eigene Zeile um. Wirkt sowohl für aktuelle als auch verworfene Würfe. */
+.adr-fumble-check-inline {
+  display: inline;
+  font-size: 0.85em;
+  margin-left: 0.15rem;
+  white-space: nowrap;
+  color: inherit;
+  opacity: 0.85;
+}
+.adr-fumble-check-inline .adr-label {
+  font-size: 0.95em;
+}
+/* Bei verworfenen Würfen den Durchstreichungs-Effekt vom Eltern-Div
+   nicht auf den Inline-Prüfwürfel anwenden, damit der Prüfwurf-Wert
+   ohne Strich lesbar bleibt. */
+.adr-individual-discarded .adr-fumble-check-inline {
+  text-decoration: none;
+}
+
+/* ── Benny-Reroll-Schutz: Hinweis bei zurückgehaltenem alten Ergebnis ── */
+.adr-benny-protected-hint {
+  text-align: center;
+  font-style: italic;
+  color: #555;
+  font-size: 0.85rem;
+  margin-top: 0.4rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.adr-benny-protected-line {
+  line-height: 1.3;
+}
+.adr-benny-protected-line + .adr-benny-protected-line {
+  margin-top: 0.15rem;
+}
+.adr-benny-protected-fumble {
+  color: #d10000;
+  font-weight: bold;
+}
+.adr-benny-protected-extra-one {
+  color: #444;
+  font-weight: bold;
+}
+.adr-benny-protected-check-result {
+  margin-top: 0.3rem;
+  font-style: italic;
+  color: #444;
+}
+.adr-benny-protected-hint .adr-fumble-check-discarded-btn {
+  margin-top: 0.4rem;
+}
+
+/* ── Vergleichende Probe: Sammelsektion mit Akteurnamen ── */
+/* Sitzt direkt nach der .adr-opposed-arena (= unter dem ::after-Strich),
+   außerhalb des toggle-containers. Damit ist der Abstand zum Strich identisch
+   zur Einzelprobe, wo der Hint direkt nach der actor-row sitzt. Ein Hint pro
+   Akteur, in derselben Reihenfolge wie auf der Chat-Card. */
+.adr-opposed-benny-hints {
+  padding: 0;
+}
+.adr-opposed-benny-hints .adr-benny-protected-hint {
+  margin-top: 0.5rem;
+}
+.adr-opposed-benny-hints .adr-benny-protected-hint:first-child {
+  /* Erster Hint nutzt nur den default margin-top: 0.4rem aus
+     .adr-benny-protected-hint — identisch zur Einzelprobe. */
+  margin-top: 0.4rem;
+}
+
+/* ── Dramatische Aufgabe: Sammelsektion mit Akteurnamen ── */
+/* Analog zur Vergleichenden Probe. Sitzt unterhalb der Entries, vor der
+   History (falls vorhanden) bzw. der Status-Zeile. Der Gradient-Trenner
+   sitzt jetzt auf `.adr-dramatic-entries::after` — diese Sektion braucht
+   daher nur minimalen Top-Abstand. */
+.adr-dramatic-benny-hints {
+  padding: 0.1rem 0 0.2rem 0;
+}
+.adr-dramatic-benny-hints .adr-benny-protected-hint {
+  margin-top: 0.5rem;
+}
+.adr-dramatic-benny-hints .adr-benny-protected-hint:first-of-type {
+  margin-top: 0;
+}
+/* Spieler (nicht-GM) sehen den verworfenen Patzer-Check-Button ausgegraut
+   und nicht klickbar — Hintergrund hellgrau, Text dunkel für gute Lesbarkeit. */
+.adr-fumble-check-discarded-btn.adr-not-mine,
+.adr-fumble-check-discarded-btn.adr-not-mine:hover,
+.adr-fumble-check-discarded-btn.adr-not-mine:active,
+.adr-fumble-check-discarded-btn.adr-not-mine:focus {
+  background: rgba(140, 140, 140, 0.5);
+  color: #2a2a2a;
+  border-color: rgba(100, 100, 100, 0.4);
+  cursor: not-allowed;
+  box-shadow: none;
+  outline: none;
+}
+
+/* Patzer-Wahl-Buttons (Annehmen + Check) im Not-Mine-Zustand für Spieler.
+   Selbe Optik wie der Discarded-Check-Button: ausgegraut + cursor not-allowed.
+   Greift sowohl auf grünen Annehmen-Button als auch roten Check-Button.
+
+   Wichtig: Spezifität muss `li.chat-message.adr-chat .adr-accept-result-btn:hover`
+   übertreffen, sonst greift der :hover-Cursor (default) und die Maus zeigt
+   weiter den Klick-Pfeil. Deshalb `li.chat-message.adr-chat`-Präfix. */
+li.chat-message.adr-chat .adr-accept-result-btn.adr-not-mine,
+li.chat-message.adr-chat .adr-accept-result-btn.adr-not-mine:hover,
+li.chat-message.adr-chat .adr-accept-result-btn.adr-not-mine:active,
+li.chat-message.adr-chat .adr-accept-result-btn.adr-not-mine:focus,
+li.chat-message.adr-chat .adr-fumble-check-btn.adr-not-mine,
+li.chat-message.adr-chat .adr-fumble-check-btn.adr-not-mine:hover,
+li.chat-message.adr-chat .adr-fumble-check-btn.adr-not-mine:active,
+li.chat-message.adr-chat .adr-fumble-check-btn.adr-not-mine:focus {
+  background: rgba(140, 140, 140, 0.5);
+  color: #2a2a2a;
+  border-color: rgba(100, 100, 100, 0.4);
+  /* !important nötig, weil Foundry-Systemstyles `cursor: pointer` auf
+     <button>-Elementen aggressiv setzen — siehe auch padding/height
+     mit !important in den Default-Regeln dieser Buttons weiter oben. */
+  cursor: not-allowed !important;
+  box-shadow: none;
+  outline: none;
+}
+/* Sci-Fi-Variante: gleiches Verhalten, behält aber das Banner-Hintergrundbild
+   (sonst stört der grau-flache Override die optische Konsistenz mit Sci-Fi-UI). */
+li.chat-message.adr-chat.scifi .adr-accept-result-btn.adr-not-mine,
+li.chat-message.adr-chat.scifi .adr-accept-result-btn.adr-not-mine:hover,
+li.chat-message.adr-chat.scifi .adr-fumble-check-btn.adr-not-mine,
+li.chat-message.adr-chat.scifi .adr-fumble-check-btn.adr-not-mine:hover {
+  filter: grayscale(1);
+  opacity: 0.55;
+  cursor: not-allowed !important;
+}
+
+/* Verworfene Würfeldetails im Toggle (Benny-Schutz-Anzeige) */
+.adr-individual.adr-individual-discarded {
+  text-decoration: line-through;
+  text-decoration-thickness: 1px;
+  color: #888;
+}
+
+/* ── Benny-Button ── */
+
+.adr-benny-btn {
+  width: 30px;
+  height: 30px;
+  padding: 2px;
+  border: 2px solid rgba(100, 100, 100, 0.3);
+  border-radius: 50%;
+  background: rgba(255,255,255,0.8);
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.adr-benny-btn:hover {
+  border-color: rgba(60, 160, 60, 0.6);
+  box-shadow: 0 0 4px rgba(60, 160, 60, 0.3);
+}
+.adr-benny-btn img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 50%;
+}
+.adr-benny-btn.adr-benny-used {
+  border-color: rgba(40, 160, 40, 0.8);
+  box-shadow: 0 0 6px rgba(40, 160, 40, 0.4);
+}
+.adr-benny-btn.adr-benny-fumble {
+  border-color: rgba(200, 0, 0, 0.6);
+  cursor: not-allowed;
+  position: relative;
+  opacity: 0.7;
+}
+.adr-benny-btn.adr-benny-fumble::after {
+  content: "✕";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: bold;
+  color: #d10000;
+  background: rgba(0,0,0,0.25);
+  border-radius: 50%;
+}
+.adr-benny-btn.adr-benny-fumble:hover {
+  border-color: rgba(200, 0, 0, 0.6);
+  box-shadow: none;
+}
+
+/* Benny-Button bei Nicht-Owner-Sicht (gleiche Logik wie grüner Würfel-Button) */
+.adr-benny-btn.adr-not-mine {
+  border-color: rgba(100, 100, 100, 0.3);
+  background: rgba(60, 60, 60, 0.3);
+  cursor: not-allowed;
+  opacity: 0.5;
+  box-shadow: none;
+}
+.adr-benny-btn.adr-not-mine:hover {
+  border-color: rgba(100, 100, 100, 0.3);
+  background: rgba(60, 60, 60, 0.3);
+  box-shadow: none;
+}
+.adr-benny-btn.adr-not-mine img {
+  filter: grayscale(1);
+}
+
+/* ── Utility ── */
+
+.adr-hidden {
+  display: none !important;
+}
+
+/* ── Status-Zeile ── */
+
+.adr-request-status {
+  margin-top: 0.375rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: #666;
+  font-style: italic;
+}
+.adr-request-status.adr-complete {
+  color: #1a8a1a;
+  font-style: normal;
+  font-weight: bold;
+  margin-top: -0.5rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/*  Gruppenprobe: kompaktes Layout                                 */
+/* ═══════════════════════════════════════════════════════════════ */
+
+/* Trait-Detail-Zeile unter Spielername: → (W6) / → ungeübt */
+.adr-request-trait-detail {
+  font-family: 'Roboto Slab', var(--font-primary), serif;
+  font-size: 0.85rem;
+  color: #555;
+  padding-left: 43px; /* Token-Bild (35px) + gap (8px) */
+  margin-top: -0.2rem;
+  text-align: left;
+}
+/* Innerhalb von actor-info (Gruppenprobe): kein extra padding nötig */
+.adr-request-actor-info .adr-request-trait-detail {
+  padding-left: 0;
+  margin-top: -2px;
+}
+.adr-request-trait-detail em {
+  color: #c77;
+}
+
+/* Weniger Padding bei Gruppen-Entries */
+.adr-group-entry {
+  padding: 4px 4px 6px 4px;
+  border-bottom-color: rgba(0,0,0,0.33);
+}
+.adr-group-entry:last-child {
+  margin-bottom: 0;
+}
+
+/* Gruppenprobe: Header + Abgeschlossen werden per JS gesteuert
+   (chat-background.css setzt margin: 0 !important auf .message-header,
+    daher ist CSS-only hier nicht möglich) */
+
+/* ── Permanente Gradient-Trennlinien zwischen Akteur-Bereich und Folgeinhalt ── */
+/* Pendant zur Linie nach der Eigenschaft. Greift IMMER (auch vor dem ersten
+   Wurf), damit das Layout konsistent bleibt. Pro Modus eigener Selector:    */
+/*  • Einzelprobe: pro Spieler, am Boden von .adr-request-entry              */
+/*  • Gruppenprobe: einmal vor und einmal nach den Entries                   */
+/*  • Dramatische Aufgabe: einmal vor und einmal nach den Entries            */
+
+/* Einzelprobe: Gradient am Boden der Actor-Row (NICHT am Entry-Container).
+   Dadurch sitzt der Strich fest unter dem Spieler-Block und wandert NICHT
+   mit, wenn nach dem Wurf ein Einzelergebnis-Toggle hinzukommt. */
+.adr-request-entry:not(.adr-group-entry):not(.adr-opposed-side) > .adr-request-actor-row {
+  position: relative;
+  padding-bottom: var(--adr-strich-pad-unten);
+}
+.adr-request-entry:not(.adr-group-entry):not(.adr-opposed-side) > .adr-request-actor-row::after {
+  content: "";
+  position: absolute;
+  left: 20%;
+  right: 20%;
+  bottom: var(--adr-strich-offset-unten);
+  height: 2px;
+  background: var(--adr-strich-gradient);
+  pointer-events: none;
+}
+
+/* Gruppenprobe: Gradient vor und nach den Entries, permanent. Verwendet
+   :has() auf .adr-group-entry, um Single-Mode nicht versehentlich zu
+   treffen (beide nutzen .adr-request-entries als Wrapper). */
+.adr-request-entries:has(> .adr-group-entry) {
+  position: relative;
+  padding-top: var(--adr-strich-pad-oben);
+  padding-bottom: var(--adr-strich-pad-unten);
+}
+.adr-request-entries:has(> .adr-group-entry)::before,
+.adr-request-entries:has(> .adr-group-entry)::after {
+  content: "";
+  position: absolute;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  background: var(--adr-strich-gradient);
+  pointer-events: none;
+}
+.adr-request-entries:has(> .adr-group-entry)::before {
+  top: var(--adr-strich-offset-oben);
+}
+.adr-request-entries:has(> .adr-group-entry)::after {
+  bottom: var(--adr-strich-offset-unten);
+}
+/* Wenn die Eigenschaft oben drüber gerendert ist, hat sie schon einen     */
+/* Gradient (::after auf .adr-request-trait-line). Den ::before der Entries */
+/* in dem Fall ausblenden, damit keine doppelte Linie entsteht. Und das    */
+/* padding-top der Entries auf 0 zurücksetzen — sonst doppelter Abstand    */
+/* zwischen Trait-Line-Strich und erstem Spieler.                          */
+.adr-request-trait-line + .adr-request-entries:has(> .adr-group-entry) {
+  padding-top: 0;
+}
+.adr-request-trait-line + .adr-request-entries:has(> .adr-group-entry)::before {
+  display: none;
+}
+
+/* Vergleichende Probe: Gradient oberhalb UND unterhalb der Arena, permanent.
+   padding/position sind im zweiten .adr-opposed-arena-Block weiter unten
+   gesetzt (Z. ~1973), wo der Hauptselektor mit Grid-Layout liegt — hier nur
+   die Pseudo-Elemente, sonst überschreibt das spätere `padding: 0` alles. */
+.adr-opposed-arena::before,
+.adr-opposed-arena::after {
+  content: "";
+  position: absolute;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  background: var(--adr-strich-gradient);
+  pointer-events: none;
+}
+.adr-opposed-arena::before {
+  top: var(--adr-strich-offset-oben);
+}
+.adr-opposed-arena::after {
+  bottom: var(--adr-strich-offset-unten);
+}
+
+/* Gruppen-Toggle: Trennlinie + Container.
+   Stylischer Gradient (Pendant zur Linie nach der Eigenschaft oben), wird in
+   `_updateGroupToggle` (Gruppenprobe), `_updateOpposedToggle` (Vergleichende
+   Probe) und im Dramatic-History-Container verwendet. */
+.adr-group-divider {
+  position: relative;
+  height: 2px;
+  margin: 0.25rem 0 0.5rem 0;
+  background: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(0, 0, 0, 0.22) 50%,
+    transparent 100%
+  );
+  background-position: center;
+  background-size: 60% 2px;
+  background-repeat: no-repeat;
+  border: none;
+  pointer-events: none;
+}
+
+.adr-group-toggle-container {
+  /* Abstand zum vorherigen Strich (= ::after der Entries / Arena), zentral
+     gesteuert via Variable — gleicht den margin-top der Einzelprobe an. */
+  margin-top: var(--adr-strich-zu-toggle);
+  /* 1rem (statt 0.65rem) kompensiert den margin-top: -0.5rem der Status-Zeile */
+  /* ".adr-request-status.adr-complete" und ergibt netto ~0.5rem effektiven    */
+  /* Abstand — gleicht dem Abstand der einfachen Probe an. Gilt für Gruppen-,  */
+  /* Vergleichende und Dramatische-Probe (alle nutzen diesen Wrapper).         */
+  margin-bottom: 1rem;
+}
+
+/* Den Divider im Group-/Opposed-Toggle-Container ausblenden: die Trennlinie
+   kommt jetzt permanent von .adr-request-entries::after (Group) bzw. einer
+   Sammelsektion (Opposed). Im Dramatic-History-Container bleibt der Divider
+   sichtbar — dort trennt er Verlauf-Header von Verlauf-Inhalt. */
+.adr-group-toggle-container:not(.adr-dramatic-history-container) > .adr-group-divider {
+  display: none;
+}
+
+.adr-group-toggle-container .adr-individual-toggle-container {
+  padding-left: 0.25rem;
+}
+.adr-group-toggle-container.adr-dramatic-history-container .adr-individual-details {
+  /* Nur für dramatic-history: erstes Element (.adr-dramatic-history-round) hat */
+  /* eigenes margin-top: 10px, das den Hochzug kompensiert. Bei Gruppe/Opposed  */
+  /* fehlt diese Kompensation → würde zu eng am Toggle kleben.                  */
+  margin-top: -0.5rem;
+}
+/* Sci-Fi: schmälerer Innenraum durch dickeren Frame — Padding der Details-   */
+/* Liste rausnehmen, damit z.B. "(Modifikator: +4)" wieder auf eine Zeile passt. */
+li.chat-message.adr-chat.scifi .adr-group-toggle-container .adr-individual-details {
+  padding-left: 0;
+  padding-right: 0;
+}
+.adr-group-toggle-container .adr-individual-details:not(.adr-individual-hidden) {
+  margin-bottom: 0.65rem;
+}
+
+/* Einzelergebnis pro Spieler im Gruppen-Toggle — Blockstil pro Akteur:    */
+/* zentrierte Kopfzeile mit Akteurname, darunter alle Würfe (verworfen +   */
+/* aktuell). Identisch zur Vergleichenden Probe (.adr-opposed-detail-*).    */
+.adr-group-detail-block {
+  margin: 6px 0 8px;
+}
+.adr-group-detail-block:first-child {
+  margin-top: 2px;
+}
+.adr-group-detail-block:last-child {
+  margin-bottom: 2px;
+}
+.adr-group-detail-name {
+  font-family: 'Roboto Slab', var(--font-primary), serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #222;
+  text-decoration: underline;
+  text-align: center;
+  margin-bottom: 2px;
+}
+.adr-group-detail-body {
+  font-size: 0.85rem;
+  color: #222;
+  text-align: center;
+  line-height: 1.4;
+}
+/* Pro Spielerblock können mehrere Wurfzeilen stehen (verworfen + aktuell, */
+/* analog Einzelprobe-Historie). Direkte .adr-individual-Kinder sind       */
+/* Wrapper-Divs und sollen Block-Level bleiben.                            */
+.adr-group-detail-body > .adr-individual {
+  font-size: inherit;
+  line-height: inherit;
+  margin-top: 0;
+}
+.adr-group-detail-wild {
+  font-weight: normal;
+  color: #555;
+}
+
+/* ═══════════════════════════════════════════════════════════════ */
+/*  SciFi-Variante: entfernt — Standardfarben funktionieren auf   */
+/*  beiden Hintergründen (Fantasy + SciFi haben helles Inneres)   */
+/* ═══════════════════════════════════════════════════════════════ */
+
+/* ================================================================ */
+/*  Dramatische Aufgabe — Formular                                   */
+/* ================================================================ */
+
+.adr-dramatic-box.adr-toggle-box {
+  flex-direction: column;
+}
+
+.adr-dramatic-box.app {
+  background:
+    linear-gradient(rgba(255,255,255,0.25), rgba(255,255,255,0.25)),
+    #3e3e3e url("/ui/denim075.png") repeat;
+  box-shadow: 0 0 8px rgba(0,0,0,0.9) !important;
+  border: 1px solid #333;
+}
+
+.adr-dramatic-fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 8px 10px 10px !important;
+}
+
+.adr-dramatic-description,
+.adr-dramatic-preview {
+  text-align: center;
+  color: #ddd;
+  font-size: 0.85rem;
+}
+
+.adr-dramatic-preview {
+  color: #f0d7a6;
+}
+
+.adr-dramatic-presets {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 4px;
+}
+
+.adr-dramatic-preset-btn {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.adr-dramatic-settings {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.adr-dramatic-stepper {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: center;
+}
+
+.adr-dramatic-stepper-label {
+  color: #ddd;
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.adr-dramatic-stepper-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.adr-dramatic-adjust-btn {
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 4px;
+  background: rgba(0,0,0,0.3);
+  color: #ccc;
+  cursor: pointer;
+}
+
+.adr-dramatic-adjust-btn:hover {
+  background: rgba(255,255,255,0.1);
+  color: #fff;
+}
+
+.adr-dramatic-stepper-value {
+  min-width: 48px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  text-align: center;
+  font-weight: bold;
+}
+
+/* ================================================================ */
+/*  Dramatische Aufgabe — Chat                                       */
+/* ================================================================ */
+
+.adr-dramatic-task-msg {
+  padding: 6px 8px 8px;
+}
+
+/* ─── Titel + Summary oben ─── */
+.adr-dramatic-title-line {
+  padding-bottom: 0;
+  margin-bottom: 8px;
+}
+
+.adr-dramatic-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  font-family: 'Roboto Slab', var(--font-primary), serif;
+  font-size: 0.9rem;
+  color: #333;
+  margin-bottom: 8px;
+}
+.adr-dramatic-summary-row {
+  display: flex;
+  gap: 6px;
+}
+.adr-dramatic-summary-label { color: #555; }
+.adr-dramatic-summary-value { font-weight: 700; color: #222; }
+
+/* ─── Eintrag: 3-Zeilen-Grid mit Portrait links ─── */
+.adr-dramatic-entries {
+  display: flex;
+  flex-direction: column;
+  /* Gradient-Trennlinien oberhalb und unterhalb der Entries.
+     Sonderfall oben: .adr-dramatic-summary hat margin-bottom 0.5rem, das wird
+     vom padding-top und vom top-Offset abgezogen, damit die effektive Lücke
+     zur ersten Akteur-Zeile identisch zu den anderen Modi ist. */
+  position: relative;
+  padding-top: calc(var(--adr-strich-pad-oben) - 0.5rem);
+  padding-bottom: var(--adr-strich-pad-unten);
+}
+.adr-dramatic-entries::before,
+.adr-dramatic-entries::after {
+  content: "";
+  position: absolute;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  background: var(--adr-strich-gradient);
+  pointer-events: none;
+}
+.adr-dramatic-entries::before {
+  top: calc(var(--adr-strich-offset-oben) - 0.5rem);
+}
+.adr-dramatic-entries::after {
+  bottom: var(--adr-strich-offset-unten);
+}
+
+.adr-dramatic-entry {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  column-gap: 9px;
+  row-gap: 0;
+  padding: 6px 4px;
+  border-top: 1px solid rgba(0,0,0,0.22);
+  text-align: left !important;
+}
+/* Erster Entry: kein border-top, sonst doppelte Linie mit dem Gradient
+   ::before von .adr-dramatic-entries. Folge-Entries behalten ihren
+   border-top als Akteur-Trenner. */
+.adr-dramatic-entry:first-child {
+  border-top: none;
+}
+
+.adr-dramatic-entry-img {
+  grid-row: 1;
+  grid-column: 1;
+  width: 42px;
+  height: 42px;
+  border-radius: 4px;
+  object-fit: contain;
+  border: none;
+  flex-shrink: 0;
+}
+
+/* Zeile 1: Name + Karte */
+.adr-dramatic-row1 {
+  grid-row: 1;
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.adr-dramatic-entry-name {
+  flex: 1;
+  font-size: 1rem;
+  color: #111;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Karten-Pill */
+.adr-dramatic-card {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 36px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.08);
+  color: #222;
+  font-weight: 700;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+.adr-dramatic-card-suit {
+  font-size: 1.1rem;
+  line-height: 1;
+  margin-left: 1px;
+}
+.adr-dramatic-card-joker {
+  /* Joker neutral (wie normale Karte) — gewollte Gestaltung */
+}
+.adr-dramatic-card-complication {
+  background: rgba(150,30,30,0.22);
+  color: #821010;
+}
+
+/* Zeile 2: Trait-Text + Action-Button */
+.adr-dramatic-row2 {
+  grid-row: 2;
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 24px;
+  margin-top: 2px;
+}
+.adr-dramatic-trait-text {
+  flex: 1;
+  font-size: 0.8rem;
+  color: #222;
+  line-height: 1.3;
+  display: flex;
+  align-items: flex-start;
+  gap: 0;
+}
+.adr-dramatic-arrow {
+  color: #6a6a6a;
+  margin-right: 4px;
+  flex-shrink: 0;
+}
+/* Content-Spalte fließt unter sich selbst um — die Klammer landet damit
+   in der zweiten Zeile bündig zum Trait-Namen, nicht zum Pfeil. */
+.adr-dramatic-trait-content {
+  flex: 1;
+  min-width: 0;
+}
+.adr-dramatic-values {
+  color: #6a6a6a;
+}
+.adr-dramatic-die {
+  color: #6a6a6a;
+}
+.adr-dramatic-joker-bonus {
+  color: #1a8a1a;
+  font-weight: 600;
+}
+.adr-dramatic-sep {
+  color: #555;
+  font-weight: 900;
+  margin: 0;
+}
+.adr-dramatic-wild {
+  color: #6a6a6a;
+  letter-spacing: 0.02em;
+}
+.adr-dramatic-mod {
+  font-weight: 600;
+}
+.adr-dramatic-mod.adr-dramatic-mod-pos {
+  color: #1a8a1a;
+}
+.adr-dramatic-mod.adr-dramatic-mod-neg {
+  color: #d10000;
+}
+.adr-dramatic-mod.adr-dramatic-mod-zero {
+  color: #6a6a6a;
+  font-weight: 400;
+}
+
+.adr-dramatic-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+/* Zeile 3: Optionen / Marker / Skipped / Fumble */
+/* Empfangene Support-Boni am Ziel (zwischen row2 und row3) */
+.adr-dramatic-received-support {
+  grid-row: 3;
+  grid-column: 1 / -1;
+  font-size: 0.8rem;
+  line-height: 1.3;
+  color: #444;
+  margin-top: 6px;
+}
+.adr-dramatic-received-support-line {
+  position: relative;
+  padding: 1px 0 1px 1.2em;
+}
+.adr-dramatic-received-support-line::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  top: 1px;
+  color: #888;
+  font-weight: 400;
+}
+.adr-dramatic-received-support-fumble {
+  color: #b02020;
+}
+
+/* Helfer hat unterstützt: Sub-Zeile statt Trait + Würfeln-Button.
+   Action floatet rechts, damit der Text in voller Breite fließt und auch
+   unter den Buttons weiterläuft (statt links neben den Buttons in eine
+   schmale Spalte gequetscht zu werden). */
+.adr-dramatic-support-row {
+  display: block !important;  /* override .adr-dramatic-row2 (flex) */
+  font-size: 0.85rem;
+  color: #444;
+  position: relative;
+}
+.adr-dramatic-support-row .adr-dramatic-action {
+  float: right;
+  margin-left: 6px;
+  position: relative;
+  z-index: 2;       /* Klick-Priorität gegenüber dem Text-Container */
+}
+.adr-dramatic-support-row::after {
+  content: "";
+  display: block;
+  clear: both;
+}
+.adr-dramatic-support-line {
+  position: relative;
+  display: block;
+  line-height: 1.35;
+  padding-left: 1.2em;
+  pointer-events: none;  /* Text-Span schluckt KEINE Klicks → Buttons bleiben klickbar */
+}
+.adr-dramatic-support-line::before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: #888;
+  font-weight: 400;
+}
+.adr-dramatic-support-fumble-text {
+  color: #b02020;
+  font-style: italic;
+}
+.adr-dramatic-support-success-text {
+  color: #1a8a1a;
+  font-weight: 700;
+}
+.adr-dramatic-support-failure-text {
+  color: #d10000;
+  font-weight: 700;
+}
+.adr-dramatic-support-pending-text {
+  color: #b06b00;
+  font-style: italic;
+  font-weight: 600;
+}
+.adr-dramatic-support-fumble-check-row {
+  grid-column: 1 / -1;
+  text-align: center;
+  margin-top: 2px;
+}
+.adr-dramatic-support-fumble-check-result {
+  grid-column: 1 / -1;
+}
+/* Optionale dezente Hintergrund-Schattierung für Helfer-Einträge */
+.adr-dramatic-entry-supporter {
+  background: rgba(40, 70, 110, 0.06);
+}
+
+.adr-dramatic-row3 {
+  grid-row: 4;
+  grid-column: 1 / -1;
+  font-size: 0.8rem;
+  color: #6a6a6a;
+  line-height: 1.3;
+  margin-top: 3px;
+  min-height: 1.1rem;
+  text-align: center;
+}
+
+/* Optionen-Block: 2 Spalten × 2 Zeilen.
+   Spalte 1: "Optionen:" (nur Zeile 1).
+   Spalte 2: Zeile 1 = "Eigenschaft ändern", Zeile 2 = "Aussetzen · Unterstützen".
+   Dadurch beginnen "Eigenschaft ändern" und "Aussetzen" exakt bündig
+   untereinander, mit kleinem Abstand zum Label. */
+.adr-dramatic-options {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 0.6em;
+  row-gap: 1px;
+  text-align: left;
+}
+.adr-dramatic-options-label {
+  grid-column: 1;
+  grid-row: 1;
+}
+.adr-dramatic-options-row1 {
+  grid-column: 2;
+  grid-row: 1;
+}
+.adr-dramatic-options-row2 {
+  grid-column: 2;
+  grid-row: 2;
+}
+.adr-dramatic-options a {
+  color: #3a5a7a;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.adr-dramatic-options a:hover {
+  color: #1a3a5a;
+}
+
+/* Optionen für Nicht-Berechtigte ausgegraut */
+.adr-dramatic-options.adr-not-mine a,
+.adr-dramatic-options.adr-not-mine a:hover {
+  color: #999;
+  cursor: not-allowed;
+}
+
+/* Farbe der Würfelergebnis-Zahl bei Fehlschlag/Patzer */
+.adr-dramatic-result-fail {
+  color: #d10000;
+}
+.adr-dramatic-option-sep {
+  color: #999;
+  margin: 0 3px;
+}
+
+.adr-dramatic-skipped {
+  font-style: italic;
+  color: #888;
+}
+
+.adr-dramatic-marker {
+  font-weight: 600;
+  color: #1a8a1a;
+}
+.adr-dramatic-marker-zero {
+  font-weight: 400;
+  color: #6a6a6a;
+  font-style: italic;
+}
+.adr-dramatic-marker-negative {
+  color: #d10000;
+  font-weight: 700;
+  font-style: italic;
+}
+.adr-dramatic-marker-negative .adr-dramatic-marker-detail {
+  font-style: normal;
+}
+
+/* Komplikations-Eintrag: deutlicher roter Akzent */
+.adr-dramatic-entry.adr-dramatic-entry-complication {
+  background: rgba(150,30,30,0.12);
+  border-left: 3px solid rgba(150,30,30,0.6);
+  padding-left: 6px;
+}
+
+/* ─── Verlauf-Toggle / Status / Controls ─── */
+.adr-dramatic-history-container {
+  margin-top: 6px;
+  margin-bottom: 0;
+}
+.adr-dramatic-history-container .adr-group-divider {
+  display: none;
+}
+.adr-dramatic-history-container .adr-individual-toggle {
+  margin-bottom: 0.2rem;
+}
+.adr-dramatic-history-container .adr-individual-details:not(.adr-individual-hidden) {
+  margin-bottom: 6px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(0,0,0,0.22);
+}
+
+/* Einzelergebnisse-Liste */
+.adr-dramatic-history-round {
+  font-family: 'Roboto Slab', var(--font-primary), serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #222;
+  text-decoration: underline;
+  margin-top: 10px;
+  margin-bottom: 3px;
+}
+.adr-dramatic-history-round:first-child {
+  margin-top: 12px;
+}
+.adr-dramatic-history-list {
+  list-style: disc outside;
+  padding-left: 18px;
+  margin: 0 0 4px 0;
+  text-align: left !important;
+}
+.adr-dramatic-history-item {
+  font-size: 0.85rem;
+  color: #222;
+  margin-bottom: 2px;
+}
+.adr-dramatic-history-head {
+  line-height: 1.3;
+}
+.adr-dramatic-history-body {
+  padding-left: 0;
+  line-height: 1.4;
+  color: #444;
+}
+.adr-dramatic-history-body .adr-individual {
+  display: inline;
+  margin-right: 6px;
+  font-size: inherit;
+  line-height: inherit;
+  margin-top: 0;
+}
+.adr-dramatic-history-label {
+  font-weight: normal;
+  color: #444;
+}
+.adr-dramatic-history-head .adr-dramatic-card-suit {
+  font-size: 1em;
+  margin-left: 0;
+}
+.adr-dramatic-history-head .adr-dramatic-joker-bonus {
+  font-size: 1em;
+}
+.adr-dramatic-history-outcome {
+  font-style: italic;
+  color: #555;
+  margin-left: 4px;
+}
+.adr-dramatic-history-outcome.adr-dramatic-history-gained {
+  color: #1a8a1a;
+  font-style: normal;
+  font-weight: 600;
+}
+.adr-dramatic-history-outcome.adr-dramatic-history-lost,
+.adr-dramatic-history-outcome.adr-dramatic-history-failure {
+  color: #d10000;
+  font-style: normal;
+  font-weight: 600;
+}
+.adr-dramatic-history-outcome.adr-dramatic-history-skipped,
+.adr-dramatic-history-outcome.adr-dramatic-history-none {
+  color: #888;
+}
+
+.adr-dramatic-task-status {
+  text-align: center;
+  font-style: italic;
+  font-size: 0.8rem;
+  color: #6a6a6a;
+  margin-top: 6px;
+  margin-bottom: 6px;
+}
+.adr-dramatic-status-line {
+  line-height: 1.3;
+}
+.adr-dramatic-status-line.adr-dramatic-status-success {
+  color: #1a8a1a;
+  font-weight: 700;
+  font-style: normal;
+}
+.adr-dramatic-status-line.adr-dramatic-status-failure {
+  color: #d10000;
+  font-weight: 700;
+  font-style: normal;
+}
+
+.adr-dramatic-controls {
+  display: flex;
+  justify-content: center;
+  margin-top: 0;
+}
+.adr-dramatic-advance-btn {
+  font-family: inherit;
+  font-size: 0.9rem;
+  padding: 4px 14px;
+  border: 1px solid rgba(0,0,0,0.3);
+  border-radius: 4px;
+  background: rgba(255,255,255,0.7);
+  color: #222;
+  cursor: pointer;
+}
+.adr-dramatic-advance-btn:hover {
+  background: rgba(255,255,255,0.9);
+}
+
+/* ════════════════════════════════════════════════════════════════════ */
+/*  Vergleichende Probe — Duell-Layout (opposed mode)                    */
+/* ════════════════════════════════════════════════════════════════════ */
+
+.adr-opposed-arena {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: stretch;
+  gap: 2px;
+  /* Padding für die ::before/::after-Gradient-Trennlinien (s. zentraler Block
+     "Permanente Gradient-Trennlinien" weiter oben). Symmetrisch zu beiden
+     Variablen — falls der Wurf-Button unten zu nah am Strich sitzt, hier
+     padding-bottom als calc(... + Xrem) erhöhen. */
+  padding-top: var(--adr-strich-pad-oben);
+  padding-bottom: var(--adr-strich-pad-unten);
+  padding-left: 0;
+  padding-right: 0;
+  position: relative;
+  /* Abstand zur Titelzeile (message-header) reduzieren — */
+  /* Stellschraube: weniger negativ = mehr Abstand.       */
+  margin-top: -0.5rem;
+}
+
+/* Einträge links/rechts (VS-Badge ist DOM-mäßig drittes Kind,
+   per Grid-Placement steht es in Spalte 2) */
+.adr-opposed-arena .adr-opposed-side {
+  padding: 2px 2px;
+  border-bottom: none;
+  min-width: 0;
+}
+.adr-opposed-arena .adr-opposed-side[data-opposed-index="0"] {
+  grid-column: 1;
+  grid-row: 1;
+}
+.adr-opposed-arena .adr-opposed-side[data-opposed-index="1"] {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+/* Actor-Zeile: in opposed vertikal gestapelt und mittig */
+.adr-opposed-arena .adr-opposed-actor-row {
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  text-align: center;
+}
+
+.adr-opposed-arena .adr-opposed-portrait {
+  width: 42px;
+  height: 42px;
+  border-radius: 4px;
+}
+
+/* Vergleichende Probe: Sieger/Verlierer/Gleichstand-Ring um Token-Bild */
+.adr-opposed-portrait.adr-opposed-winner,
+.adr-opposed-portrait.adr-opposed-loser,
+.adr-opposed-portrait.adr-opposed-tie {
+  outline-offset: 1px;
+}
+.adr-opposed-portrait.adr-opposed-winner { outline: 3px solid #1a8a1a; }
+.adr-opposed-portrait.adr-opposed-loser  { outline: 3px solid #d10000; }
+.adr-opposed-portrait.adr-opposed-tie    { outline: 3px solid #777; }
+
+.adr-opposed-arena .adr-opposed-info {
+  width: 100%;
+  min-width: 0;
+  text-align: center;
+}
+
+.adr-opposed-arena .adr-opposed-name {
+  text-align: center;
+  font-weight: bold;
+  color: #111;
+  font-size: 0.95rem;
+}
+
+.adr-opposed-arena .adr-opposed-trait {
+  font-family: 'Roboto Slab', var(--font-primary), serif;
+  font-size: 0.85rem;
+  font-weight: normal;
+  color: #333;
+  margin-top: 1px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.adr-opposed-arena .adr-opposed-trait.adr-opposed-trait-untrained {
+  color: #c77;
+  font-style: italic;
+}
+
+.adr-opposed-arena .adr-opposed-trait-detail {
+  font-size: 0.8rem;
+  color: #555;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.adr-opposed-arena .adr-opposed-result-area {
+  justify-content: center;
+  margin-top: 3px;
+}
+
+/* Würfel-Button im Duell etwas kompakter */
+.adr-opposed-arena .adr-roll-btn {
+  padding: 3px 8px;
+  font-size: 0.8rem;
+}
+
+/* VS-Badge in der Mitte */
+.adr-opposed-vs {
+  grid-column: 2;
+  grid-row: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+}
+.adr-opposed-vs::before,
+.adr-opposed-vs::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 1px;
+  background: linear-gradient(rgba(0,0,0,0), rgba(0,0,0,0.25));
+}
+.adr-opposed-vs::before {
+  top: 6px;
+  height: calc(50% - 22px);
+}
+.adr-opposed-vs::after {
+  bottom: 6px;
+  height: calc(50% - 22px);
+  background: linear-gradient(rgba(0,0,0,0.25), rgba(0,0,0,0));
+}
+
+.adr-opposed-vs-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.07);
+  border: 1px solid rgba(0,0,0,0.25);
+  color: #222;
+  font-family: 'Roboto Slab', var(--font-primary), serif;
+  font-weight: bold;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+}
+
+/* Vergleichende Probe: Gesammelte Einzelergebnisse — Blockstil pro Akteur */
+.adr-opposed-detail-block {
+  margin: 6px 0 8px;
+}
+.adr-opposed-detail-block:first-child {
+  margin-top: 2px;
+}
+.adr-opposed-detail-block:last-child {
+  margin-bottom: 2px;
+}
+.adr-opposed-detail-name {
+  font-family: 'Roboto Slab', var(--font-primary), serif;
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: #222;
+  text-decoration: underline;
+  text-align: center;
+  margin-bottom: 2px;
+}
+.adr-opposed-detail-body {
+  font-size: 0.85rem;
+  color: #222;
+  text-align: center;
+  line-height: 1.4;
+}
+/* Pro Spielerblock können mehrere Wurfzeilen stehen (verworfen + aktuell, analog
+   Einzelprobe-Historie). Direkte Kinder mit `.adr-individual` sind Wrapper-Divs
+   und sollen Block-Level sein. Innere Spans (z. B. .adr-group-detail-wild) bleiben
+   inline durch ihre Element-Natur. */
+.adr-opposed-detail-body > .adr-individual {
+  font-size: inherit;
+  line-height: inherit;
+  margin-top: 0;
+}
+
+/* ================================================================ */
+/*  Dramatische Aufgabe — Unterstützen-Dialog                        */
+/* ================================================================ */
+
+.adr-support-dialog-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Kopfzeile mit Helfer-Portrait */
+.adr-support-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px 2px 8px;
+}
+/* Bild + Name nebeneinander, vertikal mittig (analog zur Chat-Ausgabe) */
+.adr-support-helper-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+}
+.adr-support-helper-img {
+  width: 42px;
+  height: 42px;
+  border-radius: 4px;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+.adr-support-helper-name {
+  font-weight: bold;
+  font-size: 0.95rem;
+  color: #222;
+}
+/* Erklärtext unter Helfer-Zeile (Bonus-Info) */
+.adr-support-bonus-info {
+  font-size: 0.85rem;
+  color: #333;
+  font-style: normal;
+  margin: 2px 0 0 0;
+  line-height: 1.3;
+}
+/* Roter SL-Hinweis (komplett kursiv, "HINWEIS:" zusätzlich fett) */
+.adr-support-warning {
+  font-size: 0.85rem;
+  color: #d04040;
+  font-style: italic;
+  margin: 2px 0 0 0;
+  line-height: 1.3;
+}
+
+/* Ziel-Chips klickbar (Portraits müssen auch den Klick triggern) */
+.adr-support-target-chip {
+  cursor: pointer;
+}
+.adr-support-target-chip .adr-actor-chip-check-slot,
+.adr-support-target-chip .adr-actor-chip-img,
+.adr-support-target-chip .adr-actor-chip-name {
+  pointer-events: none;
+}
+
+/* Leere-Ziele-Meldung */
+.adr-support-empty {
+  padding: 8px 4px;
+  text-align: center;
+  font-style: italic;
+  color: #555;
+}
+
+/* Aktions-Buttons am Ende */
+.adr-support-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 4px 0 2px 0;
+}
+.adr-support-cancel-btn,
+.adr-support-confirm-btn {
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  border: 1px solid rgba(0,0,0,0.3);
+}
+.adr-support-cancel-btn {
+  background: rgba(0,0,0,0.08);
+  color: #333;
+}
+.adr-support-cancel-btn:hover {
+  background: rgba(0,0,0,0.16);
+}
+.adr-support-confirm-btn {
+  background: rgba(60, 140, 60, 0.7);
+  border-color: rgba(80, 180, 80, 0.7);
+  color: #fff;
+  font-weight: bold;
+  transition: background 0.15s, border-color 0.15s;
+}
+.adr-support-confirm-btn:hover {
+  background: rgba(70, 160, 70, 0.85);
+  border-color: rgba(95, 195, 95, 0.85);
+}
+.adr-support-confirm-btn:disabled {
+  background: rgba(0, 0, 0, 0.12);
+  border-color: rgba(0, 0, 0, 0.25);
+  color: #888;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+/* ─────────────────────────────────────────────────────────────────── */
+/*  Change-Trait-Dialog (Eig. ändern in Dramatischer Aufgabe)           */
+/* ─────────────────────────────────────────────────────────────────── */
+
+/* Zeile mit der ursprünglich vom GM angeforderten Eigenschaft */
+.adr-change-trait-original-line {
+  margin: 6px 0 2px 0;
+  font-size: 0.85rem;
+  color: #555;
+  font-style: italic;
+}
+
+/* Reset-Button ("Auf ursprüngliche Eigenschaft zurücksetzen") */
+.adr-change-trait-reset-btn {
+  padding: 4px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  border: 1px solid rgba(0,0,0,0.3);
+  background: rgba(0,0,0,0.08);
+  color: #333;
+  margin-right: auto;  /* links bündig, Cancel/Confirm bleiben rechts */
+}
+.adr-change-trait-reset-btn:hover {
+  background: rgba(0,0,0,0.16);
+}
