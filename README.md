@@ -8,9 +8,9 @@
 
 # Arga's Dice Roller
 
-ADR ist in seiner Grundfunktion ein systemagnostisches Würfelmodul für Foundry VTT, welches dem GM zudem die Möglichkeit bietet, mittels Schicksalswurf einen zufälligen Spieler auszuwählen. 
+At its core, ADR is a system-agnostic dice module for Foundry VTT that also gives the GM the option to pick a random player via a Fate Roll.
 
-Des Weiteren können im ADR umfangreiche Funktionen und Würfelmechaniken für das Spielsystem **Savage Worlds Adventure Edition (SWADE)** zugeschaltet werden, wie z.B. Kritische Fehlschläge, Benny-Reroll, Probenanforderungen und Dramatische Aufgaben.
+In addition, ADR can enable extensive features and dice mechanics for the **Savage Worlds Adventure Edition (SWADE)** game system, such as Critical Failures, Benny rerolls, Request Rolls, and Dramatic Tasks.
 
 <table align="center">
   <tr>
@@ -25,7 +25,7 @@ Des Weiteren können im ADR umfangreiche Funktionen und Würfelmechaniken für d
 
 <br>
 
-Und für die Darstellung im Chat stehen die Themengrafiken *Fantasy* und *Modern* zur Verfügung. Es kann aber auch der Foundry-Standad genutzt werden.
+For the chat display, the *Fantasy* and *Modern* theme graphics are available. Alternatively, the Foundry default can be used.
 
 <table align="center">
   <tr>
@@ -40,9 +40,9 @@ Und für die Darstellung im Chat stehen die Themengrafiken *Fantasy* und *Modern
 
 <br>
 
-## Allgemeine Features
-Unabhängig vom Spielsystem hat ***Arga's Dice Roller***  folgende Funktionen: 
-- ***Würfelfenster:*** Durch klicken des orangen W20-Icons im linken Control Panel öffnet sich das Würfelfenster mit den Standardwürfeln W4, W6, W8, W10, W12 und W20. Optional zuschaltbar sind: W2, W100 und Münzwürfe.
+## General Features
+Regardless of the game system, ***Arga's Dice Roller*** offers the following features:
+- ***Dice Window:*** Clicking the orange d20 icon in the left control panel opens the dice window with the standard dice d4, d6, d8, d10, d12, and d20. Optionally available: d2, d100, and coin tosses.
 
 <table align="center">
   <tr>
@@ -56,12 +56,12 @@ Unabhängig vom Spielsystem hat ***Arga's Dice Roller***  folgende Funktionen:
 </table>
 
 <br>
-  
-- ***Mischwürfe:*** Hält man beim Klick auf ein Würfelfeld die SHIFT-Taste gedrückt, können mehrere Würfelarten miteinander kombiniert werden (z.B. 2x W8 und 1x W6). Das Loslassen der SHIFT-Taste löst dann den Würfelwurf aus. 
-- ***Explodierende Würfel:*** Erreicht ein Würfel sein Maximum, wird er erneut geworfen und die Ergebnisse werden addiert. Es kann eingestellt werden, ob Würfel mehrfach oder nur 1x explodieren können. Im Chat werden Würfel mit der Möglichkeit zum Explodieren mit einem hochgestellten "EX" gekennzeichnet. 
-- ***Modifikatoren:**** Die optionalen Modifikator-Buttons gehen von -6 bis +6 und können additiv gedrückt werden. Alternativ kann man den Modifikator auch frei eingeben (maximal zweistellig). Der Modifikator beeinflussen nicht die einzelnen Würfel, sondern nur das Gesamtergebnis (und das Ergebnis des SWADE Wild Die). Die jeweils geltenden Modifikationen werden in der Chat Card farbig hervorgehoben.
-- ***Einzelergebnisse:*** Jede Chat Card mit einem Würfelereignis hat einen Button zur Darstellung der Einzelergebnisse. Wurden z.B. mehrere verschiedene Würfel geworfen, oder wurde bei SWADE ein Wurf mittels Benny wiederholt, mag es manchmal wichtig sein, welcher Würfel welches Ergebnis erzielt hat. 
-- ***Schicksalswurf (GM only):*** Der GM wählt auf dem Canvas all diejenigen Token aus, zwischen denen zufällig gewählt werden soll. Nach Drücken des Buttons "Schicksalswurf" wird aus den markierten Token zufällig einer ausgewählt und sein Name wird im Chat verkündet.
+
+- ***Mixed Rolls:*** Holding the Ctrl key while clicking a die button lets you combine several die types (e.g. 2× d8 and 1× d6). Releasing the Ctrl key then triggers the roll.
+- ***Exploding Dice:*** When a die rolls its maximum, it is rolled again and the results are added together. You can configure whether dice may explode multiple times or only once. In the chat, dice that are able to explode are marked with a superscript "ex".
+- ***Modifiers:*** The optional modifier buttons range from -6 to +6 and can be applied cumulatively. Alternatively, you can enter the modifier freely (up to two digits). The modifier does not affect the individual dice, only the total result (and the result of the SWADE Wild Die). The modifiers in effect are highlighted in color on the chat card.
+- ***Individual Results:*** Every chat card with a dice roll has a button for displaying the individual results. For example, when several different dice have been rolled, or when a roll has been rerolled with a Benny in SWADE, it can sometimes matter which die produced which result.
+- ***Fate Roll (GM only):*** On the canvas, the GM selects all the tokens to choose randomly between. After pressing the "Fate Roll" button, one of the selected tokens is picked at random and its name is announced in the chat.
 
 <table align="center">
   <tr>
@@ -74,11 +74,11 @@ Unabhängig vom Spielsystem hat ***Arga's Dice Roller***  folgende Funktionen:
 
 <br>
 
-## Features für Savage Worlds (SWADE)
-Bei aktivem SWADE-System werden automatisch zusätzliche Buttons freigeschaltet sowie die Würfelmechaniken von Savage Worlds angewandt: 
-- ***Wild Die:*** Ein zusätzlicher W6, der immer explodieren kann. Er wird parallel zu den Eigenschaftwürfeln geworfen und erzielt sein eigenes Ergebnis. Das bessere Ergebnis wird für den Wurf gezählt. Beide Würfel werden im Chat separat ausgewiesen.
-- ***Benny-Reroll:*** Akteure können ihren Würfelwurf mit einem Benny wiederholen. Das neue Ergebnis kann aber gemäß den Regeln nicht schlechter sein als das alte, es sei denn, der neue Wurf war ein Kritischer Fehlschlag. Wenn ein Reroll mittels Benny stattgefnden hat, wird dies im Chat dokumentiert und der Benny-Button bekommt eine grüne Umrandung. 
-- ***Patzer-Erkennung:*** Erkennt das Modul einen Kritischen Fehlschlag, wird der Benny-Reroll deaktiviert. (GM only:) Hat ein Extra bei einer Probe eine 1 gewürfelt, dann hat der GM die Auswahloption, ob er den Wurf annehmen oder mit einem W6 auf einen kritischen Fehlschlag prüfen möchte. ***HINWEIS:*** Aus Platzgründen wurde der SWADE-Begriff "Kritischer Fehlschlag" an einigen Stellen durch "Fumble" ersetzt". 
+## Features for Savage Worlds (SWADE)
+When the SWADE system is active, additional buttons are unlocked automatically and the dice mechanics of Savage Worlds are applied:
+- ***Wild Die:*** An additional d6 that can always explode. It is rolled alongside the Trait dice and produces its own result. The better result counts for the roll. Both dice are listed separately in the chat.
+- ***Benny Reroll:*** Actors can reroll their roll by spending a Benny. By the rules, however, the new result cannot be worse than the previous one — unless the new roll is a Critical Failure. When a roll has been rerolled with a Benny, this is documented in the chat and the Benny button receives a green border.
+- ***Fumble Detection:*** When the module detects a Critical Failure, the Benny reroll is disabled. *(GM only:)* If an Extra rolls a 1 on a check, the GM has the option to either accept the roll or check for a Critical Failure with a d6. ***NOTE:*** To save space, the SWADE term "Critical Failure" has been replaced with "Fumble" in some places.
 
 <table align="center">
   <tr>
@@ -91,12 +91,12 @@ Bei aktivem SWADE-System werden automatisch zusätzliche Buttons freigeschaltet 
 
 <br>
 
-### Request Roll (GM only): 
-Der GM sendet Probenanforderungen an einen oder mehrere Akteure (an Spieler oder auch an auf dem Canvas befindliche NSC):
+### Request Roll (GM only):
+The GM sends roll requests to one or more actors (to players or to NPCs placed on the canvas):
 
-- ***Individual Rolls:*** Jeder Akteur würfelt mit einer individuellen Eigenschaft. Es können vom GM auch Proben von mehreren Akteuern gleichzeitig angefordert werden. Sobald ein Akteur ausgewählt wird, werden alle Eigenschaften angezeigt, über die dieser Token verfügt.
+- ***Individual Rolls:*** Each actor rolls with an individual Trait. The GM can also request rolls from several actors at once. As soon as an actor is selected, all Traits that this actor possesses are displayed.
 
- <table align="center">
+<table align="center">
   <tr>
     <td align="center"><img src="screenshots/request_f.png" height="300"></td>
   </tr>
@@ -107,7 +107,7 @@ Der GM sendet Probenanforderungen an einen oder mehrere Akteure (an Spieler oder
 
 <br>
 
-   - ***Group Check:*** Alle ausgewählten Spielercharaktere (diesmal nicht NSC) testen auf dieselbe Eigenschaft (z.B. Wahrnehmung). Solange noch kein Charakter ausgewählt wurde, werden unterhalb alle Eigenschaften angezeigt, über die zumindest einer der Charaktere verfügt. Dabei werden solche Eigenschaften gelb hervorgehoben, die nicht bei allen vorhanden sind. Bei Mouse over über einem Charakter werden solche Eigenschaften rot dargestellt, die dieser Charakter nicht hat. Und bei Mouse over über einer Eigenschaft wird ein Tooltipp mit allen Akteuren angezeigt, die diese Eigenschat haben. ***HINWEIS ZUR PROBENANFORDERUNG:*** Wenn nur die zu testenede Eigenschaft angeklickt wird, dann werden automatisch *alle* verfügbaren Spieler ausgewählt.
+- ***Group Check:*** All selected player characters (this time not NPCs) test the same Trait (e.g. Notice). As long as no character has been selected, all Traits that at least one of the characters possesses are displayed below. Traits that not every character has are highlighted in yellow. When hovering over a character, the Traits that character does not have are shown in red. When hovering over a Trait, a tooltip displays all actors that have it. ***NOTE ON REQUEST ROLLS:*** If only the Trait to be tested is clicked, *all* available players are selected automatically.
 
 <table align="center">
   <tr>
@@ -140,9 +140,9 @@ Der GM sendet Probenanforderungen an einen oder mehrere Akteure (an Spieler oder
   </tr>
 </table>
 
- <br>
- 
-- ***Opposed Test:*** Zwei Akteure treten mit individuellen Eigenschaften gegeneinander an (z.B. Notice vs. Stealth). Der Gewinner wird farbig im Chat hervorgehoben.
+<br>
+
+- ***Opposed Test:*** Two actors compete against each other with individual Traits (e.g. Notice vs. Stealth). The winner is highlighted in color in the chat.
 
 <table align="center">
   <tr>
@@ -156,8 +156,8 @@ Der GM sendet Probenanforderungen an einen oder mehrere Akteure (an Spieler oder
 </table>
 
 <br>
-  
-- ***Dramatische Aufgabe:*** Ein oder mehrere Akteure müssen in einer vom GM festgelegten Anzahl an Runden mit einer individuellen Eigenschaft eine bestimmte Anzahl an Erfolgen schaffen. Der GM kann die Rahmenbedingungen frei wählen, oder er legt über entsprechende Buttons die vom SWADE Regelsystem vorgeschlagenen Schwierigkeitgrade fest. Bei der Dramatischen Aufgabe verwaltet das Modul den Aufgabenfortschritt und führt den Spieler mit Buttons durch seine Optionen, wie z.B. das Unterstützen anderer Akteure. Das Modul simuliert jede Runde das Ziehen von Aktionskarten und berücksichtigt die regeltechnischen Auswirkungen von Joker-/ oder Kreuz-Karten.
+
+- ***Dramatic Task:*** One or more actors must achieve a certain number of successes with an individual Trait within a number of rounds set by the GM. The GM can choose the parameters freely, or use the corresponding buttons to set the difficulty levels suggested by the SWADE rules. During a Dramatic Task, the module manages the task's progress and guides the player through their options with buttons, such as Supporting other actors. Each round, the module simulates drawing Action Cards and accounts for the rules effects of Joker or Club cards.
 
 <table align="center">
   <tr>
@@ -171,22 +171,25 @@ Der GM sendet Probenanforderungen an einen oder mehrere Akteure (an Spieler oder
 </table>
 
 <br>
-  
-- ***Unskilled Attempts:*** Wenn das Modul erkennt, dass eine angeforderte Eigenschaft bei einem Akteur nicht verfügbar ist, wird automatisch eine "unskilled" Probe mit W4 -2 geworfen. 
+
+- ***Unskilled Attempts:*** When the module detects that a requested Trait is not available on an actor, an "unskilled" roll of d4-2 is made automatically.
 
 <br>
 
-## Sonstiges
-- ***Lokalisierung:*** Das Modul ist derzeit in Englisch und in Deutsch verfügbar. 
-- ***Dice So Nice:*** Wenn das Modul DSN installiert und aktiviert ist, werden alle Würfe – inklusive Wild Die, explodierender Würfel und Bennies – mit den gewohnten 3D-Animationen ausgegeben.
-  
+## Miscellaneous
+- ***Localization:*** The module is currently available in English and German.
+- ***Dice So Nice:*** If the DSN module is installed and active, all rolls — including the Wild Die, exploding dice, and Bennies — are rendered with the familiar 3D animations.
+
+<br>
+
 ---
 
-## Meine anderen Module
-Wenn dir ***Arga's Dice Roller*** gefällt, dann schaue dir auch gerne meine anderen Module an:
+## My Other Modules
+If you like ***Arga's Dice Roller***, feel free to check out my other modules as well:
 
-* **[Arga's Day-Night Slider](https://github.com/Arga-Mods/argas-day-night-slider)** – Schieberegler für einen sanften Tag-/Nacht-Wechsel deiner Szenen.
+* **[Arga's Day-Night Slider](https://github.com/Arga-Mods/argas-day-night-slider)** – A slider for a smooth day/night transition in your scenes.
 * **[Arga's Benny & Wound Panel (SWADE)](https://github.com/Arga-Mods/argas-benny-and-wound-panel-swade)** – A panel for quick adjustment of Bennies, Wounds, and Fatigue on selected tokens. Designed for Savage Worlds.
+
 ---
 
 <p align="center"><em>Enjoy — Arga</em></p>
