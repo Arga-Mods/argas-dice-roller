@@ -1,7 +1,6 @@
 <p align="center">
   <img src="https://img.shields.io/endpoint?url=https://foundryshields.com/version?url=https://raw.githubusercontent.com/Arga-Mods/argas-dice-roller/main/module.json" alt="Foundry Version">
   <a href="https://github.com/Arga-Mods/argas-dice-roller/releases/latest"><img src="https://img.shields.io/github/v/release/Arga-Mods/argas-dice-roller?display_name=tag&sort=semver&label=Latest%20Release&color=4287f5" alt="Latest Release"></a>
-  <a href="https://forge-vtt.com/bazaar#package=argas-dice-roller"><img src="https://img.shields.io/badge/dynamic/json?label=Forge%20Installs&query=package.installs&suffix=%25&url=https://forge-vtt.com/api/bazaar/package/argas-dice-roller&colorB=4aa94a" alt="Forge Installs"></a>
   <a href="https://github.com/Arga-Mods/argas-dice-roller/releases"><img src="https://img.shields.io/github/downloads/Arga-Mods/argas-dice-roller/total?label=Downloads%20%28Total%29&color=4aa94a" alt="Downloads Total"></a>
   <a href="https://github.com/Arga-Mods/argas-dice-roller/releases/latest"><img src="https://img.shields.io/github/downloads/Arga-Mods/argas-dice-roller/latest/total?label=Downloads%20%28Latest%29&color=f5a623" alt="Downloads Latest"></a>
 </p>
