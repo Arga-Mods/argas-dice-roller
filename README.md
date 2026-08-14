@@ -182,6 +182,9 @@ The GM sends roll requests to one or more actors (to players or to NPCs placed o
 ## Manifest-URL
 https://github.com/Arga-Mods/argas-dice-roller/releases/latest/download/module.json
 
+## FoundryVTT.com
+https://foundryvtt.com/packages/argas-dice-roller
+
 <br>
 
 ---
