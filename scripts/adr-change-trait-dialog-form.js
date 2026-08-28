@@ -135,14 +135,12 @@ export class ChangeTraitDialogForm extends HandlebarsApplicationMixin(Applicatio
       { trait: escFn(originalTraitName) }
     );
 
-    // Override aktiv?
     const ovr = entry?.dramaticTraitOverride;
     const hasOverride = !!(ovr && (
       ovr.type !== entry.traitType ||
       ovr.key !== entry.traitKey
     ));
 
-    // Traits des Akteurs (Attribute + Fertigkeiten)
     const traits = actorObj ? collectActorTraits(actorObj) : {
       attributes: [], skills: [], coreSkills: [], otherSkills: [],
     };
@@ -196,7 +194,6 @@ export class ChangeTraitDialogForm extends HandlebarsApplicationMixin(Applicatio
         const key = traitBtn.dataset.traitKey;
         const name = traitBtn.dataset.traitName;
         if (this.selectedTraitKey === key && this.selectedTraitType === type) {
-          // Abwählen bei erneutem Klick
           this.selectedTraitType = null;
           this.selectedTraitKey = null;
           this.selectedTraitName = null;

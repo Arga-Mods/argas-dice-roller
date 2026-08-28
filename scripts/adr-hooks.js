@@ -20,10 +20,9 @@ import {
 let globalDiceForm;
 
 /**
- * Dice-So-Nice-Animation unter Wahrung des Sichtbarkeits-Modus der Nachricht:
- * Bei Whisper-/Blind-Nachrichten sehen nur die Empfänger die 3D-Würfel —
- * sonst würden verdeckte Würfe (SL-/Blind-/Selbst-Wurf) über die Animation
- * an alle Clients leaken, obwohl die Chatkarte verborgen ist.
+ * Dice-So-Nice-Animation unter Wahrung des Sichtbarkeits-Modus: Bei Whisper-/
+ * Blind-Nachrichten sehen nur die Empfänger die 3D-Würfel, sonst leakt die
+ * Animation verdeckte Würfe an alle Clients.
  */
 async function _adrShowRoll3d(roll, message) {
   if (!game.dice3d || !roll) return;
@@ -31,10 +30,9 @@ async function _adrShowRoll3d(roll, message) {
     .map(id => game.users.get(id))
     .filter(Boolean);
   try {
-    // DSNs blind-Parameter bedeutet "auf dem AUSLÖSENDEN Client nicht
-    // anzeigen" — hier bewusst false: Der Klicker ist bei verdeckten Würfen
-    // immer legitimer Empfänger (GM), und die Whisper-Liste beschränkt die
-    // übrigen Clients bereits korrekt.
+    // DSNs blind-Parameter heißt "auf dem AUSLÖSENDEN Client nicht anzeigen" —
+    // bewusst false: Der Klicker ist bei verdeckten Würfen stets legitimer
+    // Empfänger, die Whisper-Liste beschränkt die übrigen Clients bereits.
     await game.dice3d.showForRoll(
       roll, game.user, true,
       whisperUsers.length ? whisperUsers : null,
@@ -67,11 +65,9 @@ let _adrReorderCount = 0;         // Repositionierungen im aktuellen Render-Zykl
 const ADR_REORDER_LIMIT = 20;     // > Limit pro Render-Zyklus => Tauziehen => Observer trennen
 
 /**
- * Hält den ADR-Eintrag als letztes Element der Steuerungsleiste.
- * Endlosschleifen-Schutz: zählt Repositionierungen pro Render-Zyklus —
- * wird das Limit überschritten (ein anderes Modul kämpft ebenfalls um den
- * letzten Platz), trennt ADR seinen eigenen Observer und gibt den Platz auf.
- * Das Spiel bleibt so in jedem Fall flüssig.
+ * Hält den ADR-Eintrag als letztes Element der Steuerungsleiste. Überschreitet
+ * die Zahl der Repositionierungen pro Render-Zyklus das Limit (ein anderes
+ * Modul kämpft um denselben Platz), wird der Observer getrennt — kein Endlos-Tauziehen.
  */
 function _adrEnsureControlLast(container, node) {
   if (!container || !node) return;
@@ -86,7 +82,6 @@ function _adrEnsureControlLast(container, node) {
   container.appendChild(node);
 }
 
-/** Würfelfenster öffnen bzw. schließen. */
 function _adrToggleDiceForm() {
   if (!globalDiceForm) globalDiceForm = new DiceForm();
   if (globalDiceForm.rendered) globalDiceForm.close();
@@ -126,10 +121,8 @@ Hooks.on("getSceneControlButtons", (controls) => {
   }
 });
 
-/* Manueller DOM-Injection-Fallback: erzeugt den ADR-Eintrag als eigenes
- * <li> in der Szenen-Steuerungsleiste (dem <menu>), unten links, außerhalb
- * der Figurensteuerung.
- * Robustes Unten-Halten in drei Stufen:
+/* DOM-Injection: eigenes <li> in der Szenen-Steuerungsleiste, außerhalb der
+ * Figurensteuerung. Unten-Halten in drei Stufen:
  *   - order:9999 inline (am <li>)        — CSS-Flex-Reihenfolge
  *   - Stufe 1: verzögertes Nach-Anhängen — gewinnt gegen denselben Render
  *   - Stufe 2: MutationObserver          — gewinnt auch gegen späte Einschübe
@@ -138,8 +131,7 @@ Hooks.on("renderSceneControls", (_app, html) => {
   const root = html instanceof HTMLElement ? html : html?.[0];
   if (!root) return;
 
-  // ADR-Eintrag holen oder neu erzeugen. `item` ist das <li> der Leiste
-  // (im Struktur-Fallback der Button selbst).
+  // `item` ist das <li> der Leiste (im Struktur-Fallback der Button selbst).
   const existingBtn = root.querySelector(`[data-control="${ADR_CONTROL_KEY}"]`);
   const item = existingBtn ? (existingBtn.closest("li") ?? existingBtn)
                            : _adrInjectControlButton(root);
@@ -148,37 +140,25 @@ Hooks.on("renderSceneControls", (_app, html) => {
   const container = item.parentElement;   // die echte Steuerungsleiste (<menu>/<ol>)
   if (!container) return;
 
-  // Neuer Render-Zyklus: Tauzieh-Zähler zurücksetzen, alten Observer trennen.
   _adrReorderCount = 0;
   _adrControlObserver?.disconnect();
 
-  // Stufe 1: nach allen synchronen Render-Hooks der anderen Module einmal
-  // ans Ende schieben — gewinnt gegen alles aus diesem Render-Durchlauf.
+  // Stufe 1: nach den synchronen Render-Hooks der anderen Module ans Ende schieben.
   requestAnimationFrame(() => _adrEnsureControlLast(container, item));
 
-  // Stufe 2: Observer hält den Eintrag dauerhaft als letztes Element,
-  // auch gegen Module, die ihren Eintrag erst deutlich später einschieben.
+  // Stufe 2: Observer gegen Module, die ihren Eintrag erst später einschieben.
   _adrControlObserver = new MutationObserver(() => _adrEnsureControlLast(container, item));
   _adrControlObserver.observe(container, { childList: true });
 });
 
 /**
- * Erzeugt den ADR-Eintrag für die Szenen-Steuerungsleiste.
- *
- * Foundry v14 baut jedes Steuerungs-Symbol als
- *   <li><button data-control="…">…</button></li>.
- * Diese Funktion klont das <li>-Wrapper eines vorhandenen Controls (Notes)
- * als Vorlage, baut es auf die ADR-Identität um und hängt es als
- * EIGENSTÄNDIGES <li> an die echte Leiste (das <menu>/<ol>) an — NICHT in
- * das <li> eines fremden Controls hinein.
- *
- * Fallback: Findet sich kein <li>-Wrapper (abweichende Struktur), wird wie
- * früher der Button selbst geklont und an dessen Elternelement gehängt.
- *
+ * Erzeugt den ADR-Eintrag der Szenen-Steuerungsleiste: klont das <li> eines
+ * vorhandenen Controls (Foundry v14: <li><button data-control>), baut es auf
+ * die ADR-Identität um und hängt es als EIGENES <li> an die Leiste — nie in
+ * das <li> eines fremden Controls. Ohne <li>-Wrapper wird der Button selbst geklont.
  * @returns {HTMLElement|null} das eingehängte äußere Element (<li> bzw. Button)
  */
 function _adrInjectControlButton(root) {
-  // 1) Vorlage-Button eines vorhandenen Controls finden.
   const tplButton =
     root.querySelector(`[data-control="notes"]`) ??
     root.querySelector(`[data-control]`);
@@ -188,19 +168,17 @@ function _adrInjectControlButton(root) {
     return null;
   }
 
-  // 2) <li>-Wrapper bestimmen; Fallback auf den Button selbst.
   const tplItem = tplButton.closest("li") ?? tplButton;
   const hasLiWrapper = tplItem !== tplButton;
 
-  // 3) Zielcontainer = Elternelement des Wrappers = die echte Leiste.
   const container = tplItem.parentElement;
   if (!container) return null;
 
-  // 4) Vorlage tief klonen (Event-Listener werden dabei NICHT mitkopiert).
+  // cloneNode kopiert keine Event-Listener mit.
   const outer = tplItem.cloneNode(true);
 
-  // 5) Inneren Button bestimmen. Falls das Vorlage-<li> durch frühere
-  //    (Fremd-)Injektionen mehrere Buttons enthält, nur den ersten behalten.
+  // Enthält das Vorlage-<li> durch fremde Injektionen mehrere Buttons,
+  // bleibt nur der erste.
   let inner;
   if (hasLiWrapper) {
     const buttons = outer.querySelectorAll("button");
@@ -214,7 +192,6 @@ function _adrInjectControlButton(root) {
     return null;
   }
 
-  // 6) Active/Selected-Zustand rekursiv entfernen.
   const stripState = (el) => {
     el.classList?.remove?.("active", "selected", "control-active", "ui-active",
                            "control-tool-active", "active-tool");
@@ -224,11 +201,11 @@ function _adrInjectControlButton(root) {
   stripState(outer);
   outer.querySelectorAll("*").forEach(stripState);
 
-  // 7) Alle Icon-Träger entfernen — V13/V14 kann <i>, <svg>, <img>, <picture> nutzen.
+  // V13/V14 kann <i>, <svg>, <img>, <picture> als Icon-Träger nutzen.
   outer.querySelectorAll("i, svg, img, picture").forEach(el => el.remove());
 
-  // 8) FontAwesome-Klassen strippen, sonst erscheint das Vorlage-Icon
-  //    (z.B. Bookmark) zusätzlich per ::before-Pseudoelement.
+  // Ohne Strippen der FontAwesome-Klassen erscheint das Vorlage-Icon
+  // (z.B. Bookmark) zusätzlich per ::before-Pseudoelement.
   const stripFa = (el) => {
     if (!el.classList) return;
     Array.from(el.classList)
@@ -238,8 +215,6 @@ function _adrInjectControlButton(root) {
   stripFa(outer);
   outer.querySelectorAll("*").forEach(stripFa);
 
-  // 9) Fremd-Identität (data-control/-action/-tool) von ALLEN Elementen des
-  //    Klons entfernen …
   const stripIdentity = (el) => {
     if (!el.dataset) return;
     delete el.dataset.control;
@@ -249,10 +224,9 @@ function _adrInjectControlButton(root) {
   stripIdentity(outer);
   outer.querySelectorAll("*").forEach(stripIdentity);
 
-  // 10) … und ausschließlich auf dem inneren Button die ADR-Identität setzen.
+  // ADR-Identität ausschließlich auf dem inneren Button.
   inner.dataset.control = ADR_CONTROL_KEY;
 
-  // 11) Tooltip/ARIA auf Wrapper und Button setzen, altes title-Attribut weg.
   const titleStr = game.i18n.localize("argas-dice-roller.controlTitle");
   for (const el of (outer === inner ? [outer] : [outer, inner])) {
     el.setAttribute("aria-label", titleStr);
@@ -260,25 +234,21 @@ function _adrInjectControlButton(root) {
     el.removeAttribute("title");
   }
 
-  // 12) ADR-eigenes Icon einsetzen: dasselbe W20-SVG wie im Würfelfenster
-  //     (assets/icons/d20.svg); Größe über .adr-control-icon in argas-dice-roller.css.
-  //     Als CSS-Maske (span), damit die Farbe per CSS gesetzt werden kann.
+  // Icon als CSS-Maske (.adr-control-icon, assets/icons/d20.svg), damit die
+  // Farbe per CSS gesetzt werden kann.
   const newIcon = document.createElement("span");
   newIcon.className = "adr-control-icon";
   newIcon.setAttribute("aria-hidden", "true");
   inner.appendChild(newIcon);
 
-  // 13) CSS-Flex-Reihenfolge: maximaler order-Wert schiebt den Eintrag im
-  //     Flex-Layout der Leiste ganz nach unten (harmlos, falls kein Flex).
+  // order schiebt den Eintrag im Flex-Layout ganz nach unten (harmlos ohne Flex).
   outer.style.setProperty("order", "9999", "important");
 
-  // 14) Als eigenständigen Eintrag an die echte Leiste anhängen.
   container.appendChild(outer);
   return outer;
 }
 
-// Delegierter Klick-Handler (Capture-Phase, einmalig registriert): fängt
-// Klicks auf den injizierten Button ab und schaltet das Würfelfenster.
+// Delegierter Klick-Handler (Capture-Phase) für den injizierten Button.
 document.addEventListener("click", (ev) => {
   const btn = ev.target?.closest?.(`[data-control="${ADR_CONTROL_KEY}"]`);
   if (!btn) return;
@@ -300,10 +270,8 @@ Hooks.once("ready", () => {
     const btn = ev.target.closest("[data-action='open-request-roll']");
     if (!btn) return;
 
-    // Würfelfenster schließen
     if (globalDiceForm?.rendered) globalDiceForm.close();
 
-    // RequestRollForm öffnen (Singleton)
     if (!globalRequestRollForm) globalRequestRollForm = new RequestRollForm();
     if (globalRequestRollForm.rendered) {
       globalRequestRollForm.bringToFront();
@@ -321,7 +289,6 @@ Hooks.once("ready", () => {
     const message = game.messages.get(messageId);
     if (!message) return;
 
-    // W6 würfeln
     const roll = new Roll("1d6");
     await roll.evaluate();
 
@@ -350,10 +317,9 @@ Hooks.once("ready", () => {
       roll._total = sum;
     }
 
-    // Dice So Nice 3D-Animation (empfängerbeschränkt bei verdeckten Würfen)
     await _adrShowRoll3d(roll, message);
 
-    // Flags setzen → löst renderChatMessageHTML erneut aus
+    // Flag-Update löst renderChatMessageHTML erneut aus.
     await message.update({
       [`flags.${ADR.ID}.fumbleCheckResult`]: roll.total === 1,
       [`flags.${ADR.ID}.fumbleCheckDie`]: roll.total,
@@ -377,7 +343,6 @@ Hooks.once("ready", () => {
       return;
     }
 
-    // Subject + Berechtigungs-Check
     const subject = freeRollSubject(message);
     if (!subject) return;
     if (!subjectCanClick(subject, message)) {
@@ -385,7 +350,6 @@ Hooks.once("ready", () => {
       return;
     }
 
-    // Bennies prüfen
     if (subjectBennies(subject) <= 0) {
       ui.notifications.warn(game.i18n.localize(
         subject.forNPC ? `${ADR.ID}.requestRoll.warn.noGMBennies`
@@ -394,7 +358,7 @@ Hooks.once("ready", () => {
       return;
     }
 
-    // Benny abziehen (SWADE-Animation + Counter-Update)
+    // Abzug vor dem Wurf; jeder spätere Abbruchpfad muss subjectRefundBenny(subject) aufrufen.
     const spent = await subjectSpendBenny(subject);
     if (!spent) {
       ui.notifications.warn(game.i18n.localize(
@@ -404,7 +368,6 @@ Hooks.once("ready", () => {
       return;
     }
 
-    // Neu würfeln (gleiche Parameter wie Ursprungswurf)
     let mainRoll, wildRoll, sumMod, type, hasWildDie, isExploding, pool;
     try {
       ({ mainRoll, wildRoll, sumMod, type, hasWildDie, isExploding, pool } = await _adrFreshFreeRoll(message));
@@ -418,19 +381,15 @@ Hooks.once("ready", () => {
       return;
     }
 
-    // Patzer-Mechanik-Schalter für die Anzeige-Datenextraktion (Highlights).
-    // Wird auch unten für den Tweaks-Hook ausgewertet.
     let fumbleMechanic = false;
     try { fumbleMechanic = !!game.settings.get(ADR.ID, "highlightNaturalOnes"); } catch (e) { /* */ }
 
-    // Multi-Pool: Tweaks-Hook + dice[0]-basierte Total-Neuberechnung
-    // ÜBERSPRINGEN (Spec — der Tweaks-Dialog ist auf Mehrkategorien-Pools nicht
-    // ausgelegt, und die dice[0]-Total-Logik würde nur den ersten Pool-Eintrag
-    // berücksichtigen). DSN-Animation läuft trotzdem.
+    // Multi-Pool: Tweaks-Hook und dice[0]-Total-Neuberechnung überspringen —
+    // der Tweaks-Dialog kennt keine Mehrkategorien-Pools, und die dice[0]-Logik
+    // sähe nur den ersten Pool-Eintrag.
     const isMultiReroll = Array.isArray(pool) && pool.length > 0;
 
     if (!isMultiReroll) {
-      // Hook für Tweaks-Integration feuern (rollKind: "free", isBennyReroll: true)
       const combinedDice = [mainRoll.dice[0]];
       if (wildRoll?.dice?.length) combinedDice.push(wildRoll.dice[0]);
       const combinedRoll = {
@@ -457,12 +416,11 @@ Hooks.once("ready", () => {
       };
       const finalRoll = await _fireTraitRollHook(hookData);
       if (finalRoll === false) {
-        // Hook hat abgebrochen — Benny zurückerstatten
         await subjectRefundBenny(subject);
         return;
       }
 
-      // Totals neu berechnen (Hook könnte Würfel-Werte manipuliert haben)
+      // Totals neu berechnen — der Hook kann Würfelwerte verändert haben.
       if (mainRoll?.dice?.length) {
         const sum = mainRoll.dice[0].results.reduce((a, r) => a + (r.result || 0), 0);
         mainRoll._total = sum + sumMod;
@@ -473,23 +431,17 @@ Hooks.once("ready", () => {
       }
     }
 
-    // DSN-Animation für den Reroll-Wurf (zeigt finale Werte nach Hook).
-    // Roll-Sound manuell triggern — Foundry spielt den Würfelsound nur
-    // bei ChatMessage.create(), wir machen aber update(), daher fehlt
-    // er sonst beim Benny-Reroll. Bei verdeckten Würfen nur lokal abspielen,
-    // damit der Sound den Wurf nicht an alle Clients verrät.
+    // Würfelsound manuell: Foundry spielt ihn nur bei ChatMessage.create(), hier
+    // erfolgt update(). Bei verdeckten Würfen nur lokal, sonst verrät er den Wurf.
     try { foundry.audio.AudioHelper.play({ src: CONFIG.sounds.dice }, !_adrIsHiddenMessage(message)); } catch (e) { /* */ }
     await _adrShowRoll3d(mainRoll, message);
     if (wildRoll) await _adrShowRoll3d(wildRoll, message);
 
-    // Anzeigedaten extrahieren (pool durchreichen für Multi-Kategorisierung)
     const newData = _adrExtractFreeRollData(mainRoll, wildRoll, fumbleMechanic, pool);
 
-    // Schutz-/Overwrite-Logik anwenden + Message updaten. Foundry merget
-    // Flag-Sub-Objekte rekursiv, deshalb müssen Flags, die wir aus der
-    // DB entfernen wollen, explizit gelöscht werden (siehe
-    // _adrWriteFlags) — sonst bleibt z. B. ein altes
-    // `lastRerollFumbleOverwrite=true` aus einem früheren Reroll hängen.
+    // Foundry merget Flag-Objekte rekursiv: zu entfernende Flags müssen explizit
+    // gelöscht werden (_adrWriteFlags), sonst bleibt z. B. ein altes
+    // `lastRerollFumbleOverwrite=true` hängen.
     const newFlags = foundry.utils.deepClone(message.flags[ADR.ID]);
     const isWildcardSpeaker = !!newFlags.isWildcard;
     const removals = _adrApplyBennyRerollFree(newFlags, newData, isWildcardSpeaker);
@@ -497,9 +449,8 @@ Hooks.once("ready", () => {
   });
 
   // ── Discarded-Patzer-Check im freien Wurf (GM-Button) ──
-  // Prüft den verworfenen Statisten-Wurf nachträglich auf Patzer-Bestätigung.
-  // Greift, wenn der alte Wurf bei einem Benny-Reroll mit einer einzelnen 1
-  // geschützt wurde und der GM den Status doch noch klären will.
+  // Nachträglicher Patzer-Check des verworfenen Wurfs, wenn dieser beim
+  // Benny-Reroll mit einer einzelnen 1 geschützt wurde.
   document.body.addEventListener("click", async (ev) => {
     const btn = ev.target.closest("[data-action='adr-fumble-check-discarded-free']");
     if (!btn || !game.user.isGM) return;
@@ -512,11 +463,9 @@ Hooks.once("ready", () => {
     if (!Array.isArray(flags?.previousRolls) || flags.previousRolls.length === 0) return;
     const lastIdx = flags.previousRolls.length - 1;
 
-    // W6 würfeln
     const roll = new Roll("1d6");
     await roll.evaluate();
 
-    // Hook für Tweaks-Integration feuern (gleiches Pattern wie adr-fumble-check-main)
     const speakerAlias = message.speaker?.alias || flags.actorName || "";
     const hookData = {
       roll,
@@ -533,18 +482,16 @@ Hooks.once("ready", () => {
       fumbleMechanic: false,
     };
     const finalRoll = await _fireTraitRollHook(hookData);
-    if (finalRoll === false) return;  // Hook hat abgebrochen
+    if (finalRoll === false) return;
 
-    // Total neu berechnen (Tweaks könnte den Würfel-Wert manipuliert haben)
+    // Total neu berechnen — Tweaks kann den Würfelwert verändert haben.
     if (roll?.dice?.length) {
       const sum = roll.dice[0].results.reduce((a, r) => a + (r.result || 0), 0);
       roll._total = sum;
     }
 
-    // Dice So Nice 3D-Animation (empfängerbeschränkt bei verdeckten Würfen)
     await _adrShowRoll3d(roll, message);
 
-    // Letzten verworfenen Eintrag updaten → renderChatMessageHTML zeigt das Ergebnis
     const newFlags = foundry.utils.deepClone(flags);
     newFlags.previousRolls[lastIdx].fumbleCheckResult = roll.total === 1;
     newFlags.previousRolls[lastIdx].fumbleCheckDie = roll.total;
@@ -552,7 +499,6 @@ Hooks.once("ready", () => {
   });
 
   // ── Initial-Wurf: GM nimmt die 1 ohne Patzer-Check an ──
-  // Setzt nur das Akzeptiert-Flag; die Render-Logik blendet Buttons aus.
   document.body.addEventListener("click", async (ev) => {
     const btn = ev.target.closest("[data-action='adr-fumble-accept-main']");
     if (!btn || !game.user.isGM) return;
@@ -565,11 +511,8 @@ Hooks.once("ready", () => {
   });
 
   // ── Pending-Reroll: GM nimmt das Reroll-Ergebnis an (kein Patzer-Check) ──
-  // Der neue Wurf war eine 1, ist aber nicht zwangsläufig ein Patzer.
-  // „Annehmen" lässt die 1 als Reroll-Ergebnis stehen, der Benny-Schutz
-  // greift, und das alte Ergebnis bleibt sichtbar — analog dem klassischen
-  // Schutz-Pfad. Der Discarded wird mit `fumbleCheckSkipped` markiert,
-  // damit der „Allerdings war eine 1"-Zusatz und der Check-Button entfallen.
+  // Der Reroll war eine 1, aber kein bestätigter Patzer: Benny-Schutz greift,
+  // das alte Ergebnis bleibt geltend.
   document.body.addEventListener("click", async (ev) => {
     const btn = ev.target.closest("[data-action='adr-fumble-pending-accept-free']");
     if (!btn || !game.user.isGM) return;
@@ -583,12 +526,9 @@ Hooks.once("ready", () => {
     if (!Array.isArray(flags.previousRolls) || flags.previousRolls.length === 0) return;
 
     const newFlags = foundry.utils.deepClone(flags);
-    // Im invertierten Pending-Datenmodell ist der alte (gute) Wurf bereits
-    // mainResult, der Reroll-1 liegt im letzten previousRolls-Eintrag.
-    // „Besseres Ergebnis behalten" heißt deshalb: kein Swap nötig, nur den
-    // verworfenen Reroll-1 mit fumbleCheckSkipped markieren — das unterdrückt
-    // im Schutz-Hint den „Allerdings war eine 1"-Zusatz und den nachträglichen
-    // Discarded-Check-Button.
+    // Pending-Datenmodell: der alte Wurf ist bereits mainResult, die Reroll-1
+    // liegt im letzten previousRolls-Eintrag — kein Swap nötig. fumbleCheckSkipped
+    // unterdrückt im Schutz-Hint den „Allerdings war eine 1"-Zusatz und den Check-Button.
     const lastIdx = newFlags.previousRolls.length - 1;
     newFlags.previousRolls[lastIdx].fumbleCheckSkipped = true;
     newFlags.lastRerollProtected = true;
@@ -614,7 +554,6 @@ Hooks.once("ready", () => {
     if (!flags?.pendingRerollFumbleDecision) return;
     if (!Array.isArray(flags.previousRolls) || flags.previousRolls.length === 0) return;
 
-    // W6 würfeln + Tweaks-Hook (selber Pfad wie adr-fumble-check-main)
     const roll = new Roll("1d6");
     await roll.evaluate();
 
@@ -649,19 +588,15 @@ Hooks.once("ready", () => {
     const newFlags = foundry.utils.deepClone(flags);
 
     if (isFumble) {
-      // Patzer bestätigt: der alte (gute) Wurf wandert in previousRolls, der
-      // Reroll-1 wird zum geltenden mainResult mit Patzer-Vorrang. Im neuen
-      // Pending-Datenmodell ist die 1 noch im letzten previousRolls-Eintrag;
-      // _adrPendingDecisionSwap tauscht sie mit dem aktuellen mainResult.
+      // Patzer bestätigt: die Reroll-1 (noch im letzten previousRolls-Eintrag)
+      // wird per Swap zum geltenden mainResult mit Patzer-Vorrang.
       _adrPendingDecisionSwap(newFlags);
       newFlags.lastRerollFumbleOverwrite = true;
       newFlags.fumbleCheckResult = true;
       newFlags.fumbleCheckDie = dieValue;
     } else {
-      // Kein Patzer: alter Wurf bleibt geltend (= mainResult bleibt unverändert),
-      // verworfener Reroll-1 im letzten previousRolls-Eintrag wird mit Check-
-      // Ergebnis markiert (Schutz-Hint zeigt damit „Allerdings war eine 1" +
-      // „zusätzliche Prüfung ergab: kein kritischer Fehlschlag").
+      // Kein Patzer: mainResult bleibt, die verworfene Reroll-1 erhält das
+      // Check-Ergebnis für den Schutz-Hint.
       const lastIdx = newFlags.previousRolls.length - 1;
       newFlags.previousRolls[lastIdx].fumbleCheckResult = false;
       newFlags.previousRolls[lastIdx].fumbleCheckDie = dieValue;
@@ -673,8 +608,7 @@ Hooks.once("ready", () => {
   });
 
   // ── Klick auf Akteur-Bild im freien Wurf: Token zentrieren + auswählen ──
-  // Kein Sheet öffnen — analog zum Verhalten in der Probenanforderung.
-  // Funktioniert nur, wenn ein Token in der aktuellen Szene zum Speaker existiert.
+  // Bewusst kein Sheet öffnen (wie in der Probenanforderung).
   document.body.addEventListener("click", async (ev) => {
     const img = ev.target.closest(".adr-actor-img");
     if (!img) return;
@@ -700,7 +634,6 @@ Hooks.once("ready", () => {
       token.control({ releaseOthers: true });
       await canvas.animatePan({ x: token.center.x, y: token.center.y, duration: 250 });
     }
-    // Kein Token in aktueller Szene → still bleiben (keine Sheet-Öffnung).
   });
 });
 
@@ -709,14 +642,11 @@ Hooks.once("ready", () => {
 /* ================================================================ */
 
 /*
- * Der ADR-Toggle (Privater SL-Wurf / Blindwurf / Eigenwurf) ist reiner
- * Fenster-Zustand in `DiceForm.hiddenType` — gesetzt vom Klick im
- * Würfelfenster, beim Öffnen über _resetVolatileSettings() auf
- * "öffentlich" zurückgesetzt. ADR liest und schreibt bewusst KEIN
- * Foundry-Würfelmodus-Setting: `core.rollMode` ist seit v14 zugunsten
- * von `core.messageMode` deprecatet, die Kompatibilität fällt mit v16
- * weg. Eine Sync mit dem nativen Chat-Selektor findet daher nicht
- * statt; den verdeckten Wurf setzt _rollDie direkt über whisper/blind.
+ * Der Toggle (SL-/Blind-/Eigenwurf) ist reiner Fenster-Zustand in
+ * `DiceForm.hiddenType`. Bewusst KEIN Foundry-Würfelmodus-Setting:
+ * `core.rollMode` ist seit v14 zugunsten von `core.messageMode` deprecatet
+ * (Wegfall mit v16). Keine Sync mit dem Chat-Selektor; _rollDie setzt
+ * whisper/blind direkt.
  */
 
 /* ================================================================ */
@@ -724,12 +654,8 @@ Hooks.once("ready", () => {
 /* ================================================================ */
 
 /**
- * Maximaldefensives Verstecken einer Chat-LI.
- * Gleiche Behandlung für selfRoll / gmRoll / blindRoll-Nachrichten,
- * die ungewollt auf einem Client sichtbar werden würden.
- * Setzt mehrere CSS-Werte mit !important, plus hidden-Attribut und
- * leert den Inhalt — falls ein anderes Modul display:none überschreibt,
- * ist immer noch nichts zu sehen.
+ * Defensives Verstecken einer Chat-LI: mehrere !important-Werte plus geleerter
+ * Inhalt, damit auch bei fremdem Überschreiben von display:none nichts zu sehen ist.
  */
 function _adrHideMessage(li) {
   if (!li) return;
@@ -748,20 +674,11 @@ function _adrHideMessage(li) {
 
 /* ---------------------------------------------------------------- */
 /*  Multi-Pool-Render-Helper (Mehrfach-Würfel-Auswahl per Strg+Klick) */
-/*  Werden vom Render-Hook UND von _adrInjectFreeRollDiscardedHistory */
-/*  genutzt — daher als top-level Funktionen.                         */
 /* ---------------------------------------------------------------- */
 
 /**
- * Baut den Display-Text für die Hauptzeile eines Multi-Pool-Wurfs.
- *
- * Regeln (per Spec):
- *   - Mit Wild Die ODER ≥ 4 Kategorien → "div. Würfel" (lokalisiert,
- *     i18n-Key: chat.multiDiceMixed).
- *   - Sonst 1–3 Kategorien → "2x W4 (+) 3x W20 (+) 1x W100"
- *     (Plus-Trenner aus i18n-Key chat.multiDicePlus, "W" bei deutsch,
- *     "d" bei englisch).
- *   - `ex`-Superscript bei mainExploding=true angehängt.
+ * Display-Text der Hauptzeile eines Multi-Pool-Wurfs: mit Wild Die oder
+ * ≥ 4 Kategorien „div. Würfel", sonst „2x W4 + 3x W20".
  */
 function _adrBuildMultiPoolDisplayHTML(pool, hasWild, exploding) {
   const useDiv = hasWild || pool.length >= 4;
@@ -778,11 +695,7 @@ function _adrBuildMultiPoolDisplayHTML(pool, hasWild, exploding) {
   return parts.join(` ${plus} `) + exSup;
 }
 
-/**
- * Baut die Detail-Anzeige (Toggle-Inhalt) für einen Multi-Pool-Wurf.
- * Pro Kategorie eine Zeile mit Label „Nx Wn:" + Einzelwerte (min/max-
- * gefärbt). Optional Extras-Zeile mit (WD: …) und (Mod. ±N).
- */
+/** Detail-Anzeige (Toggle-Inhalt) eines Multi-Pool-Wurfs: eine Zeile je Kategorie. */
 function _adrBuildMultiPoolDetailsHTML(multiPoolResults, wildResult, wildIndRes, appliedMod) {
   const isGerman = String(game.i18n.lang || "").startsWith("de");
   let html = "";
@@ -797,7 +710,6 @@ function _adrBuildMultiPoolDetailsHTML(multiPoolResults, wildResult, wildIndRes,
       + valuesHTML
       + `</div>`;
   }
-  // Extras-Zeile: Wild Die + Modifikator
   const extras = [];
   if (wildResult != null && Array.isArray(wildIndRes) && wildIndRes.length) {
     const wdLabel = game.i18n.localize(`${ADR.ID}.legend.wildDieChat`);
@@ -821,15 +733,12 @@ function _adrBuildMultiPoolDetailsHTML(multiPoolResults, wildResult, wildIndRes,
 }
 
 Hooks.on("renderChatMessageHTML", (message, html) => {
-  // v14: html ist ein HTMLElement
   const li = html.closest("li.chat-message") ?? html;
 
-  // ── Hilfsfunktion: H4-Titel im Header setzen oder erzeugen ──
   function _setHeaderLabel(container, label) {
     const header = container.querySelector(".message-header");
     if (!header) return;
 
-    // Eigenes Label-Element erzeugen (oder aktualisieren)
     let adrLabel = header.querySelector(".adr-header-label");
     if (!adrLabel) {
       adrLabel = document.createElement("span");
@@ -838,7 +747,6 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
     }
     adrLabel.textContent = label;
 
-    // System-h4 verstecken
     const h4 = header.querySelector("h4");
     if (h4) h4.style.setProperty("display", "none", "important");
   }
@@ -849,13 +757,11 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
 
     const bgUrl = `modules/${ADR.ID}/assets/layout/background_finger.webp`;
 
-    // Host vorbereiten
     li.style.setProperty("position", "relative", "important");
     li.style.setProperty("background", "transparent", "important");
     li.style.setProperty("min-height", "260px", "important");
     li.style.setProperty("aspect-ratio", "1 / 1", "important");
 
-    // vorhandenes Overlay ersetzen
     li.querySelector(".adr-fate-bg")?.remove();
     const layer = document.createElement("div");
     layer.className = "adr-fate-bg";
@@ -869,10 +775,8 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
     layer.style.backgroundSize = "contain";
     li.prepend(layer);
 
-    // Header-Label setzen (wie bei normalen Würfen)
     _setHeaderLabel(li, game.i18n.localize(`${ADR.ID}.chat.fateTitle`));
 
-    // Kinder transparent + über das Overlay legen
     li.querySelectorAll(".message-content, .dice-result, .chat-card, .card-content, .message-header")
       .forEach(el => {
         el.style.setProperty("background", "transparent", "important");
@@ -887,14 +791,10 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
   // ── Nur ADR-Nachrichten weiter verarbeiten ──
   if (!message.flags?.["argas-dice-roller"]?.mainFormula) return;
 
-  // ── Privater Wurf (selfRoll): Nur der Würfelnde sieht überhaupt etwas. ──
-  // Foundry zeigt geflüsterte Nachrichten standardmäßig auch an SLs (und je nach
-  // Setup/Modul-Konfiguration an weitere User). Bei einem privaten Wurf soll
-  // wirklich NIEMAND außer dem Würfelnden eine Nachricht sehen — daher zusätzlich
-  // zur korrekten Whisper-Liste hier defensiv mehrfach absichern.
-  // Fallback-Erkennung: Whisper geht nur an einen einzigen User, der zugleich
-  // der Autor ist (klassische selfRoll-Signatur), falls das Flag aus irgendeinem
-  // Grund nicht gesetzt sein sollte (alte Nachrichten o.ä.).
+  // ── Privater Wurf (selfRoll): nur der Würfelnde sieht etwas. ──
+  // Foundry zeigt Whisper standardmäßig auch SLs — daher zusätzlich zur
+  // Whisper-Liste hier verstecken. Heuristik (Whisper nur an den Autor) als
+  // Fallback für Nachrichten ohne Flag.
   const _whisperList = message.whisper ?? [];
   const _isSelfRollFlag = message.getFlag(ADR.ID, "isSelfRoll") === true;
   const _looksLikeSelfRoll = _whisperList.length === 1 && _whisperList[0] === message.author?.id;
@@ -906,11 +806,9 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
     }
   }
 
-  // ── Privater SL-Wurf / Verdeckter SL-Wurf: nur SLs (und der Autor) dürfen
-  //    überhaupt etwas sehen. Wenn ein Nicht-SL aus irgendeinem Grund die
-  //    Nachricht in seinem Chat hat, hier komplett verstecken.
-  //    Erkennung: hideRecipients-Flag (gesetzt für GM_ROLL und BLIND_ROLL),
-  //    plus Heuristik (Whisper geht ausschließlich an SL-User).
+  // ── SL-/Blindwurf: nur SLs und der Autor sehen etwas. ──
+  // Erkennung: hideRecipients-Flag (GM_ROLL, BLIND_ROLL) plus Heuristik
+  // (Whisper ausschließlich an SL-User).
   const _hideRecipientsFlag = message.getFlag(ADR.ID, "hideRecipients") === true;
   const _looksLikeGMOnlyWhisper = _whisperList.length > 0
     && _whisperList.every(id => game.users.get(id)?.isGM);
@@ -920,21 +818,15 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
     return;
   }
 
-  // ── Sprachmix-Schutz: Marker, die der Würfler-Client gesetzt hat,
-  //    werden hier in der Interface-Sprache des Empfängers gefüllt.
-  //    `data-adr-i18n="…"` → innerHTML = lokalisierter Key
-  //      (innerHTML, weil i18n-Strings HTML-Tags enthalten dürfen, z.B. <i>(klick)</i>)
-  //    `data-adr-hidden-key="gmRoll|blindRoll|selfRoll"` → innerHTML = buildHiddenInfoHTML(key)
+  // ── Re-Lokalisierung: Marker des Würfler-Clients in der Sprache des
+  //    Betrachters füllen (innerHTML, weil i18n-Strings HTML enthalten dürfen).
   html.querySelectorAll("[data-adr-i18n]").forEach(el => {
     el.innerHTML = game.i18n.localize(el.dataset.adrI18n);
   });
   html.querySelectorAll("[data-adr-hidden-key]").forEach(el => {
     let key = el.dataset.adrHiddenKey;
-    // Spezialfall: ein Spieler hat einen Privaten SL-Wurf (gmRoll) gemacht
-    // und der GM sieht die Nachricht jetzt. Der gmRoll-Text ist aus
-    // Sicht des Würflers formuliert ("…und für Dich") und klingt für den
-    // GM als Empfänger schief. In dem Fall den GM-spezifischen Schlüssel
-    // einsetzen, damit die zweite Zeile lautet "und den Würfelnden".
+    // gmRoll eines Spielers aus GM-Sicht: der Text ist aus Würfler-Sicht
+    // formuliert ("…und für Dich"), daher GM-spezifischer Schlüssel.
     if (key === "gmRoll" && game.user?.isGM && message.author && !message.author.isGM) {
       key = "gmRollViewedByGM";
     }
@@ -947,10 +839,9 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
       const details = this.nextElementSibling;
       if (details?.classList.contains("adr-individual-details")) {
         details.classList.toggle("adr-individual-hidden");
-        // Beim Aufklappen: Chat-Log scrollen damit alles sichtbar ist
+        // Beim Aufklappen Chat-Log nachscrollen, damit alles sichtbar ist.
         if (!details.classList.contains("adr-individual-hidden")) {
-          // Reflow erzwingen, dann scrollen
-          void details.offsetHeight;
+          void details.offsetHeight;   // Reflow erzwingen
           setTimeout(() => {
             const li = this.closest("li.chat-message");
             if (li) {
@@ -971,9 +862,8 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
   });
 
   // ── Zweizeiliger Akteurname ──
-  // Der Hook feuert, bevor das Element ins Dokument eingehängt ist —
-  // offsetHeight wäre hier immer 0. Deshalb erst "one-line" setzen und die
-  // Messung auf den nächsten Frame (nach dem Attach) verschieben.
+  // Der Hook feuert vor dem Einhängen ins Dokument (offsetHeight = 0), daher
+  // Messung auf den nächsten Frame verschieben.
   const nameBox = html.querySelector(".adr-actor-name");
   if (nameBox) {
     html.classList.add("one-line");
@@ -1006,8 +896,7 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
       || game.i18n.localize(`${ADR.ID}.chat.unknownActor`);
     const defaultSrc = `modules/${ADR.ID}/assets/layout/default_token.webp`;
     const flagSrc = message.getFlag(ADR.ID, "actorImg") || "";
-    // Akteurname/Bildpfad stammen aus Token-/Akteurdaten, die auch Spieler
-    // setzen können — vor dem Einfügen in HTML immer escapen.
+    // Akteurname/Bildpfad sind Nutzereingaben — vor dem Einfügen escapen.
     const esc = foundry.utils.escapeHTML;
     const portraitSrc = esc(flagSrc || defaultSrc);
 
@@ -1050,7 +939,6 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
   html.querySelectorAll(".dice-total").forEach(el => el.classList.remove("dice-total"));
   html.querySelectorAll(".dice-result").forEach(el => el.classList.remove("dice-result"));
 
-  // .adr-chat Wrapper entfernen (Kinder nach oben heben)
   const adrChatWrap = html.querySelector(".message-content > .adr-chat");
   if (adrChatWrap) {
     const parent = adrChatWrap.parentNode;
@@ -1062,9 +950,7 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
   li.classList.remove("with-wild", "no-wild");
   if (message.getFlag(ADR.ID, "fate")) li.classList.add("adr-fate");
 
-  // Theme aus dem "chatDesign"-Dropdown: "modern" → SciFi-Optik,
-  // "fantasy" → klassische Optik. ("standard" erreicht diesen Hook
-  // gar nicht erst — solche Würfe werden ohne ADR-Render erzeugt.)
+  // "standard" erreicht diesen Hook nicht — solche Würfe entstehen ohne ADR-Render.
   const scifi = game.settings.get(ADR.ID, "chatDesign") === "modern";
   if (scifi) li.classList.add("scifi");
 
@@ -1075,7 +961,6 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
   const modulePath = `modules/${ADR.ID}`;
   const flagSrc = message.getFlag(ADR.ID, "actorImg") || "";
   const defaultSrc = `${modulePath}/assets/layout/default_token.webp`;
-  // Escaping wie im Hidden-Zweig: Token-/Akteurdaten sind Nutzereingaben.
   const portraitSrc = foundry.utils.escapeHTML(flagSrc || defaultSrc);
   if (portraitSrc) {
     li.querySelector(".message-header")?.insertAdjacentHTML("afterend",
@@ -1092,18 +977,14 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
   const clean = rawFormula.replace(/\s+/g, "");
 
   // ── Multi-Pool-Erkennung ──
-  // Eine Multi-Pool-Nachricht hat ein Array-Flag `multiPool`. In diesem Fall
-  // wird die normale parseDice/buildCell-Logik (die nur eine einzelne Würfel-
-  // Formel kennt) übersprungen und durch einen eigenen Render-Pfad ersetzt.
-  // `mainFormula` ist in solchen Nachrichten als Marker auf "_multi_pool"
-  // gesetzt (für die ADR-Erkennung weiter oben), wird hier aber nicht geparst.
+  // Multi-Pool umgeht parseDice/buildCell (nur für Einzelformeln); `mainFormula`
+  // ist dort nur der Marker "_multi_pool" für die ADR-Erkennung oben.
   const multiPool = message.getFlag(ADR.ID, "multiPool");
   const isMulti = Array.isArray(multiPool) && multiPool.length > 0;
 
   function parseDice(formula) {
-    // Nach dem Würfeltyp können "kh"/"kl" (Höchster/Niedrigster) und/oder
-    // "x"/"!" (Explodieren) stehen — beides für die Anzeige überlesen.
-    // … außerdem "b1"/"p2" (Bonus-/Strafwurf, Call of Cthulhu).
+    // Suffixe kh/kl (Höchster/Niedrigster), b1/p2 (Cthulhu) und x/! (Explodieren)
+    // werden für die Anzeige überlesen.
     const m = formula.match(/^(?:([0-9]+))?(dc|df|d[0-9]+)(?:k[hl])?(?:[bp][12])?(?:[x!]+)?([+\-][0-9]+)?/) || [];
     const cnt = m[1] || "";
     const raw = m[2] || "";
@@ -1127,12 +1008,10 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
 
   const buildCell = (cnt, die, mod, value, individualResults = [], highlightSetting = false, criticalHtml = "") => {
     let highlight = false;
-    // Münz-Erkennung NUR über das Label — eine Werte-Heuristik ("alle Werte
-    // 0/1") würde auch jeden Einzelwürfel mit Ergebnis 1 als Münze einstufen
-    // und damit genau das Einsen-Highlight unterdrücken, das hier gewollt ist.
+    // Münz-Erkennung NUR über das Label — eine Werte-Heuristik (alle 0/1) würde
+    // jeden Einzelwürfel mit Ergebnis 1 als Münze einstufen und das Einsen-Highlight unterdrücken.
     const isCoin = (die === game.i18n.localize(`${ADR.ID}.legend.coin`));
-    // Fudge-Zelle: Einsen-Regel gilt nicht; stattdessen Extremfälle
-    // (alle „+" grün, alle „−" rot) über eigene Klassen.
+    // Fudge: keine Einsen-Regel, stattdessen Extremfälle (alle +/alle −) markieren.
     const isFudgeCell = (die === adrFudgeChatLabel());
     let fudgeClass = "";
     if (isFudgeCell && individualResults.length) {
@@ -1152,24 +1031,20 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
     const starFlag = isWildCell
       ? message.getFlag("argas-dice-roller", "wildExploding")
       : message.getFlag("argas-dice-roller", "mainExploding");
-    // „Höchster"/„Niedrigster": Pfeil-Icon hinter dem Würfeltyp (nur Hauptzelle).
-    // Tooltip wird hier beim Betrachter lokalisiert (Hook läuft je Client).
+    // Keep-Icon nur in der Hauptzelle.
     const keepMode = isWildCell ? null : adrKeepModifier(message.getFlag(ADR.ID, "keepMode"));
     let keepHTML = keepMode
       ? ` <i class="fa-regular ${keepMode === "kh" ? "fa-square-up" : "fa-square-down"} adr-keep-icon" title="${game.i18n.localize(`${ADR.ID}.chat.${keepMode === "kh" ? "keepHighest" : "keepLowest"}`)}"></i>`
       : "";
-    // Bonus-/Strafwurf (Call of Cthulhu): Daumen-Icon + Anzahl der Zusatzwürfel.
     const cth = isWildCell ? null : message.getFlag(ADR.ID, "cthulhu");
     const cthMode = adrCthulhuMode(cth?.mode);
     if (cthMode) {
       const n = Math.min(2, Math.max(1, Number(cth.extra) || 1));
       keepHTML = ` <span class="adr-cthulhu-mark" title="${game.i18n.localize(`${ADR.ID}.chat.${cthMode === "bonus" ? "bonusDie" : "penaltyDie"}`)}"><i class="fa-regular ${cthMode === "bonus" ? "fa-thumbs-up" : "fa-thumbs-down"} adr-keep-icon"></i>${n}</span>`;
     }
-    // Echte Münzzelle (zur CSS-Sonderbehandlung des Vertikal-Abstands)
     const isCoinCell = (die === game.i18n.localize(`${ADR.ID}.legend.coin`));
 
-    // Kopfzeile der Zelle: Münzzelle zeigt "Münzwurf" (kein "1x Münze"),
-    // alle anderen Zellen unverändert "Nx Wn" + ex-Sup + Modifikator.
+    // Münzzelle zeigt "Münzwurf" statt "1x Münze".
     const diceInfoHTML = isCoinCell
       ? game.i18n.localize(`${ADR.ID}.chat.coin-roll-label`)
       : `${(die === game.i18n.localize(`${ADR.ID}.legend.wildDieChat`) ? "" : (cnt ? `${cnt}x ` : ""))}${die}${(starFlag ? "<sup class=\"adr-ex\">ex</sup>" : "")}${keepHTML}${mod ? `<span class="adr-dice-mod adr-dice-mod-${mod.startsWith("+") ? "pos" : "neg"}">(${mod})</span>` : ""}`;
@@ -1187,9 +1062,7 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
   </div>`;
   };
 
-  // Multi-Pool-spezifischer Zellbau (eigene Hauptzeile pro Pool, ohne
-  // die parseDice-basierte Cnt/Die/Mod-Mechanik). Lokalisierungs- und
-  // Exploding-Sup-Logik in _adrBuildMultiPoolDisplayHTML.
+  // Zellbau für Multi-Pool ohne die parseDice-Mechanik.
   const buildMultiCell = (displayHTML, value, modHTML = "") => {
     return `<div class="adr-dice-cell">
       <div class="adr-dice-info">${displayHTML}${modHTML}</div>
@@ -1197,7 +1070,6 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
     </div>`;
   };
 
-  // Ergebnisse für die Kritisch-Logik
   const mainIndRes = message.getFlag("argas-dice-roller", "mainIndividualResults") ?? [];
   const wildIndRes = message.getFlag("argas-dice-roller", "wildIndividualResults") ?? [];
   const hasWild = (wildResult != null);
@@ -1207,12 +1079,11 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
   const totalDiceForCritical = hasWild ? (totalMain + 1) : totalMain;
   const onesForCritical = hasWild ? (onesMain + (wildResult == 1 ? 1 : 0)) : onesMain;
   const isCoinRow = !isMulti && (die1 === game.i18n.localize(`${ADR.ID}.legend.coin`));
-  // SWADE-Eigenschaftsproben werden IMMER mit explodierenden Würfeln gewürfelt.
-  // Wenn der Spieler Exploding NICHT angehakt hat, ist's garantiert keine
-  // Eigenschaftsprobe → kein Patzer-Verdacht (auch nicht weich).
+  // SWADE-Eigenschaftsproben explodieren immer — ohne Explodieren ist es keine
+  // Eigenschaftsprobe, also kein Patzer-Verdacht.
   const mainExploding = !!message.getFlag("argas-dice-roller", "mainExploding");
 
-  // Patzer-Anzeige bei Multi-Pool deaktiviert (Spec).
+  // Patzer-Anzeige bei Multi-Pool deaktiviert.
   let showCritical = !isMulti
     && mainExploding
     && hasWild && (wildResult == 1) && (onesForCritical > totalDiceForCritical / 2)
@@ -1221,10 +1092,7 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
 
   let cellsHtml;
   if (isMulti) {
-    // Multi-Pool-Hauptzeile: eigener Display-Text + optionale WD-Zelle.
-    // Modifikator wird einmalig (in der Main-Zelle) angezeigt — Wild Die
-    // zeigt im Multi-Modus keinen separaten Mod-Block, da der Spec-Layout
-    // mit „div. Würfel(+)" + WD-Zelle ohne Doppelung übersichtlicher ist.
+    // Modifikator nur einmal in der Hauptzelle, nicht an der WD-Zelle.
     const sumMod = Number(message.getFlag(ADR.ID, "appliedModifier")) || 0;
     const multiDisplayHTML = _adrBuildMultiPoolDisplayHTML(multiPool, hasWild, mainExploding);
     const modHTML = sumMod !== 0
@@ -1253,11 +1121,9 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
     }`;
   }
 
-  // Ergebniszeile einfügen
   li.querySelector(".adr-actor-name")?.insertAdjacentHTML("afterend",
     `<div class="adr-dice-row">${cellsHtml}</div>`);
 
-  // Hinweis separat UNTER die Ergebniszeile
   if (showCritical) {
     const rows = li.querySelectorAll(".adr-dice-row");
     const lastRow = rows[rows.length - 1];
@@ -1267,37 +1133,100 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
       `<div class="adr-fumble-check-result">${prefix}<br><span class="adr-fumble-confirmed-text" style="font-size:0.85rem;">${label}</span></div>`);
   }
 
-  // ── Benny-Button im freien Wurf ──
+  // ── Patzer-Prüfung: Einzelwürfel ohne Wild Die zeigt 1 → GM-Button ──
+  // Nur bei Statisten: Wildcards werfen bei Eigenschaftsproben immer einen Wild
+  // Die mit, ein Einzelwürfel ohne Wild Die ist bei ihnen keine Eigenschaftsprobe.
+  const isWildcardSpeaker = !!message.getFlag(ADR.ID, "isWildcard");
+  const fumbleCheckNeeded = !isMulti && mainExploding && !hasWild && !isCoinRow && totalMain === 1
+    && mainIndRes[0]?.value == 1
+    && !isWildcardSpeaker
+    && game.settings.get("argas-dice-roller", "highlightNaturalOnes");
+
+  if (fumbleCheckNeeded) {
+    const fumbleCheckResult = message.getFlag(ADR.ID, "fumbleCheckResult");
+    const fumbleCheckDie = message.getFlag(ADR.ID, "fumbleCheckDie");
+    const rows = li.querySelectorAll(".adr-dice-row");
+    const lastRow = rows[rows.length - 1];
+
+    if (fumbleCheckResult === true) {
+      const summaryTotal = li.querySelector(".adr-summary-total");
+      if (summaryTotal) summaryTotal.classList.add("adr-highlight-ones");
+      // Im FumbleOverwrite-Pfad rendert die Hint-Region den Ergebnistext
+      // (bennyFumbleOverwriteHintConfirmed).
+      if (message.getFlag(ADR.ID, "lastRerollFumbleOverwrite") !== true) {
+        const keyword = game.i18n.localize(`${ADR.ID}.requestRoll.fumbleCheckYes`);
+        const template = game.i18n.localize(`${ADR.ID}.requestRoll.fumbleCheckTextYes`);
+        lastRow?.insertAdjacentHTML("afterend",
+          `<div class="adr-fumble-check-result">${template.replace("{result}", `<span class="adr-fumble-confirmed-text">${keyword}</span>`)}</div>`);
+      }
+
+    } else if (fumbleCheckResult === false) {
+      const keyword = game.i18n.localize(`${ADR.ID}.requestRoll.fumbleCheckNone`);
+      const template = game.i18n.localize(`${ADR.ID}.requestRoll.fumbleCheckTextNo`);
+      lastRow?.insertAdjacentHTML("afterend",
+        `<div class="adr-fumble-check-result">${template.replace("{result}", `<span class="adr-fumble-denied-text">${keyword}</span>`)}</div>`);
+
+    } else if (message.getFlag(ADR.ID, "fumbleCheckAccepted") === true) {
+      // GM hat die 1 akzeptiert — kein Patzer-Check.
+
+    } else if (message.getFlag(ADR.ID, "pendingRerollFumbleDecision") === true) {
+      // Auswahl rendert der Pending-Hint unten.
+
+    } else if (message.getFlag(ADR.ID, "bennyUsed") === true) {
+      // Anzeige übernimmt die Hint-Region.
+
+    } else {
+      const isGM = game.user.isGM;
+      const acceptLabel = game.i18n.localize(`${ADR.ID}.requestRoll.acceptResultBtn`);
+      const orLabel = game.i18n.localize(`${ADR.ID}.requestRoll.orChoice`);
+      const line1 = game.i18n.localize(`${ADR.ID}.requestRoll.fumbleCheckBtn1`);
+      const line2 = game.i18n.localize(`${ADR.ID}.requestRoll.fumbleCheckBtn2`);
+      const notMineCls = isGM ? "" : " adr-not-mine";
+      // Inline !important nötig: das System-CSS für button:hover ist spezifischer.
+      const notMineAttrs = isGM
+        ? ""
+        : ` title="${game.i18n.localize(`${ADR.ID}.requestRoll.chatNoPermission`)}" style="cursor: not-allowed !important"`;
+      lastRow?.insertAdjacentHTML("afterend",
+        `<div class="adr-fumble-choice-container">`
+        + `<button type="button" class="adr-accept-result-btn${notMineCls}"${notMineAttrs} data-action="adr-fumble-accept-main" data-message-id="${message.id}">${acceptLabel}</button>`
+        + `<span class="adr-fumble-choice-or">${orLabel}</span>`
+        + `<button type="button" class="adr-fumble-check-btn${notMineCls}"${notMineAttrs} data-action="adr-fumble-check-main" data-message-id="${message.id}">${line1} ${line2}</button>`
+        + `</div>`);
+    }
+
+    if (fumbleCheckResult != null) {
+      setTimeout(() => {
+        const scrollContainer = li.closest(".chat-scroll");
+        if (scrollContainer) {
+          const liRect = li.getBoundingClientRect();
+          const containerRect = scrollContainer.getBoundingClientRect();
+          const overflow = liRect.bottom - containerRect.bottom;
+          if (overflow > 0) scrollContainer.scrollTop += overflow + 8;
+        }
+      }, 50);
+    }
+  }
+
   _adrInjectFreeRollBennyButton(li, message);
   _adrInjectFreeRollDiscardedHistory(li, message);
   _adrInjectFreeRollHint(li, message);
 });
 
 /* ================================================================ */
-/*  Free-Roll Benny-Button: Helpers + Klick-Handler (Placeholder)    */
+/*  Free-Roll Benny-Button: Helpers + Klick-Handler                  */
 /* ================================================================ */
 
-// Subjekt-Helfer wurden nach adr-benny-helpers.js ausgelagert, damit sie
-// sowohl vom Free-Roll-Pfad (hier) als auch vom Probenanforderungs-Pfad
-// (adr-request-roll-chat.js, NSC-Reroll → GM-Benny) benutzt werden können.
-// Imports oben in der Datei.
-
 /**
- * Patzer-Status für den freien Wurf. Analog zur Visualisierungs-Logik
- * in renderChatMessageHTML (showCritical) und zur Patzer-Sperre im
- * Single-Mode der Request-Roll. Bewusst NICHT über `_classifyFumble`
- * aus adr-request-roll-chat.js — der erwartet ein diceDetails-Schema,
- * das es im freien Wurf nicht gibt.
- *
- * Rückgabe:
- *   "confirmed"   — Patzer aus einer früheren Prüfung bestätigt. Reroll gesperrt.
- *   "none"        — kein Patzer-Verdacht.
+ * Patzer-Status des freien Wurfs. Bewusst NICHT über `_classifyFumble` aus
+ * adr-request-roll-chat.js — der erwartet ein diceDetails-Schema, das es im
+ * freien Wurf nicht gibt.
+ * @returns {"confirmed"|"needs-check"|"none"} confirmed = Reroll gesperrt,
+ *   needs-check = GM-W6-Check steht aus (Reroll erlaubt).
  */
 function _adrFreeRollFumbleStatus(message) {
   const f = message.flags?.[ADR.ID] || {};
 
-  // Multi-Pool: Patzer-Mechanik komplett aus (Spec). Reroll bleibt erlaubt,
-  // kein Patzer-Check, keine Bestätigungs-W6.
+  // Multi-Pool: Patzer-Mechanik aus, Reroll bleibt erlaubt.
   if (Array.isArray(f.multiPool) && f.multiPool.length > 0) return "none";
 
   if (f.fumbleCheckResult === true) return "confirmed";
@@ -1313,65 +1242,46 @@ function _adrFreeRollFumbleStatus(message) {
   const totalMain = mainIndRes.length;
   const onesMain = mainIndRes.filter(x => x?.value == 1).length;
 
-  // Münzwurf (dc): kein Patzer
   if (String(f.dieType || "").toLowerCase() === "dc") return "none";
 
   if (hasWild) {
-    // Wildcard-Wurf mit Wild Die: Wenn Wild Die = 1 UND mehr als die
-    // Hälfte aller Würfel = 1, sähe das nach einem Patzer aus —
-    // ABER nur, wenn es eine Eigenschaftsprobe war. Da wir das nicht
-    // wissen (auch Schadenswürfe, freie Mehrfach-Würfe etc. können
-    // diese Konstellation ergeben), wird der Benny-Reroll NICHT
-    // gesperrt. Der Spieler entscheidet selbst, ob er den Benny einsetzt.
-    // Der weiche Hinweis „Falls der Wurf eine Eigenschaftsprobe war …"
-    // wird unabhängig davon weiterhin angezeigt (siehe showCritical
-    // in der Ergebnis-Rendering-Logik).
+    // Mit Wild Die kann ein Patzer-Bild auch aus Schadens- oder Mehrfachwürfen
+    // entstehen; ob es eine Eigenschaftsprobe war, ist unbekannt — Reroll bleibt
+    // erlaubt, der weiche Hinweis (showCritical) erscheint trotzdem.
     return "none";
   }
 
-  // Ohne Wild Die keine Patzer-Prüfung im freien Wurf: ob der Wurf eine
-  // Eigenschaftsprobe war, entscheidet der SL.
+  // Statisten: nur genau ein Hauptwürfel = 1 ist ein Patzer-Verdacht. Wildcards
+  // ohne Wild Die und nicht explodierende Würfe sind keine Eigenschaftsproben.
+  if (f.isWildcard) return "none";
+  if (!f.mainExploding) return "none";
+  if (totalMain === 1 && mainIndRes[0]?.value == 1) return "needs-check";
   return "none";
 }
 
 /**
- * Benny-Button in die freie-Wurf-Karte injizieren. Wird im
- * renderChatMessageHTML aufgerufen, nachdem die Würfel-Anzeige + Patzer-
- * Bereich gerendert wurden.
- *
- * Layout: Toggle „Einzelergebnisse" links, Benny-Button mittig im
- * Restraum rechts. Realisiert über CSS-Grid in `.adr-toggle-row` (siehe
- * argas-dice-roller.css).
- *
- * Sichtbarkeit + Status:
- *   – Kein Akteur (GM-als-GM ohne Token) → Button ausgelassen.
- *   – Bestätigter Patzer → roter Ring + ✕, Klick gesperrt
- *     (SWADE-Regel: Patzer nicht reroll-bar).
- *   – Nicht-Owner-und-nicht-GM → ausgegraut.
- *   – Reroll bereits gemacht → grüner Ring (`bennyUsed`-Flag).
- *   – Sonst: aktiv.
+ * Benny-Button in die Karte des freien Wurfs injizieren. Zustände: bestätigter
+ * Patzer → gesperrt (SWADE: Patzer nicht reroll-bar), Nicht-Owner → ausgegraut,
+ * Reroll erfolgt → grüner Ring.
  */
 function _adrInjectFreeRollBennyButton(li, message) {
-  // Bennies sind eine reine SWADE-Mechanik — in anderen Systemen darf
-  // der Reroll-Button im freien Wurf gar nicht erst erscheinen.
+  // Bennies sind reine SWADE-Mechanik.
   if (game.system.id !== "swade") return;
 
   const f = message.flags?.[ADR.ID] || {};
-  if (!f.mainFormula) return;     // Kein freier Wurf
-  if (f.fate) return;             // Schicksalswurf: kein Reroll
-  if (f.requestRoll) return;      // Request-Roll: eigener Button-Pfad
-  if (adrIsFudge(f.dieType)) return;  // Fudge-Würfel: Bennys sind SWADE, Fudge ist Fate — kein Reroll
-  if (f.cthulhu) return;              // Bonus-/Strafwurf: Call of Cthulhu, kein Benny
+  if (!f.mainFormula) return;
+  if (f.fate) return;
+  if (f.requestRoll) return;      // eigener Button-Pfad
+  if (adrIsFudge(f.dieType)) return;  // Fudge, Cthulhu, Keep: keine SWADE-Mechaniken — kein Benny
+  if (f.cthulhu) return;
+  if (adrKeepModifier(f.keepMode)) return;
 
   const toggleContainer = li.querySelector(".adr-individual-toggle-container");
   if (!toggleContainer) return;
   const toggle = toggleContainer.querySelector(".adr-individual-toggle");
   if (!toggle) return;
 
-  // Idempotenz: alten Button-Wrapper aus Vorversion abräumen (kann als
-  // Sibling neben dem Toggle-Container existieren, falls die Karte schon
-  // mal mit dem alten Wrapper-Konzept gerendert wurde), und alten Benny-
-  // Button im Container selbst.
+  // Idempotenz bei erneutem Rendern.
   toggleContainer.querySelector(":scope > .adr-benny-btn")?.remove();
   toggleContainer.classList.remove("adr-has-benny");
   li.querySelector(":scope .adr-benny-btn-wrapper")?.remove();
@@ -1399,14 +1309,9 @@ function _adrInjectFreeRollBennyButton(li, message) {
     );
   }
 
-  // Benny-Button als drittes Kind in den Toggle-Container — ans ENDE,
-  // also NACH den Details. Grund: der Toggle-Klick-Handler ermittelt
-  // den Details-Container über `this.nextElementSibling`. Würde der Button
-  // direkt nach dem Toggle eingehängt, wäre nextElementSibling der Button
-  // statt der Details und der Klick würde nicht mehr aufklappen.
-  // Visuell platziert das Grid (CSS: `.adr-has-benny`) den Button
-  // trotzdem in Spalte 3, Zeile 1 (rechts neben dem Toggle) — die DOM-
-  // Reihenfolge ist davon unabhängig.
+  // Button ans ENDE des Containers, NACH den Details: der Toggle-Handler
+  // findet die Details über `this.nextElementSibling`. Die Position rechts
+  // neben dem Toggle regelt das Grid (`.adr-has-benny`).
   toggleContainer.classList.add("adr-has-benny");
 
   const btn = document.createElement("button");
@@ -1419,44 +1324,36 @@ function _adrInjectFreeRollBennyButton(li, message) {
   toggleContainer.appendChild(btn);
 }
 
-/** Chat-Kürzel des Fudge-Würfels: „WF" (deutsch) bzw. „dF" (englisch) — analog W6/d6. */
+/** Chat-Kürzel des Fudge-Würfels: „WF" (de) bzw. „dF" (en). */
 function adrFudgeChatLabel() {
   return String(game.i18n.lang || "").startsWith("de") ? "WF" : "dF";
 }
 
 /**
- * Würfelt einen freien Wurf neu — gleiche Parameter wie der Ursprungs-
- * wurf (aus den Phase-0-Flags dieType/dieCount/appliedModifier +
- * mainExploding und implizitem hasWildDie aus wildResult).
- * Identische Logik wie in adr-dice-form.js `_rollDie`, nur ohne die
- * UI-Bindung des Würfelfensters.
+ * Würfelt einen freien Wurf mit den Parametern des Ursprungswurfs (aus den
+ * Flags) neu. Muss mit `_rollDie` in adr-dice-form.js übereinstimmen.
  */
 async function _adrFreshFreeRoll(message) {
   const f = message.flags?.[ADR.ID] || {};
 
-  // Multi-Pool-Pfad: rekonstruiert den Pool aus den Flags und wirft alle
-  // Kategorien gemeinsam neu. Tweaks und Patzer-Mechanik bleiben aus
-  // (passend zum Initial-Wurf, Spec).
   if (Array.isArray(f.multiPool) && f.multiPool.length > 0) {
     return _adrFreshMultiPoolRoll(f);
   }
 
   const count = Number(f.dieCount) || 1;
   const type = String(f.dieType || "w6");
-  // Fudge-Würfe haben keinen Benny-Button (siehe _adrInjectFreeRollBennyButton);
-  // defensiv trotzdem abfangen, damit nie ein W6 als „Nachwurf" entsteht.
+  // Fudge/Cthulhu/Keep haben keinen Benny-Button; defensiv abfangen, damit
+  // nie ein W6 als „Nachwurf" entsteht.
   if (adrIsFudge(type)) return null;
-  if (f.cthulhu) return null;   // Bonus-/Strafwurf hat keinen Benny-Button — defensiv
+  if (f.cthulhu) return null;
+  if (adrKeepModifier(f.keepMode)) return null;
   const faces = (type === "dc") ? 2 : (Number(String(type).replace(/^[dDwW]/, "")) || 6);
-  // faces !== 100 defensiv mitprüfen: W100 explodiert nie. Nachrichten aus
-  // Versionen ≤ 14.0.1 können das Flag für W100 noch fälschlich gesetzt haben.
-  // „Höchster/Niedrigster" (kh/kl): schließt Explodieren aus, wie beim Ursprungswurf.
+  // kh/kl schließt Explodieren aus (wie beim Ursprungswurf).
   const keep = (type !== "dc" && count > 1) ? adrKeepModifier(f.keepMode) : null;
-  const isExploding = !!f.mainExploding && type !== "dc" && faces !== 100 && !keep;
+  const isExploding = !!f.mainExploding && type !== "dc" && !keep;
   const hasWildDie = (f.wildResult != null);
   const sumMod = Number(f.appliedModifier) || 0;
 
-  // Haupt-Würfel
   const mainTerm = new foundry.dice.terms.Die({
     number: count, faces,
     modifiers: keep ? [keep] : (isExploding ? [adrExplodingModifier()] : []),
@@ -1468,7 +1365,7 @@ async function _adrFreshFreeRoll(message) {
   }
   const mainRoll = await Roll.fromTerms(mainTerms).evaluate();
 
-  // Münzwurf (dc): Werte 1/2 zu 0/1 normalisieren (analog Ursprungswurf)
+  // Münze: Werte 1/2 zu 0/1 normalisieren (wie beim Ursprungswurf).
   if (type === "dc" && mainRoll?.dice?.length) {
     for (const r of mainRoll.dice[0].results) {
       r.result = (r.result === 2) ? 1 : 0;
@@ -1476,7 +1373,6 @@ async function _adrFreshFreeRoll(message) {
     mainRoll._total = mainRoll.dice[0].results.reduce((a, r) => a + r.result, 0);
   }
 
-  // Wild Die (falls Ursprungswurf einen hatte) — immer 1W6 explodierend
   let wildRoll = null;
   if (hasWildDie) {
     const wildTerm = new foundry.dice.terms.Die({
@@ -1511,7 +1407,7 @@ async function _adrFreshMultiPoolRoll(f) {
     terms.push(new foundry.dice.terms.Die({
       number: p.count,
       faces: p.faces,
-      modifiers: (isExploding && p.faces !== 100) ? [adrExplodingModifier()] : [],
+      modifiers: isExploding ? [adrExplodingModifier()] : [],
     }));
   }
   if (sumMod !== 0) {
@@ -1534,25 +1430,18 @@ async function _adrFreshMultiPoolRoll(f) {
 }
 
 /**
- * Extrahiert Anzeigedaten (Einzelergebnisse + Highlights) aus den
- * frisch-gerollten Roll-Objekten. Gleiche Auswertungslogik wie der
- * Einzelwurf in adr-dice-form.js (`_rollDie`).
- *
- * Bei Multi-Pool (`pool` gesetzt) werden alle Würfel-Terme abgegangen
- * (statt nur dice[0]) und zusätzlich kategorisierte `multiPoolResults`
- * zurückgegeben. Highlights bleiben false (Patzer-Mechanik aus, Spec).
+ * Extrahiert Anzeigedaten (Einzelergebnisse + Highlights) aus frischen
+ * Roll-Objekten; muss mit `_rollDie` in adr-dice-form.js übereinstimmen.
+ * Multi-Pool liefert zusätzlich `multiPoolResults`, Highlights bleiben aus.
  */
 function _adrExtractFreeRollData(mainRoll, wildRoll, fumbleEnabled, pool = null) {
   function extractIndividual(roll) {
     if (!roll?.dice?.length) return [];
-    // Über ALLE Würfel-Terme (bei Multi-Pool > 1, sonst genau 1). Die
-    // Eltern-Kind-Zuordnung der Explosionen erledigt adrBuildDieResults.
     return roll.dice.flatMap(dieEntry => adrBuildDieResults(dieEntry));
   }
   const mainIndividualResults = extractIndividual(mainRoll);
   const wildIndividualResults = extractIndividual(wildRoll);
 
-  // Kategorisierte Ergebnisse pro Pool-Kategorie (nur bei Multi-Pool gesetzt)
   let multiPoolResults = null;
   if (Array.isArray(pool) && pool.length > 0) {
     multiPoolResults = [];
@@ -1567,7 +1456,6 @@ function _adrExtractFreeRollData(mainRoll, wildRoll, fumbleEnabled, pool = null)
   }
 
   let mainHighlight = false, wildHighlight = false;
-  // Bei Multi-Pool: keine Highlight-Setzung (Patzer-Mechanik per Spec aus).
   if (fumbleEnabled && !Array.isArray(pool)) {
     if (mainRoll?.dice?.length) {
       // Verworfene Würfel (kh/kl) zählen nicht mit.
@@ -1593,11 +1481,7 @@ function _adrExtractFreeRollData(mainRoll, wildRoll, fumbleEnabled, pool = null)
   return out;
 }
 
-/**
- * Formatiert eine Reroll-Nummer als Ordinalzahl für die aktuelle Sprache.
- * Deutsch: "2", "3", "4" (Template enthält den Punkt selbst).
- * Englisch: "2nd", "3rd", "4th", ...
- */
+/** Ordinalzahl der Reroll-Nummer: en "2nd"/"3rd", de nur die Zahl (Punkt steht im Template). */
 function _adrFormatOrdinal(n) {
   const lang = game.i18n?.lang || "de";
   if (lang.startsWith("en")) {
@@ -1612,18 +1496,9 @@ function _adrFormatOrdinal(n) {
 }
 
 /**
- * Tauscht den aktuell geltenden Wurf (mainResult & Co.) mit dem letzten
- * Eintrag aus previousRolls. Mutiert das übergebene flags-Objekt.
- *
- * Wird im Pending-Patzer-Pfad benutzt: nach einer Pending-Entscheidung
- * „Patzer prüfen" mit W6=1 wird der bisher als verworfen gespeicherte
- * Reroll-1 zum geltenden mainResult, der bisher sichtbare alte (gute)
- * Wurf wandert in die History (mit Patzer-Vorrang).
- *
- * Bei „Besseres Ergebnis behalten" oder W6>1 gibt es keinen Swap mehr —
- * der alte Wurf war im invertierten Pending-Datenmodell ohnehin schon
- * mainResult. Die jeweiligen Handler markieren dort nur den letzten
- * previousRolls-Eintrag.
+ * Tauscht den geltenden Wurf (mainResult & Co.) mit dem letzten Eintrag aus
+ * previousRolls; mutiert `flags`. Nur im Pending-Pfad bei bestätigtem Patzer
+ * (W6=1) nötig — sonst ist der alte Wurf im Pending-Datenmodell ohnehin mainResult.
  */
 function _adrPendingDecisionSwap(flags) {
   const oldData = flags.previousRolls.pop();
@@ -1635,11 +1510,8 @@ function _adrPendingDecisionSwap(flags) {
     wildResult: flags.wildResult,
     wildIndividualResults: flags.wildIndividualResults,
     wildHighlight: flags.wildHighlight,
-    // Seq des bisher aktuellen (alten, guten) Wurfs.
     seq: flags.rollSeq ?? null,
   };
-  // FumbleCheck-Felder des bisher aktuellen Wurfs (falls vorhanden) mit
-  // in die History übernehmen.
   if (flags.fumbleCheckResult !== undefined) newDiscarded.fumbleCheckResult = flags.fumbleCheckResult;
   if (flags.fumbleCheckDie !== undefined) newDiscarded.fumbleCheckDie = flags.fumbleCheckDie;
   flags.previousRolls.push(newDiscarded);
@@ -1650,26 +1522,16 @@ function _adrPendingDecisionSwap(flags) {
   flags.wildResult = oldData.wildResult;
   flags.wildIndividualResults = oldData.wildIndividualResults;
   flags.wildHighlight = oldData.wildHighlight;
-  // Seq des Reroll-1-Wurfs übernehmen (wird zum geltenden Wurf).
   if (oldData.seq != null) flags.rollSeq = oldData.seq;
-  // Falls der alte Wurf einen Patzer-Check trug, mit zurückholen
   if (oldData.fumbleCheckResult !== undefined) flags.fumbleCheckResult = oldData.fumbleCheckResult;
   if (oldData.fumbleCheckDie !== undefined) flags.fumbleCheckDie = oldData.fumbleCheckDie;
 }
 
 /**
- * Schreibt das ADR-Flag-Objekt einer ChatMessage neu und entfernt dabei
- * die in `removals` genannten Schlüssel zuverlässig aus der DB.
- *
- * Foundry merget Flag-Sub-Objekte beim `update()` rekursiv — ein bloßes
- * Überschreiben von `flags[ADR.ID]` ließe entfernte Schlüssel also stehen.
- * Statt der `-=`-Lösch-Syntax (seit Foundry v14 deprecatet, Wegfall mit
- * v16) wird dafür die stabile `unsetFlag`-API genutzt: sie kapselt die
- * versionsabhängige Lösch-Mechanik und funktioniert unter v13 wie v14.
- *
- * @param {ChatMessage} message   Ziel-Nachricht.
- * @param {object}      newFlags  Neuer Inhalt von flags[ADR.ID].
- * @param {string[]}    removals  Schlüssel, die aus der DB entfernt werden.
+ * Schreibt das ADR-Flag-Objekt neu und entfernt `removals` aus der DB.
+ * Foundry merget Flag-Objekte bei `update()` rekursiv, entfernte Schlüssel
+ * blieben sonst stehen; `unsetFlag` statt der `-=`-Syntax (seit v14 deprecatet).
+ * @param {string[]} removals Schlüssel relativ zum ADR-Namespace.
  */
 async function _adrWriteFlags(message, newFlags, removals = []) {
   await message.update({ [`flags.${ADR.ID}`]: newFlags });
@@ -1677,44 +1539,25 @@ async function _adrWriteFlags(message, newFlags, removals = []) {
 }
 
 /**
- * Wendet einen Benny-Reroll auf die Message-Flags an. Mutiert das
- * übergebene Flag-Objekt analog zu `_applyBennyRerollSingle` aus
- * adr-request-roll-chat.js, aber auf Message-Flag-Ebene statt entry.
- *
- * Vergleichsbasis: max(mainResult, wildResult) — der „effektive" Wert
- * wie in SWADE. Bei Würfen ohne Wild Die: nur mainResult.
- *
- * Drei Ergebnis-Pfade:
- *   1. Reroll besser → Overwrite, lastRerollProtected=false
- *   2. NSC-Reroll mit einer 1 (Patzer-Verdacht) → Overwrite mit
- *      lastRerollFumbleOverwrite=true. SWADE-Regel: Patzer ist final,
- *      auch wenn er numerisch schlechter als der alte Wurf ist.
- *      Schutz greift bei Patzer-Verdacht nicht.
- *   3. Sonst → Schutz, alter Wurf bleibt, lastRerollProtected=true.
- *
- * Sonderfall Münzwurf (dieType === "dc"): kein Wertvergleich (Werte 0/1
- * sind symbolisch). Neuer Wurf gilt immer, alter Wurf in History.
- *
- * Returnt ein Array mit Flag-Schlüsseln (relativ zum ADR-Namespace), die
- * aus der DB entfernt werden müssen, weil Foundry beim message.update()
- * Flag-Sub-Objekte rekursiv merget — ein bloßes `delete flags.foo` im
- * Plain-Object würde nicht greifen, der alte Wert würde aus der DB
- * zurückgemergt. Das Entfernen übernimmt `_adrWriteFlags`.
+ * Wendet einen Benny-Reroll auf die Message-Flags an (mutiert `flags`;
+ * Gegenstück zu `_applyBennyRerollSingle` in adr-request-roll-chat.js).
+ * Vergleichsbasis ist max(mainResult, wildResult). Pfade: besser → Overwrite;
+ * Patzer → Overwrite trotz schlechterem Wert (SWADE: Patzer ist final);
+ * sonst Schutz. Münzwurf: kein Wertvergleich, neuer Wurf gilt immer.
+ * @returns {string[]} Flag-Schlüssel, die `_adrWriteFlags` aus der DB entfernen
+ *   muss — ein `delete` im Plain-Object greift wegen des rekursiven Merges nicht.
  */
 function _adrApplyBennyRerollFree(flags, newData, isWildcardSpeaker) {
   const removals = [];
 
   if (!Array.isArray(flags.previousRolls)) flags.previousRolls = [];
 
-  // ── Sequenznummer-Tracking ──
-  // currentSeq = Position des aktuell geltenden Wurfs in der chronologischen
-  // Reihenfolge. Fallback 1 für Legacy-Nachrichten ohne rollSeq-Flag.
-  // newSeq = Position des neuen Benny-Wurfs (immer höher als alle bisherigen).
+  // Sequenznummern: Fallback 1 für Nachrichten ohne rollSeq-Flag.
   const currentSeq = flags.rollSeq ?? 1;
   const newSeq = flags.nextRollSeq ?? (flags.previousRolls.length + 2);
   flags.nextRollSeq = newSeq + 1;
 
-  // Münzwurf: kein Wertvergleich → neuer Wurf gilt immer
+  // Münzwurf: kein Wertvergleich, neuer Wurf gilt immer.
   if (flags.dieType === "dc") {
     const histEntry = {
       mainResult: flags.mainResult,
@@ -1741,12 +1584,7 @@ function _adrApplyBennyRerollFree(flags, newData, isWildcardSpeaker) {
     return removals;
   }
 
-  // ── Multi-Pool-Pfad ──
-  // Spec: keine Patzer-Mechanik, kein Pending. Reine Wertvergleichs-Logik
-  // mit max(main, wild). Verbesserung → alter Wurf in History, neuer
-  // wird geltend; sonst Schutz greift. multiPoolResults wandert pro
-  // Eintrag in die History, damit die kategorisierte Detail-Anzeige
-  // auch für verworfene Würfe greift.
+  // ── Multi-Pool-Pfad: keine Patzer-Mechanik, kein Pending, nur Wertvergleich ──
   if (Array.isArray(flags.multiPool) && flags.multiPool.length > 0) {
     const oldMain = Number(flags.mainResult) || 0;
     const oldWild = (flags.wildResult != null) ? Number(flags.wildResult) : null;
@@ -1757,7 +1595,6 @@ function _adrApplyBennyRerollFree(flags, newData, isWildcardSpeaker) {
     const overwriteByBetter = newEffective > oldEffective;
 
     if (overwriteByBetter) {
-      // Alt → History, neu → aktuell
       flags.previousRolls.push({
         mainResult: flags.mainResult,
         mainIndividualResults: flags.mainIndividualResults,
@@ -1778,7 +1615,6 @@ function _adrApplyBennyRerollFree(flags, newData, isWildcardSpeaker) {
       flags.rollSeq = newSeq;
       flags.lastRerollProtected = false;
     } else {
-      // Schutz greift: alter Wurf bleibt, neuer wird verworfen → History
       flags.previousRolls.push({
         mainResult: newData.mainResult,
         mainIndividualResults: newData.mainIndividualResults,
@@ -1797,11 +1633,8 @@ function _adrApplyBennyRerollFree(flags, newData, isWildcardSpeaker) {
     return removals;
   }
 
-  // ── Patzer-Override-Pfad (SWADE-Regel) ──
-  // Wildcard-Patzer-Konstellation im Reroll (Wild=1 + Mehrheit Einsen,
-  // mainExploding) übersteuert den Verschlechterungsschutz: alter (guter) Wurf
-  // wandert in previousRolls, der neue Patzer-Wurf wird geltend mit
-  // lastRerollFumbleOverwrite=true.
+  // ── Patzer-Override (SWADE): Wildcard-Patzer im Reroll übersteuert den
+  // Verschlechterungsschutz. NSC-1 ("needs-check") läuft über den Pending-Pfad. ──
   const newClassification = _adrClassifyHistoryFumble(newData, isWildcardSpeaker, !!flags.mainExploding);
   if (newClassification === "confirmed") {
     const histEntry = {
@@ -1841,10 +1674,20 @@ function _adrApplyBennyRerollFree(flags, newData, isWildcardSpeaker) {
   const oldEffective = (oldWild != null) ? Math.max(oldMain, oldWild) : oldMain;
   const newEffective = (newWild != null) ? Math.max(newMain, newWild) : newMain;
 
+  // Statisten-Reroll mit 1 = potenzieller Patzer; ohne Explodieren keine
+  // Eigenschaftsprobe, also kein Pending-Pfad.
+  const newIsPotentialFumble = !!flags.mainExploding
+    && !isWildcardSpeaker
+    && newWild == null
+    && Array.isArray(newData.mainIndividualResults)
+    && newData.mainIndividualResults.length === 1
+    && newData.mainIndividualResults[0]?.value == 1;
+
   const overwriteByBetter = newEffective > oldEffective;
+  // Pending: die Entscheidung (Annehmen → Schutz | Patzer prüfen → W6) trifft der GM.
+  const goesPending = newIsPotentialFumble && !overwriteByBetter;
 
   if (overwriteByBetter) {
-    // Alter Wurf in History (mit seiner ursprünglichen Seq)
     const histEntry = {
       mainResult: flags.mainResult,
       mainIndividualResults: flags.mainIndividualResults,
@@ -1858,7 +1701,6 @@ function _adrApplyBennyRerollFree(flags, newData, isWildcardSpeaker) {
     if (flags.fumbleCheckDie !== undefined) histEntry.fumbleCheckDie = flags.fumbleCheckDie;
     flags.previousRolls.push(histEntry);
 
-    // Neuer Wurf als geltend (mit neuer Seq)
     flags.mainResult = newData.mainResult;
     flags.mainIndividualResults = newData.mainIndividualResults;
     flags.mainHighlight = newData.mainHighlight;
@@ -1872,6 +1714,24 @@ function _adrApplyBennyRerollFree(flags, newData, isWildcardSpeaker) {
     delete flags.fumbleCheckResult;
     delete flags.fumbleCheckDie;
     removals.push("fumbleCheckResult", "fumbleCheckDie");
+  } else if (goesPending) {
+    // Pending-Datenmodell: der alte Wurf BLEIBT geltend, die Reroll-1 wandert
+    // in previousRolls. mainResult/rollSeq/fumbleCheck* des alten Wurfs bleiben
+    // für die GM-Entscheidung unangetastet (Annehmen → fumbleCheckSkipped;
+    // W6=1 → _adrPendingDecisionSwap; W6>1 → fumbleCheckResult=false am Eintrag).
+    flags.previousRolls.push({
+      mainResult: newData.mainResult,
+      mainIndividualResults: newData.mainIndividualResults,
+      mainHighlight: newData.mainHighlight,
+      wildResult: newData.wildResult,
+      wildIndividualResults: newData.wildIndividualResults,
+      wildHighlight: newData.wildHighlight,
+      seq: newSeq,
+    });
+    flags.pendingRerollFumbleDecision = true;
+    delete flags.lastRerollProtected;
+    delete flags.lastRerollFumbleOverwrite;
+    removals.push("lastRerollProtected", "lastRerollFumbleOverwrite");
   } else {
     // Schutz greift: alter Wurf bleibt; neuer in History mit neuer Seq
     flags.previousRolls.push({
@@ -1883,7 +1743,6 @@ function _adrApplyBennyRerollFree(flags, newData, isWildcardSpeaker) {
       wildHighlight: newData.wildHighlight,
       seq: newSeq,
     });
-    // current bleibt, rollSeq bleibt unverändert
     flags.lastRerollProtected = true;
     delete flags.lastRerollFumbleOverwrite;
     removals.push("lastRerollFumbleOverwrite");
@@ -1893,17 +1752,11 @@ function _adrApplyBennyRerollFree(flags, newData, isWildcardSpeaker) {
 }
 
 /**
- * Klassifiziert einen einzelnen History-Eintrag aus `previousRolls`
- * nach SWADE-Patzer-Kategorien — analog `_classifyFumble` aus
- * adr-request-roll-chat.js, aber für das Free-Roll-Flag-Schema.
- *
- *   "confirmed"   — eindeutiger Patzer (Wildcard-Patzer oder früher geprüfter Statisten-1)
- *   "none"        — kein Patzer-Verdacht
- *
- * `mainExploding` ist eine Top-Level-Eigenschaft der Message (gilt für
- * alle Würfe der Serie, weil Rerolls mit identischer Konfiguration
- * laufen). Ohne Explosion kann es nach SWADE-Regeln keine
- * Eigenschaftsprobe gewesen sein → kein Patzer-Verdacht.
+ * Klassifiziert einen History-Eintrag nach SWADE-Patzer-Kategorien (Gegenstück
+ * zu `_classifyFumble` in adr-request-roll-chat.js für das Free-Roll-Schema).
+ * `mainExploding` gilt für die ganze Reroll-Serie; ohne Explodieren keine
+ * Eigenschaftsprobe, also kein Patzer-Verdacht.
+ * @returns {"confirmed"|"needs-check"|"none"}
  */
 function _adrClassifyHistoryFumble(entry, isWildcardSpeaker, mainExploding) {
   if (!entry) return "none";
@@ -1920,28 +1773,18 @@ function _adrClassifyHistoryFumble(entry, isWildcardSpeaker, mainExploding) {
     const totalDice = totalMain + 1;
     const onesAll = onesMain + (wildResult == 1 ? 1 : 0);
     if (wildResult == 1 && onesAll > totalDice / 2) return "confirmed";
+    return "none";
   }
+  if (isWildcardSpeaker) return "none";
+  if (totalMain === 1 && mainInd[0]?.value == 1) return "needs-check";
   return "none";
 }
 
 /**
- * Voll-Rebuild des `.adr-individual-details`-Bereichs in chronologischer
- * Würfel-Reihenfolge. Alle Würfe (verworfene + aktuell geltender) werden
- * nach ihrer Sequenznummer (`seq` / `rollSeq`) sortiert und in dieser
- * Reihenfolge ausgegeben — von oben (frühester Wurf) nach unten
- * (jüngster Wurf). Der aktuell geltende Wurf bekommt KEINE
- * `adr-individual-discarded`-Klasse und steht damit ohne Durchstreichung
- * an seiner echten chronologischen Position (meist unten, aber bei
- * „Initialwurf war Top, Bennies schlechter"-Szenarien auch oben).
- *
- * Inline-Prüfwürfel: ist ein Wurf ein einzelner Würfel mit Wert 1 und
- * existiert ein W6-Prüfergebnis (`fumbleCheckDie`), wird dieser
- * Prüfwürfel als kompakter Span direkt rechts neben die 1 gehängt.
- *
- * Legacy-Fallback: fehlt das `seq`-Feld an einem Eintrag (z.B. bei alten
- * Chat-Nachrichten, die vor der Einführung erstellt wurden), wird der
- * Array-Index als Seq verwendet — das reproduziert das alte Verhalten
- * (Verwerfungs-Reihenfolge) für solche Nachrichten ohne Crash.
+ * Voll-Rebuild von `.adr-individual-details`: alle Würfe (verworfene + geltender)
+ * chronologisch nach `seq`/`rollSeq` sortiert; der geltende Wurf steht ohne
+ * Durchstreichung an seiner echten Position. Fehlt `seq` (alte Nachrichten),
+ * dient der Array-Index als Reihenfolge.
  */
 function _adrInjectFreeRollDiscardedHistory(li, message) {
   const f = message.flags?.[ADR.ID] || {};
@@ -1949,10 +1792,8 @@ function _adrInjectFreeRollDiscardedHistory(li, message) {
   const details = li.querySelector(".adr-individual-details");
   if (!details) return;
 
-  // Nichts zu rendern? Kein aktueller Wurf vorhanden → Details unverändert lassen.
   if (f.mainResult == null && prev.length === 0) return;
 
-  // Einträge sammeln (Discarded + aktueller Wurf).
   const entries = [];
   prev.forEach((p, i) => {
     entries.push({
@@ -1976,23 +1817,15 @@ function _adrInjectFreeRollDiscardedHistory(li, message) {
     isCurrent: true,
   });
 
-  // Chronologisch sortieren (kleinste seq oben).
   entries.sort((a, b) => a.seq - b.seq);
 
-  // Details komplett neu aufbauen.
   details.innerHTML = "";
 
   const dieLabel = game.i18n.localize(`${ADR.ID}.requestRoll.fumbleCheckDieLabel`);
-  // Modifikator ist im freien Wurf konstant über Reroll-Kette (gleiche Parameter
-  // wie Ursprungswurf, siehe _adrFreshFreeRoll). Alle Einträge benutzen denselben
-  // Wert. null/undefined → kein Mod-Span vom Helper.
+  // Modifikator ist über die ganze Reroll-Kette konstant.
   const appliedMod = (f.appliedModifier != null) ? Number(f.appliedModifier) : null;
 
   // ── Multi-Pool-Pfad ──
-  // Bei Multi-Pool wird pro Eintrag eine kategorisierte Detail-Box gerendert
-  // (statt der flachen Single-Die-Liste). Falls multiPoolResults im History-
-  // Eintrag fehlen sollte (z. B. sehr alte Nachricht ohne das Feld), fällt
-  // die Box auf den flachen Helper-Pfad zurück.
   const isMulti = Array.isArray(f.multiPool) && f.multiPool.length > 0;
   if (isMulti) {
     for (const e of entries) {
@@ -2007,7 +1840,7 @@ function _adrInjectFreeRollDiscardedHistory(li, message) {
       if (mpr.length) {
         el.innerHTML = _adrBuildMultiPoolDetailsHTML(mpr, p.wildResult, p.wildIndividualResults, appliedMod);
       } else {
-        // Fallback: flacher Pfad (alter Eintrag ohne multiPoolResults-Feld)
+        // Alte Einträge ohne multiPoolResults: flacher Pfad.
         const wildInd = Array.isArray(p.wildIndividualResults) ? p.wildIndividualResults : [];
         el.innerHTML = _buildInlineRollContent({
           mainHTML: _renderDicePrecomputed(mainInd),
@@ -2020,7 +1853,7 @@ function _adrInjectFreeRollDiscardedHistory(li, message) {
     return;
   }
 
-  // ── Single-Die-Pfad (unverändert) ──
+  // ── Single-Die-Pfad ──
   for (const e of entries) {
     const p = e.data;
     const discardCls = e.isCurrent ? "" : " adr-individual-discarded";
@@ -2028,8 +1861,7 @@ function _adrInjectFreeRollDiscardedHistory(li, message) {
     const mainInd = Array.isArray(p.mainIndividualResults) ? p.mainIndividualResults : [];
     if (!mainInd.length && p.wildResult == null) continue;
 
-    // Inline-Prüfwürfel: nur bei genau einem Würfel mit Wert 1 und
-    // vorhandenem W6-Prüfwurf (Statisten-Patzer-Check-Kontext).
+    // W6-Prüfwürfel direkt neben der 1.
     let inlineCheckHTML = "";
     if (mainInd.length === 1 && Number(mainInd[0]?.value) === 1 && p.fumbleCheckDie != null) {
       const dieCss = p.fumbleCheckDie === 1 ? "min" : "";
@@ -2054,24 +1886,9 @@ function _adrInjectFreeRollDiscardedHistory(li, message) {
 }
 
 /**
- * Hinweis-Element nach Benny-Reroll. Vier+Eins Varianten:
- *   – `pendingRerollFumbleDecision` → Pending: grün/rot-Auswahl
- *                                     (Annehmen → Schutz | W6-Patzer-Check)
- *   – `lastRerollFumbleOverwrite`   → NSC-Patzer-Vorrang-Hinweis
- *                                     (nur via Pending → roter Pfad bestätigt)
- *   – `lastRerollProtected`         → Schutz-Hinweis (mit Patzer-Sub-Logik
- *                                     analog Single-Mode). Hat der GM
- *                                     im Pending-Pfad ohne Check angenommen,
- *                                     markiert `fumbleCheckSkipped` den
- *                                     Discarded — dann nur Schutz-Text ohne
- *                                     „Allerdings war eine 1…"-Zusatz.
- *   – Münzwurf (dieType==="dc")     → eigene Hinweis-Zeile, keine Vergleichs-
- *                                     bewertung
- *   – sonst (bei `bennyUsed`)       → Verbesserungs-Hinweis
- *
- * Wird zwischen Wurf-Zeile (.adr-dice-row) und Toggle-Container
- * eingefügt, damit der Hinweis prominent oberhalb der Einzelergebnisse
- * sitzt.
+ * Hinweis nach Benny-Reroll, je nach Flag: Pending-Auswahl, Patzer-Vorrang,
+ * Schutz (ggf. mit „Allerdings war eine 1"-Zusatz), Münzwurf oder Verbesserung.
+ * Sitzt zwischen Wurf-Zeile und Toggle-Container.
  */
 function _adrInjectFreeRollHint(li, message) {
   const f = message.flags?.[ADR.ID] || {};
@@ -2087,11 +1904,11 @@ function _adrInjectFreeRollHint(li, message) {
   const hintEl = document.createElement("div");
   hintEl.className = "adr-benny-protected-hint";
   let hintHTML = "";
+  let needsDiscardedCheckBtn = false;
   let lastDiscarded = null;
   let renderPendingChoice = false;
 
-  // Reroll-Zähler: prev.length === 1 → erster Reroll (alte Keys ohne {n}),
-  // ab 2 → Keys mit {n}-Platzhalter.
+  // Ab dem zweiten Reroll Keys mit {n}-Platzhalter.
   const rerollNum = prev.length;
   const useCounter = rerollNum >= 2;
   const ordinal = useCounter ? _adrFormatOrdinal(rerollNum) : null;
@@ -2102,19 +1919,12 @@ function _adrInjectFreeRollHint(li, message) {
   };
 
   if (f.pendingRerollFumbleDecision) {
-    // Reroll ergab eine Statisten-1 → alter Wurf bleibt geltend, GM entscheidet.
-    // Erklärungstext + Auswahl-Buttons unten.
     hintHTML = `<div class="adr-benny-protected-line">`
       + localizeHint("pendingFumblePotentialHint") + `</div>`;
     renderPendingChoice = true;
   } else if (f.lastRerollFumbleOverwrite) {
-    // Patzer-Vorrang. Drei Sub-Fälle:
-    //   a) NSC-1, W6-bestätigt → fumbleCheckResult=true → kombinierter Text
-    //      „Reroll war 1 + Patzer bestätigt".
-    //   b) Wildcard-Patzer im Reroll → eindeutig ohne W6 → Critical-Text
-    //      „Reroll war kritischer Fehlschlag".
-    //   c) Fallback (NSC-1 ohne fumbleCheckResult, sollte normalerweise nicht
-    //      erreichbar sein): bisheriger 1er-Text.
+    // Patzer-Vorrang: W6-bestätigte NSC-1, Wildcard-Patzer oder (normalerweise
+    // unerreichbarer) Fallback ohne fumbleCheckResult.
     const currentClass = _adrClassifyHistoryFumble({
       mainIndividualResults: f.mainIndividualResults,
       wildResult: f.wildResult,
@@ -2133,23 +1943,14 @@ function _adrInjectFreeRollHint(li, message) {
         + localizeHint("bennyFumbleOverwriteHint") + `</div>`;
     }
   } else if (f.lastRerollProtected) {
-    // Schutz-Pfad — letzten Discarded klassifizieren
     lastDiscarded = prev[prev.length - 1];
     const cls = _adrClassifyHistoryFumble(lastDiscarded, isWildcardSpeaker, !!f.mainExploding);
     const checkSkipped = !!lastDiscarded?.fumbleCheckSkipped;
 
     if (cls === "confirmed") {
-      // Differenzierung: Statist mit W6-bestätigtem Patzer (fumbleCheckResult
-      // === true) ist eindeutig — der bestehende harte Text + komplett rote
-      // Zeile bleiben.
-      // Wildcard-Patzer (Wild Die = 1, überwiegend 1en) ist dagegen nur eine
-      // POTENZIELLE Patzer-Konstellation, weil unbekannt ist, ob's eine
-      // Eigenschaftsprobe war. Hier den weicheren „Falls der Wurf …"-Text
-      // verwenden und MARKUP analog zum Initial-Wurf-Hinweis:
-      // grauer Prefix in .adr-fumble-check-result, eingebetteter
-      // .adr-fumble-confirmed-text-Span in rot/fett/kursiv für den
-      // „Kritischer Fehlschlag"-Label. Zeilenumbruch zwischen Prefix und
-      // Label per <br>.
+      // W6-bestätigter Statisten-Patzer ist eindeutig (harter Text); ein
+      // Wildcard-Patzer nur POTENZIELL, weil unbekannt ist, ob es eine
+      // Eigenschaftsprobe war — daher weicher Text im Markup des Initial-Hinweises.
       const isExtraConfirmed = lastDiscarded?.fumbleCheckResult === true;
       if (isExtraConfirmed) {
         hintHTML = `<div class="adr-benny-protected-line adr-benny-protected-fumble">`
@@ -2164,20 +1965,36 @@ function _adrInjectFreeRollHint(li, message) {
     } else {
       hintHTML = `<div class="adr-benny-protected-line">`
         + localizeHint("bennyProtectedHint") + `</div>`;
+      // Zusatz und Check-Button entfallen, wenn der GM den Check im Pending übersprungen hat.
+      if (cls === "needs-check" && !checkSkipped) {
+        hintHTML += `<div class="adr-benny-protected-line adr-benny-protected-extra-one">`
+          + game.i18n.localize(`${ADR.ID}.requestRoll.bennyProtectedHintExtraOne`) + `</div>`;
+        const dcr = lastDiscarded?.fumbleCheckResult;
+        if (dcr === true || dcr === false) {
+          const tmplKey = dcr ? `${ADR.ID}.requestRoll.fumbleCheckTextYes` : `${ADR.ID}.requestRoll.fumbleCheckTextNo`;
+          const keyword = dcr
+            ? game.i18n.localize(`${ADR.ID}.requestRoll.fumbleCheckYes`)
+            : game.i18n.localize(`${ADR.ID}.requestRoll.fumbleCheckNone`);
+          const cssCls = dcr ? "adr-fumble-confirmed-text" : "adr-fumble-denied-text";
+          const tmpl = game.i18n.localize(tmplKey);
+          hintHTML += `<div class="adr-benny-protected-check-result">`
+            + tmpl.replace("{result}", `<span class="${cssCls}">${keyword}</span>`)
+            + `</div>`;
+        } else {
+          needsDiscardedCheckBtn = true;
+        }
+      }
     }
   } else if (f.dieType === "dc") {
-    // Münzwurf — kein Wertvergleich, neuer Wurf gilt immer
     hintHTML = `<div class="adr-benny-protected-line">`
       + localizeHint("bennyCoinHint") + `</div>`;
   } else {
-    // Verbesserung
     hintHTML = `<div class="adr-benny-protected-line">`
       + localizeHint("bennyImprovedHint") + `</div>`;
   }
 
   hintEl.innerHTML = hintHTML;
 
-  // Pending-Auswahl: grüner „Besseres behalten"-Button + „oder" + roter Patzer-Button
   if (renderPendingChoice) {
     const acceptLabel = game.i18n.localize(`${ADR.ID}.requestRoll.keepBetterResultBtn`);
     const orLabel = game.i18n.localize(`${ADR.ID}.requestRoll.orChoice`);
@@ -2185,7 +2002,7 @@ function _adrInjectFreeRollHint(li, message) {
     const line2 = game.i18n.localize(`${ADR.ID}.requestRoll.fumbleCheckBtn2`);
     const isGM = game.user.isGM;
     const notMineCls = isGM ? "" : " adr-not-mine";
-    // Inline-style mit !important nötig (siehe Initial-1-Stelle oben).
+    // Inline !important: das System-CSS für button:hover ist spezifischer.
     const notMineAttrs = isGM
       ? ""
       : ` title="${game.i18n.localize(`${ADR.ID}.requestRoll.chatNoPermission`)}" style="cursor: not-allowed !important"`;
@@ -2198,7 +2015,24 @@ function _adrInjectFreeRollHint(li, message) {
     hintEl.appendChild(choice);
   }
 
-  // Platzieren: nach der letzten Wurfzeile und (ggf.) der Critical-Hinweis-Zeile
+  if (needsDiscardedCheckBtn && lastDiscarded) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "adr-fumble-check-btn adr-fumble-check-discarded-btn";
+    btn.dataset.action = "adr-fumble-check-discarded-free";
+    btn.dataset.messageId = message.id;
+    const line1 = game.i18n.localize(`${ADR.ID}.requestRoll.fumbleCheckBtn1`);
+    const line2 = game.i18n.localize(`${ADR.ID}.requestRoll.fumbleCheckBtn2`);
+    btn.innerHTML = `${line1} ${line2}`;
+    if (!game.user.isGM) {
+      btn.classList.add("adr-not-mine");
+      btn.title = game.i18n.localize(`${ADR.ID}.requestRoll.chatNoPermission`);
+      btn.style.setProperty("cursor", "not-allowed", "important");
+    }
+    hintEl.appendChild(btn);
+  }
+
+  // Nach der letzten Wurfzeile bzw. der Critical-Hinweis-Zeile platzieren.
   const rows = li.querySelectorAll(".adr-dice-row");
   const lastRow = rows[rows.length - 1];
   let anchor = lastRow;
@@ -2206,11 +2040,8 @@ function _adrInjectFreeRollHint(li, message) {
   if (fcResult) anchor = fcResult;
   if (anchor) anchor.insertAdjacentElement("afterend", hintEl);
 
-  // Auto-Scroll im Pending-Pfad: Hint-Text + zwei Buttons vergrößern die
-  // Nachricht spürbar, Foundry scrollt nach `message.update()` nicht
-  // automatisch nach. Analog zur Initial-Wurf-Patzer-Check-Stelle weiter
-  // oben in renderChatMessageHTML. setTimeout, damit
-  // Layout nach Insert berechnet ist.
+  // Foundry scrollt nach `message.update()` nicht nach; setTimeout, damit das
+  // Layout nach dem Insert berechnet ist.
   if (renderPendingChoice) {
     setTimeout(() => {
       const scrollContainer = li.closest(".chat-scroll");
@@ -2235,7 +2066,6 @@ function _loadHandlebarTemplates() {
   Handlebars.registerHelper("isD2",   v => v === "d2");
   Handlebars.registerHelper("eq", (a, b) => a === b);
   Handlebars.registerHelper("gt", (a, b) => a > b);
-  // Lokalisiertes Würfel-Label ("W8" / "d8") für Template-Tooltips
   Handlebars.registerHelper("adrDieLabel",
     sides => `${game.i18n.localize(`${ADR.ID}.requestRoll.diePrefix`)}${sides}`);
   return foundry.applications.handlebars.loadTemplates([
@@ -2252,32 +2082,16 @@ function _loadHandlebarTemplates() {
 const { ApplicationV2 } = foundry.applications.api;
 
 /**
- * SwadeSettingsForm — Submenu-Fenster für die drei SWADE-spezifischen
- * Spielmechanik-Einstellungen (Wild Die, Patzer-Mechanik, Probenanforderung).
- *
- * Bewusst OHNE HandlebarsApplicationMixin und OHNE ADR-Theme: ein
- * Einstellungs-Untermenü wird aus den Foundry-Spieleinstellungen heraus
- * geöffnet und soll deshalb wie Foundrys eigene Einstellungen aussehen.
- * Der Inhalt wird in `_renderHTML` mit den Standard-Helfern aus
- * `foundry.applications.fields` (createFormGroup/createCheckboxInput)
- * aufgebaut — dadurch native Optik und kein eigenes CSS nötig. Reines
- * ApplicationV2 ist renderbar, sobald `_renderHTML` UND `_replaceHTML`
- * selbst definiert sind.
- *
- * Wird über `game.settings.registerMenu(...)` eingehängt; Foundry instanziiert
- * die Klasse beim Klick auf den Menü-Button selbst mit `new SwadeSettingsForm()`
- * — ohne Argumente, deshalb kein eigener Konstruktor.
- *
- * Die drei verwalteten Settings sind mit `config: false` registriert; dieses
- * Fenster ist die einzige UI dafür. Außerhalb des SWADE-Systems steht über
- * den Optionen ein Warnhinweis. Beim Speichern wird je Key
- * `game.settings.set(...)` aufgerufen — die bestehenden onChange-Handler
- * (enableWildDie, enableRequestRoll) feuern dann automatisch.
+ * Submenu-Fenster für die SWADE-Spielmechanik-Einstellungen (Settings mit
+ * `config: false`; dieses Fenster ist die einzige UI dafür).
+ * Bewusst reines ApplicationV2 ohne HandlebarsApplicationMixin und ADR-Theme:
+ * das Untermenü soll wie Foundrys eigene Einstellungen aussehen, daher die
+ * Standard-Helfer aus `foundry.applications.fields`. Foundry instanziiert die
+ * Klasse per registerMenu ohne Argumente — kein eigener Konstruktor.
  */
 class SwadeSettingsForm extends ApplicationV2 {
 
-  /** Die beiden verwalteten SWADE-Setting-Keys, in Anzeigereihenfolge.
-   *  (Die Wild-Die-Schaltfläche wird im Untermenü „Angezeigte Schaltflächen" verwaltet.) */
+  /** In Anzeigereihenfolge; die Wild-Die-Schaltfläche liegt im Untermenü „Angezeigte Schaltflächen". */
   static SETTING_KEYS = [
     ADR.CONFIG_HIGHLIGHT_ONES,
     ADR.CONFIG_REQUEST_ROLL,
@@ -2301,15 +2115,6 @@ class SwadeSettingsForm extends ApplicationV2 {
     return game.i18n.localize(`${ADR.ID}.swadeSettings.windowTitle`);
   }
 
-  /* -------------------------------------------------------------- */
-  /*  Rendering — Standard-Foundry-form-groups (kein eigenes CSS)     */
-  /* -------------------------------------------------------------- */
-
-  /**
-   * Baut den Fensterinhalt mit Foundrys Standard-Formularhelfern auf:
-   * je Setting eine `form-group` (Checkbox + Name + Hint), darunter ein
-   * Speichern-Button im Standard-Footer. Rückgabewert geht an `_replaceHTML`.
-   */
   async _renderHTML(_context, _options) {
     const { createCheckboxInput, createFormGroup } = foundry.applications.fields;
 
@@ -2319,8 +2124,7 @@ class SwadeSettingsForm extends ApplicationV2 {
     const isSwade = game.system.id === "swade";
     if (!isSwade) root.append(this._buildWarning());
 
-    // Je Setting eine Standard-form-group (Checkbox + Name + Hint).
-    // Probenanforderung gibt es nur auf SWADE: sonst ausgegraut und aus.
+    // Probenanforderung nur auf SWADE, sonst ausgegraut und aus.
     for (const key of SwadeSettingsForm.SETTING_KEYS) {
       const locked = !isSwade && key === ADR.CONFIG_REQUEST_ROLL;
       const input = createCheckboxInput({
@@ -2336,8 +2140,7 @@ class SwadeSettingsForm extends ApplicationV2 {
       root.append(group);
     }
 
-    // Speichern-Button im Standard-Footer (speichert + schließt;
-    // das native Schließen-X verwirft)
+    // Speichern schließt; das native Schließen-X verwirft.
     const footer = document.createElement("footer");
     footer.className = "form-footer";
 
@@ -2357,10 +2160,7 @@ class SwadeSettingsForm extends ApplicationV2 {
     return root;
   }
 
-  /**
-   * Warnhinweis für Fremdsysteme: Label rot/fett, Systemname kursiv,
-   * darunter eine Trennlinie zu den Optionen.
-   */
+  /** Warnhinweis für Fremdsysteme. */
   _buildWarning() {
     const wrap = document.createElement("div");
     wrap.className = "adr-swade-warning";
@@ -2380,21 +2180,15 @@ class SwadeSettingsForm extends ApplicationV2 {
     return wrap;
   }
 
-  /** Fügt das von `_renderHTML` gebaute Element in den Fensterinhalt ein. */
   _replaceHTML(result, content, _options) {
     content.replaceChildren(result);
   }
-
-  /* -------------------------------------------------------------- */
-  /*  Event-Handler (Event-Delegation auf this.element)              */
-  /* -------------------------------------------------------------- */
 
   _onFirstRender(context, options) {
     super._onFirstRender?.(context, options);
     const root = this.element;
     if (!root) return;
 
-    // Klick-Delegation für den Speichern-Button
     root.addEventListener("click", (ev) => {
       if (ev.target.closest("[data-action='adr-swade-settings-save']")) {
         this._onSave();
@@ -2402,15 +2196,7 @@ class SwadeSettingsForm extends ApplicationV2 {
     });
   }
 
-  /* -------------------------------------------------------------- */
-  /*  Speichern                                                       */
-  /* -------------------------------------------------------------- */
-
-  /**
-   * Liest die drei Checkboxen aus und schreibt nur tatsächlich geänderte
-   * Werte per `game.settings.set(...)` zurück (damit onChange-Handler nicht
-   * unnötig feuern). Schließt das Fenster danach.
-   */
+  /** Schreibt nur geänderte Werte, damit onChange-Handler nicht unnötig feuern. */
   async _onSave() {
     const root = this.element;
     if (!root) return;
@@ -2432,11 +2218,7 @@ class SwadeSettingsForm extends ApplicationV2 {
 /*  Angezeigte Würfeltypen: Submenu-Fenster (registerMenu)          */
 /* ================================================================ */
 
-/**
- * DiceTypesForm — Submenu-Fenster für das Setting `diceTypes` (welche
- * Würfelzeilen das Würfelfenster anbietet). Aufbau wie SwadeSettingsForm:
- * reines ApplicationV2 mit Foundrys Standard-Formularhelfern.
- */
+/** Submenu-Fenster für `diceTypes` (angebotene Würfelzeilen); Aufbau wie SwadeSettingsForm. */
 class DiceTypesForm extends ApplicationV2 {
 
   static DEFAULT_OPTIONS = {
@@ -2529,11 +2311,8 @@ class DiceTypesForm extends ApplicationV2 {
 /* ================================================================ */
 
 /**
- * ButtonsSettingsForm — Submenu-Fenster für die Schaltflächen des
- * Würfelfensters (verdeckte Würfe, Explosionswürfel, Modifikatoren,
- * Fate). Die Settings sind `config: false`; dieses Fenster ist die
- * einzige UI dafür. Boolean-Settings als Checkbox, `explodingMode`
- * als Auswahlliste.
+ * Submenu-Fenster für die Schaltflächen des Würfelfensters (Settings mit
+ * `config: false`; einzige UI dafür). Settings mit `choices` als Auswahlliste.
  */
 class ButtonsSettingsForm extends ApplicationV2 {
 
@@ -2546,7 +2325,7 @@ class ButtonsSettingsForm extends ApplicationV2 {
     "enableFateRollButton",
   ];
 
-  /** Systemspezifische Schaltflächen — unter einer Trennlinie: SWADE, Call of Cthulhu, D&D. */
+  /** Systemspezifische Schaltflächen (SWADE, Call of Cthulhu, D&D) unter einer Trennlinie. */
   static SYSTEM_SETTING_KEYS = [
     ADR.CONFIG_WILD_DIE,
     ADR.CONFIG_CTHULHU_DICE,
@@ -2596,7 +2375,6 @@ class ButtonsSettingsForm extends ApplicationV2 {
 
     ButtonsSettingsForm.SETTING_KEYS.forEach(addGroup);
 
-    // Trennlinie + Hinweis, dann die systemspezifischen Schaltflächen.
     root.append(document.createElement("hr"));
     const note = document.createElement("p");
     note.className = "adr-buttons-system-note";
@@ -2650,23 +2428,15 @@ class ButtonsSettingsForm extends ApplicationV2 {
 /* ================================================================ */
 
 function _registerGameSettings() {
-  // Drei Settings sind SWADE-Funktionen (Wild Die, Patzer-Mechanik,
-  // Probenanforderung). Sie sind `config: false` — also nie direkt im
-  // Hauptpanel der Spieleinstellungen — und werden über das Submenu
-  // `swadeSettings` (SwadeSettingsForm, siehe oben) zugänglich gemacht.
-  // Das Menü gibt es auf SWADE und den Systemen aus
-  // ADR.SWADE_MECHANICS_SYSTEMS; nur auf SWADE sind die Settings per
-  // Default aktiv. Auf allen anderen Systemen weder Menü noch Settings.
+  // SWADE-Settings (Patzer-Mechanik, Probenanforderung, Wild Die) sind
+  // `config: false` und nur über Submenüs erreichbar; per Default nur auf SWADE aktiv.
   const isSwade = game.system.id === "swade";
 
-  // name/hint/choices werden als ROHE i18n-Keys übergeben (kein localize):
-  // Die Registrierung läuft im init-Hook, Modul-Übersetzungen sind aber erst
-  // ab i18nInit geladen — localize lieferte hier nur den Key zurück. Foundrys
-  // SettingsConfig lokalisiert die Keys selbst beim Rendern (Best Practice).
+  // name/hint/choices als ROHE i18n-Keys: im init-Hook sind die Modul-
+  // Übersetzungen noch nicht geladen (erst ab i18nInit), localize lieferte nur
+  // den Key. Foundrys SettingsConfig lokalisiert beim Rendern selbst.
 
-  // Chat-Design (Dropdown): Stil der Würfelergebnis-Darstellung im Chat.
-  // "fantasy" → klassische ADR-Optik, "modern" → SciFi-Optik (.scifi-
-  // Klasse), "standard" → generische Foundry-Würfelkarte ohne ADR-Grafik.
+  // "standard" = generische Foundry-Würfelkarte ohne ADR-Render.
   game.settings.register(ADR.ID, "chatDesign", {
     name: "argas-dice-roller.settings.chatDesign.name",
     hint: "argas-dice-roller.settings.chatDesign.hint",
@@ -2701,10 +2471,7 @@ function _registerGameSettings() {
     onChange: v => _updateDiceForm(ADR.CONFIG_HIDDEN_ROLLS, v)
   });
 
-  // Dropdown-Steuerung des Exploding-Buttons: bestimmt Sichtbarkeit
-  // ("off" = ausgeblendet) und Explosionsart ("multi" = rekursiv,
-  // "once" = einmalig). Alleinige Quelle der Wahrheit für die
-  // Explosionsmechanik.
+  // Alleinige Quelle der Wahrheit für die Explosionsmechanik ("off" blendet den Button aus).
   game.settings.register(ADR.ID, ADR.CONFIG_EXPLODING_MODE, {
     name: "argas-dice-roller.settings.explodingMode.name",
     hint: "argas-dice-roller.settings.explodingMode.hint",
@@ -2740,8 +2507,7 @@ function _registerGameSettings() {
     onChange: v => _updateDiceForm(ADR.CONFIG_MODIFIERS, v)
   });
 
-  // „Höchster"/„Niedrigster" (Vorteil/Nachteil, Boon/Bane): N Würfel werfen,
-  // nur der höchste bzw. niedrigste zählt. Standard aus — systemabhängig.
+  // „Höchster"/„Niedrigster" (Vorteil/Nachteil): Default systemabhängig.
   game.settings.register(ADR.ID, ADR.CONFIG_KEEP_DICE, {
     name: "argas-dice-roller.settings.enableKeepDice.name",
     hint: "argas-dice-roller.settings.enableKeepDice.hint",
@@ -2752,7 +2518,6 @@ function _registerGameSettings() {
     onChange: v => _updateDiceForm(ADR.CONFIG_KEEP_DICE, v)
   });
 
-  // Bonus-/Strafwurf (Call of Cthulhu 7e): Zusatz-Zehnerwürfel beim W100.
   game.settings.register(ADR.ID, ADR.CONFIG_CTHULHU_DICE, {
     name: "argas-dice-roller.settings.enableCthulhuDice.name",
     hint: "argas-dice-roller.settings.enableCthulhuDice.hint",
@@ -2797,8 +2562,6 @@ function _registerGameSettings() {
     onChange: v => _updateDiceForm(ADR.CONFIG_1ST_COLUMN, v)
   });
 
-  // Angezeigte Würfeltypen: weltweit, nur SL, ausschließlich über das
-  // Submenu `diceTypes` (DiceTypesForm) erreichbar.
   game.settings.register(ADR.ID, ADR.CONFIG_DICE_TYPES, {
     scope: "world",
     config: false,
@@ -2854,10 +2617,8 @@ function _registerGameSettings() {
     onChange: () => _updateDiceForm(ADR.CONFIG_REQUEST_ROLL, null)
   });
 
-  // SWADE-Submenu: bündelt die drei Settings oben hinter einem eigenen
-  // Eintrag mit Button in den Spieleinstellungen. Nur auf den Systemen aus
-  // ADR.SWADE_MECHANICS_SYSTEMS registriert — sonst gäbe es einen
-  // funktionslosen Menüeintrag. `restricted: true` → nur Spielleiter.
+  // SWADE-Submenu nur auf Systemen mit SWADE-Mechaniken — sonst wäre der
+  // Menüeintrag funktionslos.
   if (adrSwadeMechanicsOffered()) {
     game.settings.registerMenu(ADR.ID, "swadeSettings", {
       name: `${ADR.ID}.swadeSettings.menuName`,
@@ -2901,24 +2662,15 @@ function _updateDiceForm(key, value) {
     case ADR.CONFIG_CLOSE_FORM: globalDiceForm.closeFormOnRoll = value; break;
     case ADR.CONFIG_DICE_TYPES: globalDiceForm.diceTypes = value; break;
   }
-  // Nur ein OFFENES Fenster neu rendern — render(true) würde ein vom Nutzer
-  // geschlossenes Würfelfenster sonst wieder aufreißen (bei World-Settings
-  // sogar auf allen Clients, die es je geöffnet hatten). Der Zustand ist
-  // oben trotzdem gesetzt und greift beim nächsten Öffnen.
+  // Nur ein OFFENES Fenster neu rendern — render(true) würde ein geschlossenes
+  // Würfelfenster wieder öffnen (bei World-Settings auf allen Clients).
   if (globalDiceForm.rendered) globalDiceForm.render(true);
 }
 
-/** ADR: optionaler Reload nach Einstellungsänderung (lokalisiert)
- *
- * Hintergrund Z-Index: Der Reload-Dialog wird typischerweise getriggert,
- * während das ADR-Würfelfenster offen ist (Setting-Change passiert oft
- * direkt aus dem Workflow heraus). ApplicationV2 vergibt Z-Indices auf
- * Basis der Fokus-Reihenfolge — wenn das Würfelfenster zuletzt fokussiert
- * war, kann der neu geöffnete DialogV2 darunter landen und unsichtbar sein.
- *
- * Fix: Dialog-Instanz explizit erzeugen und nach dem Render einen
- * `bringToTop()`-Call ausführen. So liegt der Reload-Dialog garantiert
- * über dem Würfelfenster.
+/**
+ * Optionaler Reload-Dialog nach Einstellungsänderung. ApplicationV2 vergibt
+ * Z-Indices nach Fokus-Reihenfolge — bei offenem Würfelfenster kann der
+ * DialogV2 darunter landen, daher explizite Instanz plus `bringToFront()`.
  */
 function ADR_confirmReload() {
   const title   = game.i18n.localize(`${ADR.ID}.dialogs.reload.title`);
@@ -2944,8 +2696,7 @@ function ADR_confirmReload() {
   });
 
   const renderPromise = dlg.render({ force: true });
-  // bringToFront nach Render (ApplicationV2-API; v1 hieß es bringToTop) —
-  // Optional Chaining defensiv, falls die API in Major-Versionen wechselt
+  // Optional Chaining defensiv gegen API-Wechsel in Major-Versionen.
   renderPromise.then(() => {
     try { dlg.bringToFront?.(); } catch (e) { /* */ }
   });

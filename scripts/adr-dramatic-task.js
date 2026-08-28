@@ -144,7 +144,6 @@ function _drawFromDeck(deck, count) {
 }
 
 export function dealDramaticRound(entries, round = 1, deck = null) {
-  // Kein Deck übergeben (alte Aufrufe) → frisch mischen, wie bisher.
   const workingDeck = Array.isArray(deck) ? deck : _shuffle(_buildDeck());
   const cards = _drawFromDeck(workingDeck, (entries ?? []).length);
   return (entries ?? []).map((entry, index) => ({

@@ -70,10 +70,9 @@ export function _extractDiceDetails(roll) {
     }
   }
 
-  // Tatsächlich angewandter Modifikator (nach SWADE-Dialog des Spielers).
-  // SWADE: Trait-Wurf nimmt den höheren von Trait-Die und Wild-Die,
-  // dann werden numerische Modifikatoren addiert. Wir rechnen den Modifier
-  // rückwärts aus dem Roll-Total und dem höchsten Würfel-Total.
+  // Tatsächlich angewandter Modifikator (nach dem SWADE-Dialog des Spielers):
+  // SWADE nimmt den höheren von Trait- und Wild Die und addiert danach die
+  // numerischen Modifikatoren, daher Rückrechnung aus Roll-Total und höchstem Würfel-Total.
   const totalRaw = Number(roll.total);
   const total = Number.isFinite(totalRaw) ? totalRaw : 0;
   let bestDie;
@@ -108,38 +107,20 @@ function _getFirstDiceValues(arr) {
 }
 
 /**
- * Patzer-Klassifizierung:
- * - "none":       Kein Patzer möglich
- * - "confirmed":  Automatisch bestätigter Patzer (SC Wildcard-Regeln)
- * - "needs-check": GM muss mit W6 prüfen (Nicht-SC, einzelner Würfel = 1)
- *
- * Spielercharaktere (isNPC=false):
- *   – Ohne Wild Die → kein Patzer möglich (kein Eigenschaftswurf)
- *   – Mit Wild Die  → Wildcard-Regeln (Wild Die = 1 UND > Hälfte = 1)
- *
- * Nicht-SC (isNPC=true):
- *   – Nur bei exakt einem Würfel mit Ergebnis 1 → GM-Prüfung nötig
- *   – Mehrere Würfel → kein Patzer möglich
- */
-/**
- * Prüft, ob der Benny-Button für einen Entry gesperrt sein muss (= "kein Reroll
- * nach Patzer"-Hausregel). Berücksichtigt sowohl den aktuell geltenden Wurf als
- * auch den zuletzt verworfenen Reroll, falls der Schutz aktiv war.
- *
- * Hintergrund: Wenn ein Benny-Reroll einen bestätigten Patzer ergibt UND der
- * alte Wurf besser war, greift der Verschlechterungsschutz — der alte gute
- * Wurf bleibt geltend, aber der Spieler HAT einen Patzer geworfen. Nach
- * Hausregel ist damit kein weiterer Benny-Reroll auf diesen Wurf erlaubt.
+ * Prüft, ob der Benny-Button für einen Entry gesperrt ist (Hausregel: kein
+ * Reroll nach Patzer). Berücksichtigt neben dem geltenden Wurf auch den zuletzt
+ * verworfenen Reroll: Ergibt ein Benny-Reroll einen bestätigten Patzer und war
+ * der alte Wurf besser, bleibt der alte Wurf durch den Verschlechterungsschutz
+ * geltend — der Patzer wurde trotzdem geworfen und sperrt weitere Rerolls.
  *
  * @param {object} entry – {diceDetails, isNPC, fumbleCheckResult, lastRerollProtected, previousRolls}
  * @returns {boolean}
  */
 function _isEntryBennyLocked(entry) {
   if (!entry) return false;
-  // 1) Aktuell geltender Wurf ist bestätigter Patzer
   if (entry.fumbleCheckResult === true) return true;
   if (_classifyFumble(entry.diceDetails, entry.isNPC) === "confirmed") return true;
-  // 2) Zuletzt verworfener Reroll (Schutz-Pfad) war bestätigter Patzer
+  // Zuletzt verworfener Reroll (Schutz-Pfad) war bestätigter Patzer
   if (entry.lastRerollProtected && Array.isArray(entry.previousRolls) && entry.previousRolls.length > 0) {
     const last = entry.previousRolls[entry.previousRolls.length - 1];
     if (last?.fumbleCheckResult === true) return true;
@@ -148,6 +129,12 @@ function _isEntryBennyLocked(entry) {
   return false;
 }
 
+/**
+ * Patzer-Klassifizierung:
+ * - "none":        kein Patzer möglich
+ * - "confirmed":   bestätigter Patzer (Wildcard-Regel: Wild Die = 1 UND mehr als die Hälfte aller Würfel = 1)
+ * - "needs-check": GM prüft mit W6 (Nicht-SC, genau ein Würfel mit Ergebnis 1)
+ */
 export function _classifyFumble(diceDetails, isNPC) {
   if (!diceDetails) return "none";
 
@@ -170,11 +157,7 @@ export function _classifyFumble(diceDetails, isNPC) {
   }
 }
 
-/**
- * Einzelergebnisse als HTML rendern (gleicher Stil wie Hauptmodul).
- */
 function _appliedModifierParts(appliedMod) {
-  // Robuste Number-Konvertierung: NaN, undefined, null, leere Strings → 0
   const raw = Number(appliedMod);
   const m = Number.isFinite(raw) ? raw : 0;
   if (m === 0) return { str: "\u00b10", cls: "adr-applied-mod-zero" };
@@ -230,8 +213,7 @@ export function _renderDiceArr(arr) {
  * Rendert vorgekochte Einzelergebnis-Arrays (Format des freien Wurfs,
  * gespeichert in `flags.mainIndividualResults` / `wildIndividualResults`):
  * `[{ display, class, value }, …]`. Anders als bei `_renderDiceArr` liegt
- * die Exploding-Chain-Logik schon im `display`-Feld vor, wir müssen nur die
- * Spans bauen.
+ * die Exploding-Chain-Logik bereits im `display`-Feld vor.
  */
 export function _renderDicePrecomputed(arr) {
   if (!Array.isArray(arr) || !arr.length) return "";
@@ -273,9 +255,8 @@ export function _buildInlineRollContent({
 
 /**
  * Berechnet die Anzeige-Daten für einen Probenanforderungs-Modifikator.
- * Robust gegen NaN, undefined, null, Strings, Objekte. Gibt immer ein
- * konsistentes Ergebnis-Objekt zurück, das direkt im Template verwendet
- * werden kann — ohne `gt`-Helper-Logik.
+ * Robust gegen NaN, undefined, null, Strings, Objekte; das Ergebnis ist
+ * direkt im Template verwendbar.
  *
  * @param {*} modifier  Roher Modifikator-Wert.
  * @returns {{ show: boolean, str: string, cls: string, value: number }}
@@ -289,14 +270,10 @@ export function _getModifierDisplay(modifier) {
 }
 
 /**
- * Repariert eine bereits gerenderte Probenanforderungs-Nachricht, falls die
- * Modifikator-Anzeige im DOM "NaN" enthält (z. B. weil die Nachricht vor einem
- * Code-Fix mit einem korrupten Wert erstellt wurde). Baut die Anzeige aus
- * `flags.modifier` neu auf.
- *
- * Greift nur bei nicht-dramatischen Modi (single, group, opposed). Im
- * Dramatic-Modus wird die Anzeige beim Rendern dynamisch von _enhanceDramaticRequestChat
- * aufgebaut, dort gibt es separate Mechanik.
+ * Repariert eine bereits gerenderte Probenanforderungs-Nachricht, deren
+ * persistierte Modifikator-Anzeige "NaN" enthält, aus `flags.modifier`.
+ * Nur für single/group/opposed — der Dramatic-Modus baut seine Anzeige in
+ * _enhanceDramaticRequestChat selbst auf.
  *
  * @param {HTMLElement} li      Das <li>-Element der Chat-Nachricht.
  * @param {Object}      flags   Flags-Objekt aus message.flags[ADR.ID].
@@ -307,14 +284,11 @@ function _selfHealModifierDisplay(li, flags) {
 
   const fmt = _getModifierDisplay(flags.modifier);
 
-  // Alle Modifikator-Spans (Group-Top, Single, Opposed, Group-Detail, Single-Detail)
   li.querySelectorAll(".adr-request-modifier").forEach(span => {
     const txt = span.textContent || "";
-    // Nur eingreifen wenn die Anzeige korrupt ist ("NaN", leer trotz Modifier, oder unsichtbares Sonderzeichen)
     const looksCorrupt = /NaN/i.test(txt) || txt.trim() === "" || txt.includes("undefined");
-    if (!looksCorrupt && fmt.show) return; // ok wie es ist
+    if (!looksCorrupt && fmt.show) return;
     if (!looksCorrupt && !fmt.show) {
-      // Kein Modifikator vorhanden, aber span existiert — ausblenden
       span.style.display = "none";
       return;
     }
@@ -322,10 +296,9 @@ function _selfHealModifierDisplay(li, flags) {
       span.textContent = fmt.str;
       span.classList.remove("adr-request-modifier-pos", "adr-request-modifier-neg");
       if (fmt.cls) span.classList.add(fmt.cls);
-      span.style.display = ""; // falls vorher ausgeblendet
+      span.style.display = "";
     } else {
       span.style.display = "none";
-      // Container `.adr-request-trait-die` mit dazugehörigem Mod-Label ebenfalls ausblenden
       const wrapper = span.closest(".adr-request-trait-die");
       if (wrapper && wrapper.querySelector(".adr-request-mod-label")) {
         wrapper.style.display = "none";
@@ -333,8 +306,7 @@ function _selfHealModifierDisplay(li, flags) {
     }
   });
 
-  // Falls der Modifikator nicht angezeigt werden sollte, aber der Container noch da ist (z. B. weil
-  // span schon entfernt wurde), Container ebenfalls ausblenden.
+  // Container ohne Mod-Span (Span bereits entfernt) ebenfalls ausblenden
   if (!fmt.show) {
     li.querySelectorAll(".adr-request-trait-die").forEach(div => {
       if (div.querySelector(".adr-request-mod-label") && !div.querySelector(".adr-request-modifier")) {
@@ -370,7 +342,7 @@ export function _buildRollHistoryHTML(entry) {
       + `<span class="adr-label"> )</span></span>`;
   };
 
-  // Chronologisch sammeln (Legacy-Fallback: Array-Index als Seq).
+  // Chronologisch sammeln; ohne `seq` gilt der Array-Index.
   const all = [];
   const prevList = Array.isArray(entry.previousRolls) ? entry.previousRolls : [];
   prevList.forEach((pr, i) => {
@@ -479,9 +451,8 @@ function _sortDramaticEntries(entries) {
 function _buildDramaticHistoryDiceHTML(diceDetails) {
   if (!diceDetails) return "";
 
-  // Dramatic-History behält bewusst `adr-dramatic-history-label` für den WD-Span
-  // (eigenes Layout-Pattern, eingebettet in adr-dramatic-history-body), darüber
-  // hinaus identisches Inline-Schema wie Single/Group/Opposed.
+  // WD-Span mit `adr-dramatic-history-label` (Layout innerhalb adr-dramatic-history-body),
+  // sonst gleiches Inline-Schema wie Single/Group/Opposed.
   const mainHTML = _renderDiceArr(diceDetails.main);
   const content = _buildInlineRollContent({
     mainHTML: `<span class="adr-individual">${mainHTML}</span>`,
@@ -579,7 +550,7 @@ function _buildDramaticHistoryGroups(entries, currentRound) {
 }
 
 function _buildDramaticStatusText(flags) {
-  // Altes Plain-Text-API (noch für entry-Status genutzt) — eine Zeile, kein HTML
+  // Einzeilige Plain-Text-Variante (kein HTML)
   if (flags.outcome === "success") {
     const l1 = game.i18n.localize(`${ADR.ID}.requestRoll.dramaticTaskSuccessLine1`);
     const l2 = game.i18n.localize(`${ADR.ID}.requestRoll.dramaticTaskSuccessLine2`);
@@ -681,15 +652,10 @@ function _recalculateDramaticFlags(flags) {
  * Liefert für einen Dramatic-Entry die effektiv zu nutzenden Trait-Daten.
  * Berücksichtigt einen ggf. vom Spieler gesetzten `dramaticTraitOverride`.
  *
- * Felder:
- *   type            "attribute" | "skill" | "untrained"
- *   key             Skill-Item-ID oder Attribut-Key
- *   name            Anzeigename
- *   die             Würfel-Seitenzahl (4/6/8/10/12)
- *   dieLabel        z.B. "W6" / "d6" abhängig von flags.diePrefix? — siehe unten
- *   isUntrained     true, wenn Untrained-Malus greift (-2)
+ * Felder: type ("attribute" | "skill" | "untrained"), key (Skill-Item-ID oder
+ * Attribut-Key), name, die (Seitenzahl), dieLabel (z. B. "W6"), isUntrained.
  *
- * Achtung: `die`/`dieLabel` werden aus dem aktuellen Actor neu gelesen, weil
+ * Bei Override werden `die`/`dieLabel` aus dem aktuellen Actor neu gelesen, weil
  * der Override eine andere Eigenschaft sein kann als der Original-Trait.
  *
  * @param {object} entry  Dramatic-Entry aus flags.entries
@@ -703,8 +669,6 @@ function _resolveDramaticTrait(entry) {
   const key  = useOverride ? ovr.key  : entry?.traitKey;
   const name = useOverride ? ovr.name : entry?.traitName;
 
-  // Wenn kein Override: Entry-Felder direkt zurückgeben (so wie sie beim
-  // Anlegen der Aufgabe geschrieben wurden).
   if (!useOverride) {
     return {
       type,
@@ -716,7 +680,6 @@ function _resolveDramaticTrait(entry) {
     };
   }
 
-  // Override: Würfel + Untrained-Status aus dem aktuellen Actor frisch ableiten.
   const actor = _resolveActor(entry.actorId);
   let die = 4;
   if (actor) {
@@ -840,13 +803,11 @@ function _buildDramaticEntryViews(flags) {
       const sg = roundState.supportGiven;
       dramaticSupportLineHTML = _buildDramaticSupportLineHTML(sg);
 
-      // Patzer-Prüfung läuft noch — Patzer-Button anzeigen, aber das Ergebnis
-      // ebenfalls regulär darstellen (kein "ausstehend"-Sonderlayout mehr).
+      // Laufende Patzer-Prüfung: Patzer-Button anzeigen, Ergebnis trotzdem regulär darstellen
       if (sg.pendingFumbleCheck) {
         dramaticSupporterShowFumbleCheck = true;
       }
       if (!sg.tooLate && !sg.capExceeded) {
-        // Wenn die Patzer-Prüfung "kein Patzer" ergab, "kein Patzer"-Text anzeigen
         if (sg.fumbleCheckDie != null && !sg.critFail) {
           const keyword = game.i18n.localize(`${ADR.ID}.requestRoll.fumbleCheckNone`);
           const template = game.i18n.localize(`${ADR.ID}.requestRoll.fumbleCheckTextNo`);
@@ -872,10 +833,8 @@ function _buildDramaticEntryViews(flags) {
         }
         dramaticSupporterBennyFumble = !!sg.critFail;
         dramaticSupporterBennyUsed = !!sg.bennyUsed;
-        // Button bleibt sichtbar wie bei normaler Probe, damit der Spieler
-        // bei Bedarf weitere Bennies investieren kann (jeder Reroll verbraucht
-        // einen Benny). adr-benny-used markiert nur visuell, dass bereits ein
-        // Benny eingesetzt wurde.
+        // Weitere Benny-Rerolls bleiben erlaubt (jeder kostet einen Benny);
+        // adr-benny-used ist nur eine visuelle Markierung.
         dramaticSupporterShowBenny = !taskLocked;
       }
     }
@@ -900,8 +859,6 @@ function _buildDramaticEntryViews(flags) {
 
     return {
       ...entry,
-      // Trait-Felder mit Override-Auflösung überschreiben (greift, wenn ein
-      // dramaticTraitOverride gesetzt ist; sonst identisch zum Entry).
       traitType: resolvedTrait.type,
       traitKey: resolvedTrait.key,
       traitName: resolvedTrait.name,
@@ -997,21 +954,11 @@ function _getDramaticMarkersFromResult(resultTotal) {
 }
 
 /**
- * Patzer-Override-Pfad (Dramatic): Der Benny-Reroll war ein bestätigter Patzer
- * und überschreibt das alte Ergebnis. Alter rs-Wurf wandert in previousRolls,
- * `newRollData` (= der Patzer-Wurf) wird zum geltenden rs mit −1 Marker und
- * Patzer-Konsequenzen.
- *
- * Wird aufgerufen
- *   • aus `_applyDramaticRollResult`, wenn der Reroll sofort als "confirmed"
- *     klassifiziert wird (Wildcard-Patzer-Konstellation), und
- *   • aus dem Discarded-Check-Handler, wenn ein Statisten-1-Reroll per W6
- *     nachträglich als Patzer bestätigt wird.
- *
- * Hinweis zur Schutz-Hausregel: Der Verschlechterungsschutz greift NICHT bei
- * einem Patzer-Reroll — die Patzer-Strafe (−1 Marker, ggf. Komplikations-
- * Fehlschlag) ist eine eigenständige Konsequenz und überschreibt den alten,
- * positiven Wurf vollständig.
+ * Patzer-Override-Pfad (Dramatic): Der Benny-Reroll war ein bestätigter Patzer.
+ * Der alte rs-Wurf wandert in previousRolls, `newRollData` wird zum geltenden
+ * Wurf mit −1 Marker und Patzer-Konsequenzen. Der Verschlechterungsschutz greift
+ * hier nicht — die Patzer-Strafe überschreibt den alten Wurf vollständig
+ * (Hausregel).
  *
  * @param {object} rs           – roundState (wird mutiert)
  * @param {object} entry        – Eintrag (für card-Lookup)
@@ -1020,19 +967,16 @@ function _getDramaticMarkersFromResult(resultTotal) {
 function _applyDramaticFumbleOverride(rs, entry, newRollData) {
   if (!Array.isArray(rs.previousRolls)) rs.previousRolls = [];
 
-  // Alter rs-Wurf in previousRolls schieben (mit seiner Seq)
   const currentSeq = rs.rollSeq ?? 1;
   const histEntry = { result: Number(rs.result) || 0, diceDetails: rs.diceDetails, seq: currentSeq };
   if (rs.fumbleCheckResult !== undefined) histEntry.fumbleCheckResult = rs.fumbleCheckResult;
   if (rs.fumbleCheckDie !== undefined) histEntry.fumbleCheckDie = rs.fumbleCheckDie;
   rs.previousRolls.push(histEntry);
 
-  // Seq-Tracking für den neuen geltenden Wurf
   const newSeq = newRollData.seq ?? (rs.nextRollSeq ?? (rs.previousRolls.length + 1));
   rs.rollSeq = newSeq;
   rs.nextRollSeq = Math.max(rs.nextRollSeq ?? 0, newSeq + 1);
 
-  // Patzer-Werte übernehmen
   rs.result = newRollData.result;
   rs.diceDetails = newRollData.diceDetails;
   rs.fumbleCheckResult = newRollData.fumbleCheckResult ?? true;
@@ -1063,17 +1007,14 @@ async function _applyDramaticRollResult(message, actorId, resultTotal, diceDetai
   if (bennyUsed && (rs.result === null || rs.result === undefined)) return;
 
   // ── Benny-Schutz (Verschlechterungsschutz) ──
-  // Analog zu _applyBennyRerollSingle, aber auf dem roundState (rs) statt
-  // direkt auf entry. previousRolls/lastRerollProtected/rollSeq/nextRollSeq
-  // werden runden-lokal auf rs gehalten — beim Runden-Wechsel automatisch
-  // zurückgesetzt (advanceDramaticRound delete entry.roundState).
+  // Analog zu _applyBennyRerollSingle, aber auf dem roundState: previousRolls/
+  // lastRerollProtected/rollSeq/nextRollSeq liegen runden-lokal auf rs und
+  // werden beim Rundenwechsel mit dem roundState verworfen (advanceDramaticRound).
   if (bennyUsed) {
-    // Wichtig: Reroll-Patzer (bestätigt) übersteuert den Schutz. Klassifizieren
-    // BEVOR der Schutz-Vergleich gemacht wird.
+    // Ein bestätigter Reroll-Patzer übersteuert den Schutz — Klassifikation
+    // muss VOR dem Schutz-Vergleich erfolgen.
     const newClassification = _classifyFumble(diceDetails, entry.isNPC);
     if (newClassification === "confirmed") {
-      // Bestätigter Patzer im Reroll → Override-Pfad (alter Wurf wird verworfen,
-      // Patzer gilt mit −1 Marker).
       _applyDramaticFumbleOverride(rs, entry, { result: resultTotal, diceDetails });
       await _updateDramaticTaskMessage(message, flags);
       return;
@@ -1086,8 +1027,7 @@ async function _applyDramaticRollResult(message, actorId, resultTotal, diceDetai
     rs.nextRollSeq = newSeq + 1;
 
     if (resultTotal <= oldResult) {
-      // Schutz greift: rs.result/diceDetails/markersDelta/wasFumble/etc.
-      // bleiben unverändert. Neuer Wurf wandert mit eigener seq in History.
+      // Schutz greift: alter Wurf bleibt geltend, neuer Wurf geht in die History
       rs.previousRolls.push({ result: resultTotal, diceDetails, seq: newSeq });
       rs.lastRerollProtected = true;
       rs.lastRerollFumbleOverwrite = false;
@@ -1095,8 +1035,7 @@ async function _applyDramaticRollResult(message, actorId, resultTotal, diceDetai
       await _updateDramaticTaskMessage(message, flags);
       return;
     }
-    // Verbesserung: alter rs-Wurf geht mit eigener seq in History; danach
-    // läuft der normale Apply-Pfad mit neuen Werten.
+    // Verbesserung: alter Wurf geht in die History, danach regulärer Apply-Pfad
     const histEntry = { result: oldResult, diceDetails: rs.diceDetails, seq: currentSeq };
     if (rs.fumbleCheckResult !== undefined) histEntry.fumbleCheckResult = rs.fumbleCheckResult;
     if (rs.fumbleCheckDie !== undefined) histEntry.fumbleCheckDie = rs.fumbleCheckDie;
@@ -1105,8 +1044,6 @@ async function _applyDramaticRollResult(message, actorId, resultTotal, diceDetai
     rs.lastRerollProtected = false;
     rs.lastRerollFumbleOverwrite = false;
   } else {
-    // Initialwurf: Sequenz-Tracking starten (Fallback in
-    // _applyBennyRerollSingle würde auch greifen, hier explizit für Klarheit).
     rs.rollSeq = 1;
     rs.nextRollSeq = 2;
   }
@@ -1232,8 +1169,6 @@ export async function _applyDramaticSupportRoll(message, payload) {
   if (!helper || !helperRs) return;
 
   const isBennyReroll = !!payload.isBennyReroll;
-  // Bei Benny-Reroll: Helfer hat schon gehandelt (supportGiven existiert), das ist gewollt.
-  // Beim Erstwurf: helperRs darf nicht bereits gehandelt haben.
   if (!isBennyReroll) {
     if (helperRs.acted || helperRs.skipped) return;
   } else {
@@ -1244,10 +1179,8 @@ export async function _applyDramaticSupportRoll(message, payload) {
   const targetRs = target?.roundState;
   if (!target || !targetRs) return;
 
-  // Patzer-Klassifizierung führt zu Delta -2 (nur Ziel)
-  // Erfolg/Misserfolg führt zu Delta 0 / +1 / +2
-  // pendingFumbleCheck: Patzer-Prüfung läuft noch — vorläufig delta nach resultTotal,
-  //                     der Bonus wird am Ziel mit Skip-Flag belegt (wirkungslos).
+  // Bei laufender Patzer-Prüfung gilt vorläufig das Delta nach resultTotal;
+  // der Bonus bleibt am Ziel wirkungslos, bis die Prüfung entschieden ist.
   const pendingFumbleCheck = !!payload.pendingFumbleCheck;
   let delta;
   if (payload.critFail) {
@@ -1259,14 +1192,14 @@ export async function _applyDramaticSupportRoll(message, payload) {
     else delta = 2;
   }
 
-  // Bei Benny-Reroll: alten Bonus dieses Helfers aus Ziel-Liste entfernen,
-  // bevor Cap-Berechnung läuft.
+  // Bei Benny-Reroll muss der alte Bonus dieses Helfers vor der Cap-Berechnung
+  // aus der Ziel-Liste entfernt sein.
   const existingBonusesRaw = Array.isArray(targetRs.supportBonuses) ? targetRs.supportBonuses : [];
   const existingBonuses = isBennyReroll
     ? existingBonusesRaw.filter(b => b.helperId !== payload.helperId)
     : existingBonusesRaw;
 
-  // Cap-Berechnung am Ziel: Summe der positiven Deltas <= +4
+  // Cap am Ziel: Summe der positiven Deltas höchstens +4
   const positiveSoFar = existingBonuses.reduce((sum, b) => sum + (b.delta > 0 ? b.delta : 0), 0);
   const newPositive = delta > 0 ? delta : 0;
   const capExceeded = (positiveSoFar + newPositive) > 4;
@@ -1275,20 +1208,17 @@ export async function _applyDramaticSupportRoll(message, payload) {
   const tooLate = !!(targetRs.acted || targetRs.skipped);
 
   // ── Benny-Reroll-Schutz (Verschlechterungsschutz für Support-Würfe) ──
-  // Analog zu _applyDramaticRollResult (Hauptwurf), aber auf supportGiven (sg).
-  // Vergleichsbasis: delta (höher = besser für Ziel).
-  //   1. Bestätigter Patzer im Reroll (critFail ohne pendingFumbleCheck) →
-  //      Override-Pfad: alter sg-Snapshot in sg.previousRolls, Patzer gilt
-  //      (analog _applyDramaticFumbleOverride beim Hauptwurf).
-  //   2. newDelta > oldDelta → Verbesserung: alter sg-Snapshot in History,
-  //      neuer sg wird unten regulär gebaut.
-  //   3. Sonst → Schutz greift: neuer Wurf in sg.previousRolls, alter sg
-  //      bleibt unverändert (inkl. targetRs.supportBonuses + capExceeded).
-  // Eine Statisten-1 im Reroll (pendingFumbleCheck=true, delta=0) fällt in
-  // den Schutz-Pfad. Kein Discarded-Check-Button: der Helfer-Hint wird mit
-  // allowDiscardedCheckBtn=false gerendert (siehe Hint-Loop in
-  // _enhanceDramaticRequestChat), weil der globale Discarded-Check-Handler
-  // nur Hauptwurf-previousRolls am roundState kennt.
+  // Analog zu _applyDramaticRollResult, aber auf supportGiven (sg); Vergleichsbasis
+  // ist delta (höher = besser für das Ziel).
+  //   1. Bestätigter Patzer im Reroll (critFail ohne pendingFumbleCheck) → Override:
+  //      alter sg-Snapshot in sg.previousRolls, Patzer gilt.
+  //   2. newDelta > oldDelta → Verbesserung: alter sg-Snapshot in die History.
+  //   3. Sonst → Schutz greift: neuer Wurf in sg.previousRolls, alter sg bleibt
+  //      unverändert (inkl. targetRs.supportBonuses + capExceeded).
+  // Eine Statisten-1 im Reroll (pendingFumbleCheck=true, delta=0) fällt in den
+  // Schutz-Pfad ohne Discarded-Check-Button (allowDiscardedCheckBtn=false in
+  // _enhanceDramaticRequestChat), weil der Discarded-Check-Handler nur
+  // Hauptwurf-previousRolls am roundState kennt.
   let nextHistoryRolls = [];
   let nextRollSeq = 1;
   let nextNextRollSeq = 2;
@@ -1306,10 +1236,8 @@ export async function _applyDramaticSupportRoll(message, payload) {
     const newSeq = oldSg?.nextRollSeq ?? (nextHistoryRolls.length + 2);
 
     if (!isFumbleOverride && newDelta <= oldDelta) {
-      // ── Schutz greift ──
-      // Neuer Wurf wandert in History, alter sg bleibt geltend.
-      // targetRs.supportBonuses bleibt komplett unverändert — auch capExceeded,
-      // tooLate, delta des alten Bonus behalten ihre Werte.
+      // Schutz greift: neuer Wurf in die History, alter sg und targetRs.supportBonuses
+      // bleiben unverändert
       nextHistoryRolls.push({
         resultTotal: Number(payload.resultTotal ?? 0),
         diceDetails: payload.diceDetails,
@@ -1330,9 +1258,7 @@ export async function _applyDramaticSupportRoll(message, payload) {
       return;
     }
 
-    // ── Override oder Verbesserung: alter sg-Snapshot in History ──
-    // Der neue sg wird im Object.assign-Block unten regulär gebaut; die
-    // History-Felder werden über die nextX-Variablen übergeben.
+    // Override oder Verbesserung: alter sg-Snapshot in die History
     nextHistoryRolls.push({
       resultTotal: Number(oldSg?.resultTotal ?? 0),
       diceDetails: oldSg?.diceDetails ?? null,
@@ -1347,7 +1273,6 @@ export async function _applyDramaticSupportRoll(message, payload) {
     nextLastRerollFumbleOverwrite = isFumbleOverride;
   }
 
-  // Helfer-State setzen
   Object.assign(helperRs, {
     acted: true,
     skipped: false,
@@ -1377,9 +1302,7 @@ export async function _applyDramaticSupportRoll(message, payload) {
       capExceeded,
       tooLate,
       bennyUsed: isBennyReroll,
-      // History-Felder für Verschlechterungsschutz (analog zu Hauptwurf am
-      // roundState). Beim Erstwurf leer/initial, bei Override/Verbesserung
-      // mit altem sg-Snapshot vorbefüllt (siehe Schutz-Block oben).
+      // History-Felder des Verschlechterungsschutzes (analog zum Hauptwurf am roundState)
       previousRolls: nextHistoryRolls,
       rollSeq: nextRollSeq,
       nextRollSeq: nextNextRollSeq,
@@ -1388,7 +1311,6 @@ export async function _applyDramaticSupportRoll(message, payload) {
     },
   });
 
-  // Ziel-State: Bonus anhängen (bei Benny-Reroll: ohne den alten dieses Helfers)
   targetRs.supportBonuses = [
     ...existingBonuses,
     {
@@ -1407,11 +1329,9 @@ export async function _applyDramaticSupportRoll(message, payload) {
 }
 
 /**
- * Löst eine ausstehende Patzer-Prüfung eines Helfers auf:
- * - Setzt pendingFumbleCheck=false in supportGiven (Helfer) UND supportBonuses (Ziel)
- * - Bei W6=1: critFail=true, delta=-2 (am Ziel)
- * - Bei W6≠1: critFail=false, delta bleibt wie ursprünglich nach resultTotal
- * - Cap-Berechnung am Ziel wird neu gemacht
+ * Löst eine ausstehende Patzer-Prüfung eines Helfers auf — in supportGiven
+ * (Helfer) UND supportBonuses (Ziel). W6=1: critFail, delta −2; sonst delta
+ * nach resultTotal. Cap am Ziel wird neu berechnet.
  */
 async function _applyDramaticSupportFumbleCheck(message, helperId, dieTotal) {
   const flags = foundry.utils.deepClone(message.flags[ADR.ID] || {});
@@ -1428,7 +1348,6 @@ async function _applyDramaticSupportFumbleCheck(message, helperId, dieTotal) {
 
   const isCritFail = dieTotal === 1;
 
-  // Neues delta — bei critFail -2, sonst aus resultTotal
   let newDelta;
   if (isCritFail) {
     newDelta = -2;
@@ -1439,23 +1358,19 @@ async function _applyDramaticSupportFumbleCheck(message, helperId, dieTotal) {
     else newDelta = 2;
   }
 
-  // sg aktualisieren
   sg.pendingFumbleCheck = false;
   sg.fumbleCheckDie = dieTotal;
   sg.critFail = isCritFail;
   sg.delta = newDelta;
 
-  // Bonus-Eintrag am Ziel updaten (nur dieser Helfer-Eintrag)
   const bonuses = Array.isArray(targetRs.supportBonuses) ? targetRs.supportBonuses : [];
   const otherBonuses = bonuses.filter(b => b.helperId !== helperId);
   const myBonus = bonuses.find(b => b.helperId === helperId);
 
-  // Cap neu berechnen ohne diesen Eintrag
   const positiveSoFar = otherBonuses.reduce((sum, b) => sum + (b.delta > 0 ? b.delta : 0), 0);
   const newPositive = newDelta > 0 ? newDelta : 0;
   const capExceeded = (positiveSoFar + newPositive) > 4;
 
-  // tooLate: Hat das Ziel schon gewürfelt?
   const tooLate = !!(targetRs.acted || targetRs.skipped);
 
   const updatedBonus = {
@@ -1471,7 +1386,6 @@ async function _applyDramaticSupportFumbleCheck(message, helperId, dieTotal) {
 
   targetRs.supportBonuses = [...otherBonuses, updatedBonus];
 
-  // Auch im sg die finalen Cap/tooLate-Werte spiegeln
   sg.capExceeded = capExceeded;
   sg.tooLate = tooLate;
 
@@ -1486,8 +1400,7 @@ async function _advanceDramaticTask(message) {
 
   if (flags.pendingOutcome === "readyNextRound") {
     const nextRound = Number(flags.currentRound ?? 1) + 1;
-    // Deck aus flags nehmen (falls vorhanden) — für Bestandsnachrichten ohne Deck
-    // fällt advance auf altes Verhalten zurück (frisch mischen pro Runde).
+    // Nachrichten ohne persistiertes Deck erhalten ein frisch gemischtes
     if (!Array.isArray(flags.deck)) flags.deck = createShuffledDeck();
     flags.entries = advanceDramaticRound(flags.entries, nextRound, flags.deck);
     flags.currentRound = nextRound;
@@ -1506,11 +1419,9 @@ async function _advanceDramaticTask(message) {
 /**
  * Baut den Helfer-Zeilen-HTML-Text aus einem supportGiven-Datensatz (sg).
  *
- * Sprach-neutral: holt die i18n-Keys zum Aufrufzeitpunkt. Wird sowohl
- * serverseitig beim Erstellen/Aktualisieren der Chat-Nachricht aufgerufen
- * (Build-Time) als auch clientseitig im Render-Hook beim Betrachten
- * (Re-Localize-Time). Dadurch sieht jeder Betrachter den Text in seiner
- * eigenen Sprache, statt der GM-Sprache zur Wurf-Zeit.
+ * Holt die i18n-Keys zum Aufrufzeitpunkt: läuft beim Erstellen/Aktualisieren
+ * der Nachricht (GM) und beim Betrachten im Render-Hook, damit jeder Betrachter
+ * den Text in seiner Sprache sieht.
  */
 function _buildDramaticSupportLineHTML(sg) {
   if (!sg) return "";
@@ -1529,9 +1440,8 @@ function _buildDramaticSupportLineHTML(sg) {
     return game.i18n.format(`${KEY}.helperLineFumble`, { target, trait });
   }
   if (Number(sg.delta) === 0) {
-    // Greift auch im pendingFumbleCheck-Zustand (delta=0 bis Check entscheidet) —
-    // die normale "erfolglos"-Zeile wird bevorzugt; der Patzer-Button erscheint
-    // zusätzlich, damit der GM optional auf kritischen Fehlschlag prüfen kann.
+    // Greift auch bei laufender Patzer-Prüfung (delta=0 bis zur Entscheidung);
+    // der Patzer-Button erscheint zusätzlich.
     return game.i18n.format(`${KEY}.helperLineFailure`, { target, trait });
   }
   const d = Number(sg.delta);
@@ -1561,9 +1471,7 @@ function _buildDramaticReceivedSupportLines(supportBonuses) {
         isFumble: true,
       });
     } else if (Number(b.delta) === 0) {
-      // Greift auch im pendingFumbleCheck-Zustand: das Ziel sieht
-      // "X schafft es nicht zu unterstützen", bis der GM optional einen
-      // kritischen Fehlschlag bestätigt.
+      // Greift auch bei laufender Patzer-Prüfung, bis der GM einen Patzer bestätigt
       lines.push({
         html: game.i18n.format(`${KEY}.targetLineFailure`, { helper: helperName }),
         isFumble: false,
@@ -1582,20 +1490,11 @@ function _buildDramaticReceivedSupportLines(supportBonuses) {
 
 /**
  * Clientseitige Lokalisierung der Dramatischen Aufgabe.
- * 
- * Das HBS-Template wird beim Erstellen der Chat-Nachricht serverseitig vom GM
- * gerendert; alle `{{localize ...}}`-Aufrufe verwenden dabei die GM-Locale, und
- * das Ergebnis-HTML wird in der DB persistiert. Wenn ein Spieler die Nachricht
- * dann in einer anderen Sprache (z. B. EN) betrachtet, sieht er ohne Eingriff
- * die ursprüngliche GM-Sprache.
  *
- * Diese Funktion ersetzt alle statischen Template-Texte des Dramatic-Modus
- * auf dem Client mit der aktuell aktiven Sprache des Betrachters. Sie wird
- * von `_enhanceDramaticRequestChat` direkt aufgerufen.
- *
- * Parallele Funktion `_localizeRequestStrings` deckt die anderen Modi ab
- * (Trait-Die-Label, Roll-Button, Pending) — diese Funktion ergänzt sie
- * gezielt um die Dramatic-spezifischen statischen Texte.
+ * Das Template wird beim Erstellen der Nachricht in der GM-Sprache gerendert
+ * und so persistiert; Betrachter mit anderer Sprache sähen sonst die GM-Sprache.
+ * Ersetzt daher alle statischen Dramatic-Texte in der Sprache des Betrachters.
+ * Die modusübergreifenden Texte übernimmt `_localizeRequestStrings`.
  */
 function _localizeDramaticStrings(li, flags) {
   const t = (key) => game.i18n.localize(`${ADR.ID}.requestRoll.${key}`);
@@ -1676,19 +1575,15 @@ function _localizeDramaticStrings(li, flags) {
       btn.textContent = fumbleBtnText;
     }
 
-    // Benny-Tooltips. adr-not-mine-Buttons bekommen ihren Tooltip in
-    // _enhanceDramaticRequestChat (chatNoPermission) und werden hier nicht
-    // überschrieben.
+    // Benny-Tooltips; adr-not-mine-Buttons bekommen ihren Tooltip in
+    // _enhanceDramaticRequestChat (chatNoPermission)
     for (const btn of entryEl.querySelectorAll(".adr-benny-btn")) {
       if (btn.classList.contains("adr-not-mine")) continue;
       btn.title = btn.classList.contains("adr-benny-fumble") ? bennyNoBennyTip : bennyTip;
     }
 
-    // ── Support-Texte (Helfer-Zeile + empfangene Boni) re-lokalisieren ──
-    // Die Texte wurden serverseitig vom GM in seiner Sprache als fertiges HTML
-    // gebaut und in der Chat-Nachricht persistiert. Hier werden sie aus den
-    // strukturierten Daten (roundState.supportGiven / supportBonuses) neu in
-    // der Sprache des Betrachters zusammengebaut.
+    // ── Support-Texte (Helfer-Zeile + empfangene Boni) aus den strukturierten
+    // Daten (roundState.supportGiven / supportBonuses) neu aufbauen ──
     const rs = entry.roundState ?? {};
     if (rs.supportGiven) {
       const helperLineEl = entryEl.querySelector(".adr-dramatic-support-line");
@@ -1735,8 +1630,6 @@ function _localizeDramaticStrings(li, flags) {
 function _enhanceDramaticRequestChat(li, flags) {
   li.classList.add("adr-dramatic-task-chat");
 
-  // Statische Template-Texte clientseitig in der Sprache des Betrachters
-  // setzen (siehe Doc-Comment von _localizeDramaticStrings).
   _localizeDramaticStrings(li, flags);
 
   for (const entry of flags.entries ?? []) {
@@ -1748,34 +1641,28 @@ function _enhanceDramaticRequestChat(li, flags) {
     const isSupporter = !!sg;
     const ownsActor = entry.ownerIds?.includes(game.user.id) || game.user.isGM;
 
-    // Roll-Button: nur für Hauptwurf-Einträge ausgrauen.
-    // Bei Supporter-Einträgen zeigt der Roll-Button das Support-Ergebnis an
-    // und ist im Template bereits disabled — keine Berechtigungs-Logik nötig.
+    // Roll-Button nur für Hauptwurf-Einträge ausgrauen: bei Supporter-Einträgen
+    // zeigt er das Support-Ergebnis und ist im Template bereits disabled.
     const rollBtn = entryEl.querySelector("[data-action='adr-roll-trait']");
     if (!isSupporter && rollBtn && !ownsActor && (rs.result === null || rs.result === undefined)) {
       rollBtn.classList.add("adr-not-mine");
       rollBtn.title = game.i18n.localize(`${ADR.ID}.requestRoll.chatNoPermission`);
     }
 
-    // Optionen-Container (Eigenschaft ändern, Aussetzen, Unterstützen) für
-    // Nicht-Berechtigte ausgrauen — analog zu Roll/Benny-Buttons.
     const optionsEl = entryEl.querySelector(".adr-dramatic-options");
     if (optionsEl && !ownsActor) {
       optionsEl.classList.add("adr-not-mine");
       optionsEl.title = game.i18n.localize(`${ADR.ID}.requestRoll.chatNoPermission`);
     }
 
-    // Benny-Button: berücksichtigt sowohl Hauptwurf-Patzer als auch Support-Patzer.
     const bennyBtn = entryEl.querySelector("[data-action='adr-use-benny']");
     if (bennyBtn) {
       const bennyFumble = rs.wasFumble || rs.fumbleCheckResult === true || (isSupporter && sg.critFail);
       const bennyUsed = isSupporter ? sg.bennyUsed : rs.bennyUsed;
 
       if (flags.outcome) {
-        // Aufgabe abgeschlossen — Benny komplett verstecken (gilt für alle)
         bennyBtn.classList.add("adr-hidden");
       } else if (!ownsActor) {
-        // Keine Berechtigung — sichtbar aber ausgegraut, analog zu normalen Proben
         bennyBtn.classList.remove("adr-hidden", "adr-benny-fumble");
         bennyBtn.classList.add("adr-not-mine");
         bennyBtn.disabled = false;
@@ -1814,10 +1701,8 @@ function _enhanceDramaticRequestChat(li, flags) {
   if (advanceBtn && !game.user.isGM) advanceBtn.classList.add("adr-hidden");
 
   // ── Benny-Schutz-/Verbesserungs-Hinweise (Sammelsektion mit Akteurnamen) ──
-  // Identisch zur Vergleichenden Probe: gleiche Textbausteine (Named-Varianten),
-  // sortiert in der Reihenfolge der Akteure. Wird zwischen den Entries und der
-  // History/Status-Section eingefügt. Idempotent: bei jedem Re-Render entfernen,
-  // dann neu aufbauen falls Hints anliegen.
+  // Wie bei der Vergleichenden Probe (Named-Varianten), zwischen Entries und
+  // History/Status. Idempotent: bei jedem Re-Render entfernen und neu aufbauen.
   const existingHints = li.querySelector(".adr-dramatic-benny-hints");
   if (existingHints) existingHints.remove();
   {
@@ -1827,12 +1712,9 @@ function _enhanceDramaticRequestChat(li, flags) {
       const sg = rs.supportGiven;
       let hintEl;
       if (sg) {
-        // Helfer-Eintrag: Hint aus supportGiven-History. allowDiscardedCheckBtn
-        // ist false, weil der globale Discarded-Check-Handler nur Hauptwurf-
-        // previousRolls am roundState kennt — ein Button hier würde ins Leere
-        // gehen. Wenn der GM einen verworfenen Support-Reroll-1 nachträglich
-        // prüfen will, ist das aktuell nicht vorgesehen (informativ ohnehin
-        // belanglos, weil der alte gute Support-Bonus am Ziel bereits geltend).
+        // Helfer-Eintrag: Hint aus der supportGiven-History. Kein Discarded-Check-
+        // Button, weil der Discarded-Check-Handler nur Hauptwurf-previousRolls am
+        // roundState kennt; der alte Support-Bonus gilt am Ziel ohnehin weiter.
         hintEl = _buildBennyHintEl(
           entry.actorId,
           entry.isNPC ?? false,
@@ -1857,11 +1739,9 @@ function _enhanceDramaticRequestChat(li, flags) {
     if (hintBoxes.length > 0) {
       const wrap = document.createElement("div");
       wrap.className = "adr-dramatic-benny-hints";
-      // Kein eigener Divider — der letzte .adr-dramatic-entry hat schon einen
-      // `border-bottom` (s. CSS .adr-dramatic-entry:last-child). Doppelter
-      // Trennstrich wäre redundant.
+      // Kein eigener Divider — der letzte .adr-dramatic-entry hat bereits einen
+      // border-bottom (CSS .adr-dramatic-entry:last-child)
       for (const h of hintBoxes) wrap.appendChild(h);
-      // Anker: vor History-Container, sonst vor Status-Zeile
       const anchor = li.querySelector(".adr-dramatic-history-container")
         ?? li.querySelector(".adr-request-status.adr-dramatic-task-status");
       if (anchor) anchor.insertAdjacentElement("beforebegin", wrap);
@@ -1922,7 +1802,7 @@ Hooks.on("preCreateChatMessage", (message) => {
   // den Einmal-Unterdrücker nicht.
   if (!message.rolls?.length) return;
   _swadeSuppressFlag.active = false;
-  return false;  // Nachricht blockieren
+  return false;
 });
 
 /* ================================================================ */
@@ -1982,9 +1862,8 @@ Hooks.once("ready", () => {
     } else {
       entries[data.entryIndex].result = data.resultTotal;
       if (data.diceDetails) entries[data.entryIndex].diceDetails = data.diceDetails;
-      // Sequenznummern für korrekte chronologische Sortierung bei
-      // Mehrfach-Bennies. Initialer Wurf hat seq=1; jeder Benny bekommt
-      // die nächste freie Nummer via entry.nextRollSeq.
+      // Sequenznummern für die chronologische Sortierung bei Mehrfach-Bennies:
+      // Initialwurf seq=1, jeder Benny erhält die nächste Nummer aus nextRollSeq.
       entries[data.entryIndex].rollSeq = 1;
       entries[data.entryIndex].nextRollSeq = 2;
       const completedCount = (message.getFlag(ADR.ID, "completedCount") || 0) + 1;
@@ -2064,10 +1943,8 @@ Hooks.once("ready", () => {
     }
     const modifier = (flags.modifier || 0) + (isDramatic ? (roundState?.card?.modifier || 0) : 0) + supportBonus;
 
-    // ── Im Dramatic-Mode: ggf. Trait-Override anwenden ──
-    // Pseudo-Entry mit aufgelöstem Trait, damit _executeSWADERoll und der Hook
-    // mit der vom Spieler gewählten Eigenschaft arbeiten. Außerhalb von
-    // Dramatic bleibt entry unverändert.
+    // ── Dramatic: Pseudo-Entry mit aufgelöstem Trait-Override, damit
+    // _executeSWADERoll und der Hook die gewählte Eigenschaft nutzen ──
     let rollEntry = entry;
     let rollTraitName = entry.traitName;
     let rollTraitType = entry.traitType;
@@ -2145,7 +2022,6 @@ Hooks.once("ready", () => {
     if (isOpposed) _updateOpposedToggle(messageEl, flags.entries.map((e, i) =>
       i === entryIndex ? { ...e, result: resultTotal, diceDetails } : e
     ));
-    // Nach dem Wurf Chat nach unten scrollen, damit die expandierte Nachricht vollständig sichtbar bleibt
     _scrollChatToEntry(messageEl);
   });
 
@@ -2181,9 +2057,7 @@ Hooks.once("ready", () => {
     const isSupporterReroll = isDramatic && !!dramaticRoundState?.supportGiven;
     if (isSupporterReroll) {
       const sg = dramaticRoundState.supportGiven;
-      // Aufgabe abgeschlossen? Dann Reroll generell sperren.
-      // (bennyUsed ist KEIN Blocker — analog zur normalen Probe sind weitere
-      // Bennies erlaubt, jeder Reroll kostet einen.)
+      // bennyUsed ist kein Blocker — weitere Bennies sind erlaubt, jeder Reroll kostet einen
       if (flags.outcome) return;
       if (sg.critFail) {
         ui.notifications.warn(game.i18n.localize(`${ADR.ID}.chat.critical-failure-no-benny`));
@@ -2216,6 +2090,7 @@ Hooks.once("ready", () => {
         : 0;
       const supportMod = helperCardMod + targetCardMod;
 
+      // Abzug vor dem Wurf; jeder spätere Abbruchpfad muss subjectRefundBenny(subject) aufrufen.
       const spent = await subjectSpendBenny(subject);
       if (!spent) {
         ui.notifications.warn(game.i18n.localize(
@@ -2270,7 +2145,6 @@ Hooks.once("ready", () => {
       const resultTotal = usedRoll.total ?? roll.total ?? 0;
       const diceDetails = _extractDiceDetails(usedRoll) || _extractDiceDetails(roll);
 
-      // Patzer-Klassifizierung wie im Erstwurf (isNPC weiter oben deklariert)
       const classification = _classifyFumble(diceDetails, isNPC);
       let critFail = false;
       let pendingFumbleCheck = false;
@@ -2332,7 +2206,6 @@ Hooks.once("ready", () => {
       }
     }
 
-    // Actor prüfen
     const actor = _resolveActor(actorId);
     if (!actor) return;
 
@@ -2348,8 +2221,9 @@ Hooks.once("ready", () => {
       return;
     }
 
-    // Benny abziehen (SWADE-API: Chat-Nachricht + Dice So Nice; bei GM-Benny
-    // wird User.spendBenny() oder Flag-Fallback genutzt — siehe adr-benny-helpers.js).
+    // Benny abziehen (SWADE-API: Chat-Nachricht + Dice So Nice; GM-Benny
+    // über User.spendBenny() oder Flag-Fallback — siehe adr-benny-helpers.js).
+    // Abzug vor dem Wurf; jeder spätere Abbruchpfad muss subjectRefundBenny(subject) aufrufen.
     const spent = await subjectSpendBenny(subject);
     if (!spent) {
       ui.notifications.warn(game.i18n.localize(
@@ -2436,10 +2310,8 @@ Hooks.once("ready", () => {
     const isGroup = flags.mode === "group";
     const isOpposed = flags.mode === "opposed";
 
-    // Benny-Schutz lokal nachbilden (für Single/Group/Opposed). Bei schlechterem
-    // Reroll bleibt das alte Ergebnis geltend — damit nichts zwischen Roll und
-    // Refresh auf dem falschen Wert flackert. Dramatic geht über einen eigenen
-    // Pfad (return oberhalb) und ist hier nie aktiv.
+    // Benny-Schutz lokal nachbilden (Single/Group/Opposed), damit zwischen Wurf
+    // und Refresh kein falscher Wert flackert. Dramatic ist hier nie aktiv.
     let appliedResult = resultTotal;
     let appliedDiceDetails = diceDetails;
     let appliedFumbleCheckResult = undefined;
@@ -2489,9 +2361,7 @@ Hooks.once("ready", () => {
     }
 
     _updateEntryDOM(messageEl, actorId, appliedResult, true, appliedDiceDetails, isGroup, entry.isNPC ?? false, appliedFumbleCheckResult, appliedFumbleCheckDie, appliedPreviousRolls, appliedLastRerollProtected, null, false, appliedLastRerollFumbleOverwrite);
-    // Toggle bekommt die geltenden Werte (= appliedResult/appliedDiceDetails),
-    // plus previousRolls/lastRerollProtected/lastRerollFumbleOverwrite für die
-    // Opposed-Sammelsektion.
+    // Toggle bekommt die geltenden Werte plus History-Felder für die Opposed-Sammelsektion
     const toggleEntries = flags.entries.map((e, i) =>
       i === entryIndex
         ? { ...e, result: appliedResult, bennyUsed: true, diceDetails: appliedDiceDetails, previousRolls: appliedPreviousRolls, lastRerollProtected: appliedLastRerollProtected, lastRerollFumbleOverwrite: appliedLastRerollFumbleOverwrite, fumbleCheckResult: appliedFumbleCheckResult, fumbleCheckDie: appliedFumbleCheckDie }
@@ -2499,7 +2369,6 @@ Hooks.once("ready", () => {
     );
     if (isGroup) _updateGroupToggle(messageEl, toggleEntries);
     if (isOpposed) _updateOpposedToggle(messageEl, toggleEntries);
-    // Nach Benny-Reroll Chat nach unten scrollen
     _scrollChatToEntry(messageEl);
   });
 
@@ -2574,7 +2443,6 @@ Hooks.once("ready", () => {
       return;
     }
 
-    // Dialog öffnen
     const dialog = new SupportDialogForm({ messageId, helperId });
     dialog.render(true);
   });
@@ -2612,7 +2480,6 @@ Hooks.once("ready", () => {
       return;
     }
 
-    // Dialog öffnen
     const dialog = new ChangeTraitDialogForm({ messageId, actorId });
     dialog.render(true);
   });
@@ -2647,13 +2514,12 @@ Hooks.once("ready", () => {
     const flags = message.flags[ADR.ID];
     if (!flags?.entries) return;
 
-    // W6 würfeln
     const roll = new Roll("1d6");
     await roll.evaluate();
 
-    // Hook für Tweaks-Integration feuern (analog freier Wurf). Greift für alle
-    // vier Patzer-Check-Pfade (regulär, discarded, dramatic, dramatic-support).
-    // Tweaks-GM-Dialog kann den W6 manipulieren, bevor wir das Ergebnis anwenden.
+    // Hook für Tweaks (analog freier Wurf), für alle vier Patzer-Check-Pfade
+    // (regulär, discarded, dramatic, dramatic-support). Der Tweaks-GM-Dialog
+    // kann den W6 verändern, bevor das Ergebnis angewendet wird.
     const fumbleEntry = flags.entries.find(e => e.actorId === actorId);
     const fumbleEntryIndex = flags.entries.findIndex(e => e.actorId === actorId);
     const fumbleActorName = fumbleEntry?.actorName || "";
@@ -2672,9 +2538,9 @@ Hooks.once("ready", () => {
       fumbleMechanic: false,
     };
     const fumbleFinalRoll = await _fireTraitRollHook(fumbleHookData);
-    if (fumbleFinalRoll === false) return;  // Hook hat abgebrochen
+    if (fumbleFinalRoll === false) return;
 
-    // Total neu berechnen (Tweaks könnte den Würfel-Wert manipuliert haben)
+    // Total neu berechnen, weil Tweaks den Würfelwert verändert haben kann
     if (roll?.dice?.length) {
       const sum = roll.dice[0].results.reduce((a, r) => a + (r.result || 0), 0);
       roll._total = sum;
@@ -2691,52 +2557,43 @@ Hooks.once("ready", () => {
       return;
     }
 
-    // Patzer-Check für letzten verworfenen Wurf (Benny-Reroll-Schutz).
-    // Muss VOR der Dramatic-Weiche stehen, weil der Discarded-Btn auch in
-    // der Dramatischen Aufgabe vorkommt — der reguläre Dramatic-Fumble-Check-
-    // Pfad gilt nur für `adr-fumble-check-dramatic`, nicht `…-discarded`.
+    // Patzer-Check für den letzten verworfenen Wurf (Benny-Reroll-Schutz).
+    // Muss VOR der Dramatic-Weiche stehen, weil der Discarded-Button auch in
+    // der Dramatischen Aufgabe vorkommt.
     if (btn.dataset.action === "adr-fumble-check-discarded") {
       const entryIndex = flags.entries.findIndex(e => e.actorId === actorId);
       if (entryIndex < 0) return;
       const isDramatic = flags.mode === "dramatic";
       if (isDramatic) {
-        // Dramatic: previousRolls hängt am roundState (runden-lokal).
-        // Bei W6=1 (Patzer bestätigt) wird der verworfene Reroll-1 nachträglich
-        // zum geltenden Wurf mit −1 Marker (Override-Swap, analog zu sofort-
-        // confirmed Wildcard-Patzer). Bei W6>1 bleibt der alte Wurf geltend,
-        // nur das Check-Ergebnis wird markiert.
+        // Dramatic: previousRolls hängt am roundState. W6=1 macht den verworfenen
+        // Reroll nachträglich zum geltenden Patzer-Wurf (−1 Marker); sonst bleibt
+        // der alte Wurf geltend und nur das Check-Ergebnis wird markiert.
         const flagsClone = foundry.utils.deepClone(message.flags[ADR.ID] || {});
         const entry = flagsClone.entries?.[entryIndex];
         const rs = entry?.roundState;
         if (!rs || !Array.isArray(rs.previousRolls) || rs.previousRolls.length === 0) return;
         const lastIdx = rs.previousRolls.length - 1;
         if (roll.total === 1) {
-          // Override: verworfenen Reroll-1 aus previousRolls nehmen und als
-          // geltenden Patzer-Wurf setzen. _applyDramaticFumbleOverride schiebt
-          // den aktuellen rs (alter, positiver Wurf) in previousRolls.
+          // _applyDramaticFumbleOverride schiebt den aktuellen rs (alter Wurf) in previousRolls
           const confirmedRoll = rs.previousRolls.splice(lastIdx, 1)[0];
           confirmedRoll.fumbleCheckResult = true;
           confirmedRoll.fumbleCheckDie = roll.total;
           _applyDramaticFumbleOverride(rs, entry, confirmedRoll);
         } else {
-          // Kein Patzer: alter Wurf bleibt, Check-Ergebnis informativ markieren.
           rs.previousRolls[lastIdx].fumbleCheckResult = false;
           rs.previousRolls[lastIdx].fumbleCheckDie = roll.total;
         }
         await _updateDramaticTaskMessage(message, flagsClone);
       } else {
-        // Single/Group/Opposed: previousRolls direkt auf entry. Bei W6=1
-        // (Patzer bestätigt) wird der verworfene Reroll nachträglich zum
-        // geltenden Patzer-Wurf — analog zum sofort-confirmed Wildcard-Pfad
-        // in _applyBennyRerollSingle. Bei W6>1 bleibt der alte Wurf geltend,
-        // Check-Ergebnis wird nur informativ markiert.
+        // Single/Group/Opposed: previousRolls direkt am entry. W6=1 macht den
+        // verworfenen Reroll nachträglich zum geltenden Patzer-Wurf (analog zum
+        // confirmed-Pfad in _applyBennyRerollSingle); sonst bleibt der alte Wurf.
         const entries = foundry.utils.deepClone(flags.entries);
         const entry = entries[entryIndex];
         if (!Array.isArray(entry.previousRolls) || entry.previousRolls.length === 0) return;
         const lastIdx = entry.previousRolls.length - 1;
         if (roll.total === 1) {
-          // Override-Swap: verworfenen Reroll als geltenden Patzer-Wurf setzen,
-          // alter geltender (guter) Wurf wandert mit seiner Seq in previousRolls.
+          // Override-Swap: alter geltender Wurf wandert mit seiner Seq in previousRolls
           const confirmedRoll = entry.previousRolls.splice(lastIdx, 1)[0];
           const currentSeq = entry.rollSeq ?? 1;
           const histEntry = { result: Number(entry.result) || 0, diceDetails: entry.diceDetails, seq: currentSeq };
@@ -2744,7 +2601,6 @@ Hooks.once("ready", () => {
           if (entry.fumbleCheckDie !== undefined) histEntry.fumbleCheckDie = entry.fumbleCheckDie;
           entry.previousRolls.push(histEntry);
 
-          // Patzer-Wurf übernimmt
           entry.result = confirmedRoll.result;
           entry.diceDetails = confirmedRoll.diceDetails;
           entry.rollSeq = confirmedRoll.seq ?? (entry.nextRollSeq ?? (entry.previousRolls.length + 1));
@@ -2755,7 +2611,6 @@ Hooks.once("ready", () => {
           entry.lastRerollFumbleOverwrite = true;
           delete entry.fumbleCheckAccepted;
         } else {
-          // Kein Patzer: alter Wurf bleibt, Check-Ergebnis informativ markieren.
           entry.previousRolls[lastIdx].fumbleCheckResult = false;
           entry.previousRolls[lastIdx].fumbleCheckDie = roll.total;
         }
@@ -2775,7 +2630,6 @@ Hooks.once("ready", () => {
     const entryIndex = flags.entries.findIndex(e => e.actorId === actorId);
     if (entryIndex < 0) return;
 
-    // Entry-Flags aktualisieren
     const entries = foundry.utils.deepClone(flags.entries);
     entries[entryIndex].fumbleCheckResult = roll.total === 1;
     entries[entryIndex].fumbleCheckDie = roll.total;
@@ -2787,9 +2641,8 @@ Hooks.once("ready", () => {
   });
 
   // ── Patzer-Annahme (GM-Button: 1 als reguläres Ergebnis akzeptieren) ──
-  // Pendant zu adr-fumble-accept-main im freien Wurf: GM entscheidet sich
-  // gegen die W6-Patzer-Prüfung und nimmt die 1 als reguläres Würfelergebnis.
-  // Folge-Render zeigt weder Patzer-Label noch „Kein Erfolg".
+  // Pendant zu adr-fumble-accept-main im freien Wurf; das Folge-Render zeigt
+  // weder Patzer-Label noch „Kein Erfolg".
   document.body.addEventListener("click", async (ev) => {
     const btn = ev.target.closest("[data-action='adr-fumble-accept']");
     if (!btn || !game.user.isGM) return;
@@ -2843,9 +2696,8 @@ Hooks.once("ready", () => {
     ev.preventDefault();
     ev.stopPropagation();
 
-    // Nur Token-Auswahl + Canvas-Pan, kein Sheet öffnen.
-    // Strategie: Token in der aktiven Szene zum Actor finden. Bei NSCs ist
-    // actorId die Token-Document-ID (Szenen-Instanz), bei SCs die Actor-ID.
+    // Nur Token-Auswahl + Canvas-Pan, kein Sheet. Bei NSCs ist actorId die
+    // Token-Document-ID (Szenen-Instanz), bei SCs die Actor-ID.
     let token = canvas?.tokens?.placeables?.find(t => t.document?.id === actorId);
     if (!token) {
       token = canvas?.tokens?.placeables?.find(t => t.actor?.id === actorId);
@@ -2854,7 +2706,6 @@ Hooks.once("ready", () => {
       token.control({ releaseOthers: true });
       await canvas.animatePan({ x: token.center.x, y: token.center.y, duration: 250 });
     }
-    // Fallback: kein Token in aktueller Szene → still bleiben (keine Sheet-Öffnung).
   });
 });
 
@@ -2904,22 +2755,15 @@ async function _updateRequestMessage(message, entryIndex, resultTotal, diceDetai
 /**
  * Wendet den Benny-Reroll-Schutz im Single-Mode an. Mutiert das entry-Objekt.
  *
- * SWADE-Regel (mit Argas Auslegung für individuelle Probe):
- * - Benny-Reroll kann das Ergebnis nicht verschlechtern.
- * - Schutz greift in der individuellen Probe IMMER bei schlechterem Reroll —
- *   auch bei Wildcard-Patzer (rein informativ).
- * - Bei Statisten ist eine 1 standardmässig nur ein Fehlschlag (kein Patzer);
- *   GM kann via W6 prüfen, ob's doch ein Patzer war (rein informativ, ändert
- *   das geltende Ergebnis nicht).
- * - Vergleichsbasis bei Mehrfach-Reroll: aktuell gehaltener (=bisher bester)
- *   Wert.
+ * Regel: Ein Benny-Reroll kann das Ergebnis nicht verschlechtern; Vergleichsbasis
+ * bei Mehrfach-Reroll ist der aktuell gehaltene Wert. Ausnahme (Hausregel): ein
+ * bestätigter Reroll-Patzer übersteuert den Schutz.
  *
  * Datenmodell:
- *   entry.previousRolls = [{ result, diceDetails, fumbleCheckResult?, fumbleCheckDie? }, ...]
- *     – chronologische Liste verworfener Würfe (in Reihenfolge der Verwerfung)
+ *   entry.previousRolls = [{ result, diceDetails, seq, fumbleCheckResult?, fumbleCheckDie? }, ...]
+ *     – verworfene Würfe
  *   entry.lastRerollProtected = boolean
  *     – true: letzter Reroll war schlechter, alter Wurf wurde gehalten
- *     – false: letzter Reroll hat verbessert, alter Wurf wandert in History
  *
  * @param {object} entry            – wird mutiert
  * @param {number} newResult        – Total des neuen Wurfs
@@ -2933,26 +2777,22 @@ function _applyBennyRerollSingle(entry, newResult, newDiceDetails) {
 
   if (!Array.isArray(entry.previousRolls)) entry.previousRolls = [];
 
-  // ── Sequenznummer-Tracking (für chronologische Sortierung) ──
-  // Fallback: Legacy-Entries ohne rollSeq/nextRollSeq bekommen Standardwerte.
+  // ── Sequenznummern (chronologische Sortierung); Entries ohne rollSeq/nextRollSeq erhalten Standardwerte ──
   const currentSeq = entry.rollSeq ?? 1;
   const newSeq = entry.nextRollSeq ?? (entry.previousRolls.length + 2);
   entry.nextRollSeq = newSeq + 1;
 
   // ── Patzer-Override-Pfad (Hausregel) ──
-  // Reroll-Patzer übersteuert den Verschlechterungsschutz: alter (guter) Wurf
-  // wandert in previousRolls, neuer Patzer-Wurf wird zum geltenden mit roter 1.
-  // Greift sofort bei Wildcard-Patzer ("confirmed"). Bei Statist-1 ("needs-check")
-  // erst nach W6-Discarded-Check (siehe Handler).
+  // Ein Reroll-Patzer übersteuert den Verschlechterungsschutz. Greift sofort
+  // bei Wildcard-Patzer ("confirmed"); bei Statisten-1 ("needs-check") erst
+  // nach dem W6-Discarded-Check (siehe Handler).
   const newClassification = _classifyFumble(newDiceDetails, entry.isNPC);
   if (newClassification === "confirmed") {
-    // Alter (guter) Wurf in previousRolls
     const histEntry = { result: oldResult, diceDetails: oldDiceDetails, seq: currentSeq };
     if (oldFumbleCheckResult !== undefined) histEntry.fumbleCheckResult = oldFumbleCheckResult;
     if (oldFumbleCheckDie !== undefined) histEntry.fumbleCheckDie = oldFumbleCheckDie;
     entry.previousRolls.push(histEntry);
 
-    // Patzer-Wurf wird zum geltenden
     entry.result = newResult;
     if (newDiceDetails) entry.diceDetails = newDiceDetails;
     entry.rollSeq = newSeq;
@@ -2965,7 +2805,7 @@ function _applyBennyRerollSingle(entry, newResult, newDiceDetails) {
   }
 
   if (newResult > oldResult) {
-    // Reroll besser → gilt; alter Wurf wandert in History mit seiner Seq
+    // Verbesserung: alter Wurf wandert in die History
     const histEntry = { result: oldResult, diceDetails: oldDiceDetails, seq: currentSeq };
     if (oldFumbleCheckResult !== undefined) histEntry.fumbleCheckResult = oldFumbleCheckResult;
     if (oldFumbleCheckDie !== undefined) histEntry.fumbleCheckDie = oldFumbleCheckDie;
@@ -2980,12 +2820,10 @@ function _applyBennyRerollSingle(entry, newResult, newDiceDetails) {
     delete entry.fumbleCheckDie;
     delete entry.fumbleCheckAccepted;
   } else {
-    // Schutz greift: alter Wurf bleibt; neuer Wurf wandert in History mit neuer Seq
+    // Schutz greift: alter Wurf bleibt geltend (inkl. rollSeq und Patzer-Check-Feldern)
     entry.previousRolls.push({ result: newResult, diceDetails: newDiceDetails, seq: newSeq });
     entry.lastRerollProtected = true;
     entry.lastRerollFumbleOverwrite = false;
-    // entry.result bleibt; entry.rollSeq bleibt
-    // fumbleCheckResult/Die/Accepted für den geltenden Wurf bleiben (falls schon gesetzt)
   }
 }
 
@@ -2993,8 +2831,7 @@ async function _updateRequestMessageBenny(message, entryIndex, resultTotal, dice
   const entries = foundry.utils.deepClone(message.getFlag(ADR.ID, "entries") || []);
   const entry = entries[entryIndex];
 
-  // Schutz greift in Single, Group, Opposed (Dramatic läuft NICHT durch diese
-  // Funktion, sondern über _applyDramaticRollResult).
+  // Single, Group, Opposed (Dramatic läuft über _applyDramaticRollResult)
   _applyBennyRerollSingle(entry, resultTotal, diceDetails);
   entry.bennyUsed = true;
 
@@ -3006,10 +2843,7 @@ async function _updateRequestMessageBenny(message, entryIndex, resultTotal, dice
 }
 
 /**
- * Baut die Benny-Hinweis-Zeile als DOM-Element (oder gibt `null` zurück, wenn
- * kein Hinweis nötig ist). Wird sowohl aus `_updateEntryDOM` (pro Entry,
- * Single/Group) als auch aus `_updateOpposedToggle` (Sammelsektion mit
- * Akteurname) aufgerufen.
+ * Baut die Benny-Hinweis-Zeile als DOM-Element (`null`, wenn kein Hinweis nötig).
  *
  * @param {string}   actorId             – data-actor-id für Discarded-Check-Btn
  * @param {boolean}  isNPC               – beeinflusst Patzer-Klassifikation
@@ -3022,11 +2856,9 @@ async function _updateRequestMessageBenny(message, entryIndex, resultTotal, dice
  * @returns {HTMLDivElement|null}
  */
 function _buildBennyHintEl(actorId, isNPC, previousRolls, lastRerollProtected, namedActor = null, lastRerollFumbleOverwrite = false, opts = {}) {
-  // opts.allowDiscardedCheckBtn (default true): wenn false, wird bei Statisten-1
-  // im verworfenen Wurf KEIN nachträglicher Patzer-Check-Button gerendert. Nötig
-  // für den Dramatic-Support-Hint, weil der Discarded-Check-Handler nur Haupt-
-  // wurf-previousRolls am roundState kennt — ein Klick auf einen Support-Hint-
-  // Button würde ins Leere laufen oder die falsche History anfassen.
+  // opts.allowDiscardedCheckBtn=false unterdrückt den nachträglichen Patzer-Check-
+  // Button (Dramatic-Support-Hint: der Discarded-Check-Handler kennt nur
+  // Hauptwurf-previousRolls am roundState).
   const allowDiscardedCheckBtn = opts.allowDiscardedCheckBtn !== false;
   if (!Array.isArray(previousRolls) || previousRolls.length === 0) return null;
 
@@ -3042,9 +2874,9 @@ function _buildBennyHintEl(actorId, isNPC, previousRolls, lastRerollProtected, n
     else ordinal = `${rerollNum}th`;
   }
 
-  // Key-Auflösung: ggf. Named-Variante + ggf. N-Suffix + Counter-/Actor-Substitution.
-  // `allowNamed: false` erzwingt die generische Variante (ohne Akteur-Bezug) — nötig
-  // für Sub-Texte, die als generischer Zusatz unter einer namedActor-Zeile stehen.
+  // Key-Auflösung: Named-Variante + N-Suffix + Counter-/Actor-Substitution.
+  // `allowNamed: false` erzwingt die generische Variante für Sub-Texte unter
+  // einer namedActor-Zeile.
   const localizeHint = (base, { withCounter = true, allowNamed = true } = {}) => {
     const namedSuffix = (allowNamed && namedActor) ? "Named" : "";
     const counterSuffix = (withCounter && useCounter) ? "N" : "";
@@ -3064,11 +2896,8 @@ function _buildBennyHintEl(actorId, isNPC, previousRolls, lastRerollProtected, n
   let lastDiscarded = null;
 
   if (lastRerollFumbleOverwrite) {
-    // ── Patzer-Override-Pfad (Dramatic): Reroll war bestätigter Patzer.
-    // Alter Wurf wurde verworfen, der Patzer gilt mit −1 Marker. Die Marker-
-    // Strafe wird oben am Spieler-Block ohnehin als Marker-Zeile ausgegeben
-    // (Template-Pfad: `roundState.markersDelta === -1` → "Marker verloren"),
-    // hier daher KEINE separate Marker-Subzeile, nur der Patzer-Text.
+    // ── Patzer-Override-Pfad: nur der Patzer-Text; die Marker-Strafe steht
+    // bereits als Marker-Zeile am Spieler-Block (roundState.markersDelta === -1).
     hintHTML = `<div class="adr-benny-protected-line adr-benny-protected-fumble">`
       + `${localizeHint("bennyProtectedHintFumble")}</div>`;
   } else if (lastRerollProtected) {
@@ -3079,16 +2908,14 @@ function _buildBennyHintEl(actorId, isNPC, previousRolls, lastRerollProtected, n
       : "none";
 
     if (discardedClass === "confirmed") {
-      // Wildcard-Patzer beim verworfenen Wurf: nur die rote Patzer-Zeile.
+      // Wildcard-Patzer beim verworfenen Wurf: nur die rote Patzer-Zeile
       hintHTML = `<div class="adr-benny-protected-line adr-benny-protected-fumble">`
         + `${localizeHint("bennyProtectedHintFumble")}</div>`;
     } else {
-      // Standardfall (kein Patzer am verworfenen Wurf) oder Statisten-1:
-      // Standardzeile + ggf. Zusatzzeile/Check.
+      // Standardzeile + bei Statisten-1 Zusatzzeile/Check
       hintHTML = `<div class="adr-benny-protected-line">${localizeHint("bennyProtectedHint")}</div>`;
 
       if (discardedClass === "needs-check") {
-        // Statisten-1 beim verworfenen Wurf — Check optional, Ergebnis (falls geprüft)
         const dcr = lastDiscarded.fumbleCheckResult;
         hintHTML += `<div class="adr-benny-protected-line adr-benny-protected-extra-one">`
           + `${localizeHint("bennyProtectedHintExtraOne", { withCounter: false })}</div>`;
@@ -3116,8 +2943,6 @@ function _buildBennyHintEl(actorId, isNPC, previousRolls, lastRerollProtected, n
 
   hintEl.innerHTML = hintHTML;
 
-  // Patzer-Check-Button anhängen wenn Statisten-1 noch nicht geprüft.
-  // Bei allowDiscardedCheckBtn=false (Support-Hint) Button unterdrücken.
   if (needsDiscardedCheckBtn && allowDiscardedCheckBtn) {
     const btn = document.createElement("button");
     btn.type = "button";
@@ -3158,11 +2983,8 @@ function _updateEntryDOM(container, actorId, result, bennyUsed, diceDetails, isG
   if (!entryEl) return;
 
   // ── Patzer-Zustand bestimmen ──
-  // Die Patzer-Mechanik in der Angeforderten Probe (rote 1, Benny gesperrt,
-  // W6-Check für Statisten) ist mechanik-relevant und greift IMMER — analog
-  // zum Dramatic-Pfad (`_applyDramaticRollResult`). Das globale Setting
-  // `highlightNaturalOnes` steuert nur den freien Wurf-Pfad in adr-hooks.js,
-  // nicht die Angeforderte Probe.
+  // Die Patzer-Mechanik greift in der Angeforderten Probe IMMER; das Setting
+  // `highlightNaturalOnes` steuert nur den freien Wurf in adr-hooks.js.
   let isFumble = false;
   let showCheckButton = false;
   let checkResultText = null; // "confirmed" | "denied" | null
@@ -3175,10 +2997,8 @@ function _updateEntryDOM(container, actorId, result, bennyUsed, diceDetails, isG
       isFumble = false;
       checkResultText = "denied";
     } else if (fumbleCheckAccepted === true) {
-      // GM hat die 1 als reguläres Ergebnis akzeptiert — kein Patzer-Check.
-      // isFumble bleibt false, showCheckButton bleibt false → keine Auswahl-UI,
-      // kein „Kein Erfolg", kein Patzer-Label. Der Wurfwert (z. B. 1) steht
-      // einfach als reguläres Ergebnis. Analog zum freien Wurf (fumbleCheckAccepted-Flag).
+      // GM hat die 1 als reguläres Ergebnis akzeptiert: weder Auswahl-UI noch
+      // Patzer-Label (analog zum freien Wurf)
     } else {
       const classification = _classifyFumble(diceDetails, isNPC);
       if (classification === "confirmed") {
@@ -3201,9 +3021,8 @@ function _updateEntryDOM(container, actorId, result, bennyUsed, diceDetails, isG
   }
 
   // ── Benny-Button ──
-  // Sperre auch wenn der ZULETZT VERWORFENE Reroll ein bestätigter Patzer war
-  // (Schutz-Pfad). Der Würfelwert bleibt das alte gute Ergebnis (= keine rote 1),
-  // aber kein weiterer Benny-Reroll mehr erlaubt — Hausregel.
+  // Gesperrt auch, wenn der zuletzt verworfene Reroll ein bestätigter Patzer
+  // war (Hausregel, siehe _isEntryBennyLocked).
   const bennyLocked = isFumble || _isEntryBennyLocked({
     diceDetails, isNPC, fumbleCheckResult,
     lastRerollProtected, previousRolls,
@@ -3211,7 +3030,6 @@ function _updateEntryDOM(container, actorId, result, bennyUsed, diceDetails, isG
   const bennyBtn = entryEl.querySelector("[data-action='adr-use-benny']");
   if (bennyBtn) {
     if (bennyLocked) {
-      // Patzer (geltend ODER zuletzt verworfen): Benny gesperrt, rotes X
       bennyBtn.classList.remove("adr-hidden");
       bennyBtn.classList.add("adr-benny-fumble");
       bennyBtn.disabled = true;
@@ -3229,8 +3047,7 @@ function _updateEntryDOM(container, actorId, result, bennyUsed, diceDetails, isG
     }
   }
 
-  // ── Patzer-Bereich: Label / "Kein Erfolg" / Check-Button / Check-Ergebnis ──
-  // Immer alles aufräumen, dann gezielt das Richtige einfügen
+  // ── Patzer-Bereich: erst alles aufräumen, dann gezielt einfügen ──
   const existingLabel = entryEl.querySelector(".adr-fumble-label");
   const existingCheckBtn = entryEl.querySelector(".adr-fumble-check-btn");
   const existingCheckResult = entryEl.querySelector(".adr-fumble-check-result");
@@ -3238,10 +3055,9 @@ function _updateEntryDOM(container, actorId, result, bennyUsed, diceDetails, isG
   const existingProtectedHint = entryEl.querySelector(".adr-benny-protected-hint");
   if (existingLabel) existingLabel.remove();
   if (existingCheckBtn) {
-    // Wenn der Check-Btn in einem Choice-Container (Accept-Btn + „oder" +
-    // Check-Btn) liegt, entfernen wir den kompletten Container; sonst nur
-    // den einzelnen Button. Discarded-Check-Btn liegt in protected-hint,
-    // dort greift parentChoice nicht — die hint wird unten ohnehin entfernt.
+    // Check-Button im Choice-Container (Accept + „oder" + Check): kompletten
+    // Container entfernen. Der Discarded-Check-Button liegt im protected-hint,
+    // der unten ohnehin entfernt wird.
     const parentChoice = existingCheckBtn.closest(".adr-fumble-choice-container");
     (parentChoice ?? existingCheckBtn).remove();
   }
@@ -3253,10 +3069,8 @@ function _updateEntryDOM(container, actorId, result, bennyUsed, diceDetails, isG
   let nextAnchor = anchor;
 
   // ── Benny-Schutz-/Verbesserungs-Hinweis (pro Entry) ──
-  // Direkt nach der Wurf-Zeile, vor "Kein Erfolg" / Patzer-Indikatoren.
-  // Für die Vergleichende Probe wird der Hinweis NICHT pro Entry gerendert
-  // (Layout zu eng) — stattdessen baut `_updateOpposedToggle` eine Sammel-
-  // sektion mit Akteurnamen unterhalb des Trennstrichs.
+  // Nicht in der Vergleichenden Probe (Layout zu eng) — dort baut
+  // `_updateOpposedToggle` eine Sammelsektion mit Akteurnamen.
   if (!isOpposedMode) {
     const hintEl = _buildBennyHintEl(actorId, isNPC, previousRolls, lastRerollProtected, null, lastRerollFumbleOverwrite);
     if (hintEl) {
@@ -3265,19 +3079,12 @@ function _updateEntryDOM(container, actorId, result, bennyUsed, diceDetails, isG
     }
   }
 
-  // „Kein Erfolg"-Zeile bewusst entfernt — die Patzer-/Auswahl-Buttons
-  // und Patzer-Check-Ergebnis-Texte sprechen für sich, eine separate
-  // Kommentierung des Würfelergebnisses passt hier nicht. Der Cleanup
-  // weiter oben (existingNoSuccess.remove()) bleibt aktiv, damit alte
-  // Chat-Nachrichten mit dem alten Markup automatisch aufgeräumt werden.
+  // `.adr-request-no-success` wird nur entfernt, nie erzeugt: Patzer-Buttons
+  // und Prüfergebnis-Texte ersetzen diese Zeile.
 
   if (isFumble && !checkResultText && !lastRerollFumbleOverwrite && !isOpposedMode) {
-    // SC Auto-Patzer — kurzes Label
-    // Bei Reroll-Override (`lastRerollFumbleOverwrite=true`) steht der Patzer-
-    // Hinweis bereits im Benny-Hint darüber ("Der Benny-Wiederholungswurf war
-    // ein kritischer Fehlschlag"); ein zusätzliches Label wäre redundant.
-    // Im Opposed-Mode wird der Patzer-Text in die Sammelsektion verlagert
-    // (s. _updateOpposedToggle), daher hier auch ausgespart.
+    // SC-Patzer-Label. Entfällt bei Reroll-Override (Patzer-Hinweis steht im
+    // Benny-Hint) und im Opposed-Mode (Sammelsektion in _updateOpposedToggle).
     const label = document.createElement("div");
     label.className = "adr-fumble-label";
     label.textContent = game.i18n.localize(`${ADR.ID}.chat.${isGroup ? "critical-failure-short" : "critical-failure"}`);
@@ -3285,8 +3092,7 @@ function _updateEntryDOM(container, actorId, result, bennyUsed, diceDetails, isG
     _scrollChatToEntry(entryEl);
 
   } else if (checkResultText === "confirmed" && !lastRerollFumbleOverwrite && !isOpposedMode) {
-    // Nicht-SC: Patzer per W6 bestätigt — Ergebnis-Text.
-    // Im Opposed wird der Patzer-Text in die Sammelsektion verlagert (s. o.).
+    // Nicht-SC: Patzer per W6 bestätigt (Opposed: Sammelsektion, s. o.)
     const div = document.createElement("div");
     div.className = "adr-fumble-check-result";
     const keyword = game.i18n.localize(`${ADR.ID}.requestRoll.fumbleCheckYes`);
@@ -3296,10 +3102,9 @@ function _updateEntryDOM(container, actorId, result, bennyUsed, diceDetails, isG
     _scrollChatToEntry(entryEl);
 
   } else if (showCheckButton) {
-    // Nicht-SC: Einzelwürfel = 1 → Auswahl-Container „Würfelergebnis annehmen
-    // / oder / mit W6 auf Patzer prüfen?" — analog zum freien Wurf.
-    // GM klickbar, Nicht-GM sieht beide Buttons ausgegraut (adr-not-mine +
-    // title-Tooltip + Inline-Cursor !important), konsistent mit Benny-Pattern.
+    // Nicht-SC mit Einzelwürfel 1: Auswahl „Würfelergebnis annehmen / oder /
+    // mit W6 auf Patzer prüfen" — analog zum freien Wurf; Nicht-GM sieht beide
+    // Buttons ausgegraut.
     const isGM = game.user.isGM;
     const acceptLabel = game.i18n.localize(`${ADR.ID}.requestRoll.acceptResultBtn`);
     const orLabel = game.i18n.localize(`${ADR.ID}.requestRoll.orChoice`);
@@ -3309,7 +3114,7 @@ function _updateEntryDOM(container, actorId, result, bennyUsed, diceDetails, isG
 
     const choice = document.createElement("div");
     choice.className = "adr-fumble-choice-container";
-    // Opposed-Mode: enge Spalte, Buttons dürfen umbrechen.
+    // Opposed: enge Spalte, Buttons dürfen umbrechen
     if (isOpposedMode) choice.classList.add("adr-fumble-choice-multiline");
 
     const acceptBtn = document.createElement("button");
@@ -3332,8 +3137,7 @@ function _updateEntryDOM(container, actorId, result, bennyUsed, diceDetails, isG
     checkBtn.innerHTML = isOpposedMode ? `${line1}<br>${line2}` : `${line1} ${line2}`;
 
     if (!isGM) {
-      // Inline-style mit !important: schlägt Foundry-Defaults für button-cursor
-      // (siehe Initial-1-Stelle im freien Wurf, adr-hooks.js).
+      // Inline-Style mit !important schlägt Foundrys Button-Cursor-Default
       acceptBtn.classList.add("adr-not-mine");
       acceptBtn.title = tooltip;
       acceptBtn.style.setProperty("cursor", "not-allowed", "important");
@@ -3350,8 +3154,7 @@ function _updateEntryDOM(container, actorId, result, bennyUsed, diceDetails, isG
     _scrollChatToEntry(entryEl);
 
   } else if (checkResultText === "denied") {
-    // Nicht-SC: Kein Patzer per W6 bestätigt — Ergebnis-Text
-    // Im Opposed: verkürzte Variante.
+    // Nicht-SC: kein Patzer per W6 (Opposed: verkürzte Variante)
     const div = document.createElement("div");
     div.className = "adr-fumble-check-result";
     const keyword = game.i18n.localize(`${ADR.ID}.requestRoll.fumbleCheckNone`);
@@ -3374,7 +3177,6 @@ function _updateEntryDOM(container, actorId, result, bennyUsed, diceDetails, isG
       wrapper.innerHTML = detailsHTML;
       entryEl.appendChild(wrapper.firstElementChild);
 
-      // Toggle-Klick-Handler
       const toggle = entryEl.querySelector(".adr-individual-toggle");
       if (toggle) _attachToggleHandler(toggle);
     }
@@ -3426,21 +3228,17 @@ function _attachToggleHandler(toggle) {
  * Zeigt alle Spieler-Ergebnisse in einem einzigen aufklappbaren Block.
  */
 function _updateGroupToggle(container, entries) {
-  // Nur anzeigen wenn mindestens ein Ergebnis vorliegt
   const withResults = entries
     .filter(e => e.result !== null && e.diceDetails)
     .sort((a, b) => (a.actorName ?? "").localeCompare(b.actorName ?? "", game.i18n.lang));
   if (withResults.length === 0) return;
 
-  // Bestehenden Toggle entfernen (für Updates bei Benny-Reroll)
+  // Bestehenden Toggle entfernen (Re-Render bei Benny-Reroll)
   const existing = container.querySelector(".adr-group-toggle-container");
   if (existing) existing.remove();
 
-  // Einzelergebnisse pro Spieler aufbauen — Blockstil pro Akteur: Akteurname
-  // als Kopfzeile, darunter alle Würfe (verworfen + aktuell) chronologisch via
-  // _buildRollHistoryHTML. Per Benny ersetzte, schlechtere Würfe erscheinen
-  // durchgestrichen (adr-individual-discarded) — identisch zur Vergleichenden
-  // Probe (_updateOpposedToggle).
+  // Block pro Akteur: Name als Kopfzeile, darunter alle Würfe chronologisch
+  // (verworfene durchgestrichen) — identisch zur Vergleichenden Probe
   let detailsInner = "";
   for (const entry of withResults) {
     const historyHTML = _buildRollHistoryHTML(entry);
@@ -3458,7 +3256,6 @@ function _updateGroupToggle(container, entries) {
     + `<div class="adr-individual-details adr-individual-hidden">${detailsInner}</div>`
     + `</div></div>`;
 
-  // Vor dem Status einfügen
   const statusEl = container.querySelector(".adr-request-status");
   if (statusEl) {
     statusEl.insertAdjacentHTML("beforebegin", html);
@@ -3476,17 +3273,13 @@ function _updateOpposedToggle(container, entries) {
   const withResults = entries.filter(e => e.result !== null && e.diceDetails);
   if (withResults.length === 0) return;
 
-  // Bestehenden Toggle entfernen (für Updates bei Benny-Reroll)
+  // Bestehenden Toggle und Hint-Sammelsektion entfernen (Re-Render bei Benny-Reroll);
+  // die Hints liegen außerhalb des toggle-containers direkt nach der Arena
   const existing = container.querySelector(".adr-group-toggle-container");
   if (existing) existing.remove();
-  // Hint-Sammelsektion liegt jetzt außerhalb des toggle-containers (direkt nach
-  // der Arena) — separat aufräumen, sonst stapelt sich der Hint bei Re-Render.
   const existingHints = container.querySelector(".adr-opposed-benny-hints");
   if (existingHints) existingHints.remove();
 
-  // Pro Spielerblock: Akteurname als Kopfzeile + alle Würfe (verworfen + aktuell)
-  // chronologisch darunter via _buildRollHistoryHTML — analog zur Einzelprobe.
-  // Block-Layout (zentrierter Name + Body) bleibt erhalten.
   let detailsInner = "";
   for (const entry of withResults) {
     const historyHTML = _buildRollHistoryHTML(entry);
@@ -3512,21 +3305,16 @@ function _updateOpposedToggle(container, entries) {
   }
 
   // ── Patzer-/Benny-Hint-Sammelsektion (mit Akteurnamen) ──
-  // Die Vergleichende Probe rendert pro Entry KEINE Hint-Texte (Layout zu eng).
-  // Stattdessen kommen alle Hints hier direkt nach der Arena (= unterhalb des
-  // ::after-Trennstrichs) als eigene Sektion, in derselben Reihenfolge wie die
-  // Akteure auf der Chat-Card. Pro Entry max. 1 Hint:
-  //   1) Benny-Wiederholungswurf (Verschlechterung/Verbesserung/Patzer-Override)
-  //   2) Erstwurf-Patzer (kein Reroll, aber bestätigter Patzer im Initial-Wurf)
-  // Hint sitzt AUSSERHALB des toggle-containers (analog zur Einzelprobe, wo
-  // der Hint direkt nach der actor-row sitzt) — sonst wäre der Abstand zum
-  // Strich durch margin-top + padding-top des toggle-containers zu groß.
+  // Die Vergleichende Probe rendert keine Hints pro Entry (Layout zu eng);
+  // alle Hints stehen direkt nach der Arena in Akteur-Reihenfolge, pro Entry
+  // höchstens einer: Benny-Wiederholungswurf, sonst Erstwurf-Patzer. Außerhalb
+  // des toggle-containers, weil dessen margin/padding den Abstand zum
+  // Trennstrich zu groß machen würde.
   const arenaEl = container.querySelector(".adr-opposed-arena");
   if (arenaEl) {
     const hintsWrap = document.createElement("div");
     hintsWrap.className = "adr-opposed-benny-hints";
     for (const entry of entries) {
-      // Erstrangig: Benny-Hint (greift nur wenn previousRolls vorhanden)
       let hintEl = _buildBennyHintEl(
         entry.actorId,
         entry.isNPC ?? false,
@@ -3536,7 +3324,7 @@ function _updateOpposedToggle(container, entries) {
         !!entry.lastRerollFumbleOverwrite,
       );
 
-      // Fallback: Erstwurf-Patzer (kein Reroll, aber Patzer beim Initialwurf)
+      // Erstwurf-Patzer ohne Reroll
       if (!hintEl) {
         const hasFirstFumble = entry.diceDetails && (
           entry.fumbleCheckResult === true
@@ -3558,7 +3346,6 @@ function _updateOpposedToggle(container, entries) {
     }
   }
 
-  // Sieger/Verlierer/Gleichstand am Token-Bild markieren
   _updateOpposedRings(container, entries);
 }
 
@@ -3568,7 +3355,6 @@ function _updateOpposedToggle(container, entries) {
  * Bei Benny-Reroll werden alte Klassen entfernt und neu gesetzt.
  */
 function _updateOpposedRings(container, entries) {
-  // Alle bestehenden Ring-Klassen erst mal entfernen (falls Reroll)
   container.querySelectorAll(".adr-opposed-portrait").forEach(img => {
     img.classList.remove("adr-opposed-winner", "adr-opposed-loser", "adr-opposed-tie");
   });
@@ -3595,23 +3381,11 @@ function _updateOpposedRings(container, entries) {
 /**
  * Clientseitige Lokalisierung der Chat-Nachricht.
  *
- * Hintergrund: Foundry rendert hbs-Templates beim Erzeugen der Chat-Message
- * EINMAL — in der Sprache des Erstellers (meist der GM). Das gerenderte HTML
- * wird mit der Nachricht gespeichert und allen Clients ausgeliefert. Spieler
- * mit anderer Sprache sehen daher Strings in der GM-Sprache.
- *
- * Dieser Helper läuft pro Client beim Rendern der Nachricht und überschreibt
- * die sichtbaren Infotexte mit der lokalen Sprache des Lesers:
- *
- *   1. Trait-Die-Label („W4" → „d4" oder umgekehrt) per
- *      `adr-request-die-label`/`adr-dramatic-die`-Span, anhand
- *      `entry.traitDie` aus den Flags + lokaler `diePrefix`.
- *   2. Roll-Button-Text (Würfel-Emoji bleibt vorne).
- *   3. Status-Element (Pending) — Complete wird unten separat behandelt,
- *      wenn alle gewürfelt haben.
- *
- * Skill-/Attribut-Namen werden NICHT lokalisiert (kommen aus den
- * Actor-Daten, sind kein Modul-Infotext).
+ * Foundry rendert das Template einmal in der Sprache des Erstellers und
+ * persistiert das HTML. Dieser Helper überschreibt beim Rendern pro Client
+ * die Infotexte (Modifikator-Label, Benny-Tooltips, Trait-Die-Label,
+ * Roll-Button, Pending-Status) mit der Sprache des Betrachters.
+ * Skill-/Attribut-Namen stammen aus den Actor-Daten und bleiben unangetastet.
  */
 function _localizeRequestStrings(li, flags) {
   if (!flags?.entries) return;
@@ -3620,22 +3394,15 @@ function _localizeRequestStrings(li, flags) {
   const localRollText = game.i18n.localize(`${ADR.ID}.requestRoll.chatRollButton`);
 
   // ── Modifikator-Label (alle Modi, auch Dramatic-Header) ──
-  // Template hat statisches "{{localize ... modifierLabel}}" an mehreren
-  // Stellen (Dramatic-Header, Single/Group, Opposed) — alle verwenden die
-  // Klasse .adr-request-mod-label.
   const localModLabel = game.i18n.localize(`${ADR.ID}.requestRoll.modifierLabel`);
   for (const el of li.querySelectorAll(".adr-request-mod-label")) {
     el.textContent = localModLabel;
   }
 
-  // ── Benny-Tooltips (alle Modi) ──
-  // Template setzt title abhängig von "Patzer"-Klasse statisch. Hier neu setzen
-  // mit lokalisierten Strings. .adr-not-mine bekommt seinen Tooltip woanders
-  // (chatNoPermission) und wird hier ausgespart.
+  // ── Benny-Tooltips (alle Modi); .adr-not-mine bekommt seinen Tooltip (chatNoPermission) woanders ──
   const localBennyTip = game.i18n.localize(`${ADR.ID}.requestRoll.bennyTooltip`);
   const localBennyTipNPC = game.i18n.localize(`${ADR.ID}.requestRoll.bennyTooltipNPC`);
   const localBennyNoTip = game.i18n.localize(`${ADR.ID}.chat.critical-failure-no-benny`);
-  // Lookup actorId → isNPC für gezieltes Tooltip-Setzen
   const npcMap = new Map();
   for (const e of flags.entries) npcMap.set(e.actorId, !!e.isNPC);
   for (const btn of li.querySelectorAll(".adr-benny-btn")) {
@@ -3649,7 +3416,6 @@ function _localizeRequestStrings(li, flags) {
   }
 
   // ── Trait-Die-Label (Single/Group/Opposed + Dramatic) ──
-  // Pro actorId: alle Span-Treffer mit `${prefix}${entry.traitDie}` neu setzen.
   for (const entry of flags.entries) {
     if (entry?.traitDie == null) continue;
     const newLabel = `${localDiePrefix}${entry.traitDie}`;
@@ -3664,18 +3430,14 @@ function _localizeRequestStrings(li, flags) {
     }
   }
 
-  // ── Roll-Button-Text (nur ungerollte) ──
-  // Gerollte Buttons haben `adr-rolled` und wurden von _updateEntryDOM /
-  // _buildResultHTML mit dem Ergebnis befüllt — die NICHT anfassen.
+  // ── Roll-Button-Text (nur ungerollte; gerollte tragen das Ergebnis) ──
   const rollBtns = li.querySelectorAll(".adr-roll-btn:not(.adr-rolled)");
   for (const btn of rollBtns) {
     btn.innerHTML = `🎲 ${localRollText}`;
   }
 
-  // ── Status: Pending ──
-  // Complete wird vom renderChatMessageHTML-Hook gesetzt wenn alle fertig.
-  // Wenn noch nicht alle fertig: lokalen Pending-Text setzen. Bei Dramatic
-  // entfällt das (eigene Statuszeile via dramaticStatusHTML).
+  // ── Status: Pending (Complete setzt der renderChatMessageHTML-Hook;
+  // Dramatic hat eine eigene Statuszeile) ──
   if (flags.mode !== "dramatic") {
     const allDone = flags.entries.every(e => e.result !== null);
     if (!allDone) {
@@ -3719,17 +3481,14 @@ function _refreshRequestChatHTML(message) {
     }
   }
 
-  // Gruppenprobe: gesammelter Toggle
   if (isGroup) {
     _updateGroupToggle(li, flags.entries);
   }
 
-  // Vergleichende Probe: gesammelter Toggle
   if (isOpposed) {
     _updateOpposedToggle(li, flags.entries);
   }
 
-  // Prüfe ob alle fertig
   const allDone = flags.entries.every(e => e.result !== null);
   if (allDone) {
     const statusEl = li.querySelector(".adr-request-status");
@@ -3740,7 +3499,6 @@ function _refreshRequestChatHTML(message) {
     }
   }
 
-  // Nach jedem Update den Chat nachziehen, damit die expandierte Nachricht vollständig sichtbar bleibt
   _scrollChatToEntry(li);
 }
 
@@ -3763,10 +3521,8 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
   const li = html.closest("li.chat-message") ?? html;
   li.classList.add("adr-chat", "adr-request-roll-chat");
 
-  // ── Theme aus dem "chatDesign"-Dropdown ──
-  // "modern" → SciFi-Optik, sonst klassische Optik. Probenanforderungs-
-  // Karten sind eine ADR-Eigenfunktion ohne System-Pendant und werden
-  // daher auch bei "standard" weiter als ADR-Karte gerendert (Fantasy-Optik).
+  // ── Theme aus "chatDesign": Probenanforderungs-Karten haben kein System-Pendant
+  // und werden auch bei "standard" als ADR-Karte gerendert ──
   const scifi = game.settings.get(ADR.ID, "chatDesign") === "modern";
   if (scifi) li.classList.add("scifi");
 
@@ -3812,11 +3568,8 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
     li.classList.add("adr-group-roll");
   }
 
-  // ── Self-Heal: alte/gecachte Nachrichten mit fehlerhafter Modifikator-Anzeige reparieren ──
-  // Foundry speichert den gerenderten Chat-Inhalt als HTML. Wenn eine Nachricht vor einem
-  // Code-Fix erstellt wurde und der Modifikator damals als NaN/Sonderwert ins HTML kam,
-  // bleibt das HTML erhalten — auch nach dem Fix. Hier wird die Anzeige beim erneuten
-  // Rendern der Nachricht aus dem (sanitisierten) flags.modifier neu aufgebaut.
+  // ── Self-Heal: Foundry persistiert das gerenderte HTML; eine Modifikator-Anzeige
+  // mit NaN wird aus flags.modifier neu aufgebaut ──
   _selfHealModifierDisplay(li, flags);
 
   for (const entry of flags.entries) {
@@ -3832,9 +3585,8 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
       rollBtn.title = game.i18n.localize(`${ADR.ID}.requestRoll.chatNoPermission`);
     }
 
-    // Benny-Button für Nicht-Owner (und Nicht-SL) ausgrauen — gleiche Behandlung
-    // wie der grüne Würfel-Button. Wird auch nach dem Wurf angewendet, damit der
-    // Benny nicht plötzlich hervorgehoben dargestellt wird.
+    // Benny-Button für Nicht-Owner ausgrauen — auch nach dem Wurf, damit er
+    // nicht plötzlich hervorgehoben erscheint
     const bennyBtn = li.querySelector(`[data-action="adr-use-benny"][data-actor-id="${entry.actorId}"]`);
     if (bennyBtn && !isMine) {
       bennyBtn.classList.add("adr-not-mine");
@@ -3885,12 +3637,10 @@ export async function createDramaticTaskMessageData(participants, settings) {
     ? Number(settings.targetMarkers)
     : markersPerParticipant * participants.length;
 
-  // Deck einmalig pro Dramatischer Aufgabe erstellen und persistent in flags ablegen.
-  // Karten werden runde für runde gezogen; bei leerem Deck kommentarlos neu gemischt.
+  // Ein Deck pro Dramatischer Aufgabe, persistiert in den Flags; Karten werden
+  // Runde für Runde gezogen, bei leerem Deck wird neu gemischt.
   const deck = createShuffledDeck();
 
-  // entries mit leerer history + initialem roundState (Runde 1, Karten werden
-  // von dealDramaticRound aus dem Deck gezogen).
   const baseEntries = participants.map(p => ({
     ...foundry.utils.deepClone(p),
     history: [],

@@ -11,13 +11,10 @@ import {
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
 /**
- * Baut die HTML-Struktur für den "Versteckter Wurf"-Hinweistext.
- * Jede Zeile (durch \n im i18n-String getrennt) wird als eigenes <div>
- * (nativ Block-Level) mit Inline-Styles gerendert — damit der Umbruch
- * unabhängig von gecachten/kollidierenden CSS-Regeln immer wirkt.
- * Die erste Zeile (`~ Label ~`) bekommt zusätzlich `white-space: nowrap`,
- * damit sie nie mitten in der Beschriftung umbricht — auch nicht bei
- * kleiner Schriftart oder schmalem Chat. Folgezeilen können normal umbrechen.
+ * HTML für den Hinweistext eines verdeckten Wurfs. Jede Zeile (\n im
+ * i18n-String) wird als eigenes <div> mit Inline-Styles gerendert, damit der
+ * Umbruch unabhängig von kollidierenden CSS-Regeln anderer Module wirkt.
+ * Die erste Zeile (`~ Label ~`) erhält `white-space: nowrap`.
  *
  * @param {string} key  hiddenInfo-Key, z.B. "gmRoll", "blindRoll", "selfRoll"
  * @returns {string}    HTML-Fragment
@@ -33,29 +30,23 @@ export function buildHiddenInfoHTML(key) {
 }
 
 /**
- * Würfel-Modifikator passend zum „Explosionswürfel"-Dropdown (Setting
- * `explodingMode`):
- *   - "once" → "xo"  (Foundry: Würfel explodiert genau einmal)
- *   - sonst  → "x"   (mehrfach/rekursiv explodierend)
- * Einzige Quelle der Wahrheit für reguläre Würfe UND die Reroll-Rebuilds.
+ * Foundry-Würfelmodifikator zum Setting `explodingMode`: "xo" (genau einmal
+ * explodieren) bzw. "x" (rekursiv). Einzige Quelle für Erstwurf und
+ * Reroll-Rebuild.
  */
 export function adrExplodingModifier() {
   return game.settings.get(ADR.ID, ADR.CONFIG_EXPLODING_MODE) === "once" ? "xo" : "x";
 }
 
 /**
- * Baut die Einzelergebnis-Anzeige eines Würfel-Terms: pro Original-Würfel
- * eine via <sup>ex</sup> verkettete Explosionskette plus min/max-CSS-Klasse.
+ * Einzelergebnis-Anzeige eines Würfel-Terms: pro Original-Würfel eine mit
+ * <sup>ex</sup> verkettete Explosionskette plus min/max-CSS-Klasse.
  *
- * Wichtig: Foundry hängt Explosionswürfel ans ENDE des `results`-Arrays an,
- * NICHT direkt hinter ihren Elternwürfel. Bei Würfen mit mehreren Würfeln
- * in einem Term (z. B. 6W4) ergäbe eine reine „aufeinanderfolgende
- * explodierte Würfel"-Verkettung daher falsche Gruppen. Da Foundrys
- * Explosionsschleife streng in Array-Reihenfolge läuft und pro Explosion
- * genau einen Würfel anhängt, entspricht der k-te explodierte Würfel
- * (in Array-Reihenfolge) dem k-ten angehängten Explosionswürfel — damit
- * lässt sich die Eltern-Kind-Zuordnung exakt rekonstruieren (gilt für
- * mehrfaches wie einmaliges Explodieren gleichermaßen).
+ * Foundry hängt Explosionswürfel ans Ende des `results`-Arrays an, nicht
+ * hinter ihren Elternwürfel. Da die Explosionsschleife in Array-Reihenfolge
+ * läuft und pro Explosion genau einen Würfel anhängt, gehört der k-te
+ * explodierte Würfel zum k-ten angehängten Explosionswürfel (gilt für
+ * einmaliges wie mehrfaches Explodieren).
  *
  * @param {object} dieTerm  Foundry-Würfel-Term (mit .number, .faces, .results)
  * @returns {{value:string, display:string, class:string}[]}
@@ -66,15 +57,14 @@ export function adrBuildDieResults(dieTerm) {
   const faces = dieTerm.faces;
   const n = dieTerm.number;
 
-  // Eltern-Kind-Zuordnung: jeder explodierte Würfel bekommt – in
-  // Array-Reihenfolge – den nächsten angehängten Explosionswürfel.
+  // Jeder explodierte Würfel bekommt in Array-Reihenfolge den nächsten
+  // angehängten Explosionswürfel als Kind.
   let childPtr = n;
   const childOf = new Map();
   for (let i = 0; i < results.length; i++) {
     if (results[i].exploded) childOf.set(i, childPtr++);
   }
 
-  // Pro Original-Würfel die Kette über die childOf-Verkettung einsammeln.
   const out = [];
   for (let i = 0; i < n; i++) {
     const chain = [];
@@ -87,9 +77,8 @@ export function adrBuildDieResults(dieTerm) {
     if (chain.includes(1)) cssClass = "min";
     if (chain.includes(faces)) cssClass = "max";
     const display = chain.join("<sup class='adr-ex'>ex</sup>");
-    // „Höchster"/„Niedrigster" (kh/kl): Foundry markiert nicht gewertete
-    // Würfel mit discarded=true — im Chat durchgestrichen, bei der
-    // Einsen-Regel nicht mitgezählt.
+    // kh/kl: Foundry markiert nicht gewertete Würfel mit discarded=true
+    // (im Chat durchgestrichen, bei der Einsen-Regel nicht mitgezählt).
     const discarded = !!results[i].discarded;
     if (discarded) cssClass = `${cssClass} adr-discarded`.trim();
     out.push({ value: display, display, class: cssClass, discarded });
@@ -104,16 +93,15 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
   static SELF_ROLL = "makeSelfRoll";
   static STANDARD_DICE = ["d2","d4","d6","d8","d10","d12","d20"];
 
-  // Grenzen für den händischen Modifikator-Eingabewert (zweistellig + Vorzeichen).
-  // Identisch zu den Werten im Probenanforderungsfenster (adr-request-roll-form.js).
+  // Muss mit den Grenzen im Probenanforderungsfenster (adr-request-roll-form.js) übereinstimmen.
   static MODIFIER_MIN = -99;
   static MODIFIER_MAX = 99;
 
 
   /** @override */
   static DEFAULT_OPTIONS = {
-    // Modul-Präfix in der Element-ID — eine generische ID wie "dice-form"
-    // kollidiert mit anderen Modulen (CSS-Regeln stylen sich gegenseitig um)
+    // Modul-Präfix in der Element-ID: eine generische ID wie "dice-form"
+    // kollidiert mit CSS-Regeln anderer Module.
     id: "adr-dice-form",
     classes: ["argas-dice-roller-window"],
     window: {
@@ -139,12 +127,10 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
 
   constructor(opts = {}) {
     super(opts);
-    // Verdeckte Würfe starten öffentlich. Beim Öffnen setzt
-    // _resetVolatileSettings() ohnehin auf die Defaults zurück.
     this.hiddenType = null;
     this.isExploding = false;
     this.isWildDie = false;
-    // „Höchster"/„Niedrigster": null | "kh" | "kl" (flüchtig, wie Wild Die).
+    // „Höchster"/„Niedrigster": null | "kh" | "kl".
     this.keepMode = null;
     this.showKeepToggle = game.settings.get(ADR.ID, ADR.CONFIG_KEEP_DICE);
     // Bonus-/Strafwurf (Call of Cthulhu): null | "bonus" | "penalty", Zusatzwürfel 1 oder 2.
@@ -159,25 +145,20 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
     this.enableFirstColumn = game.settings.get(ADR.ID, ADR.CONFIG_1ST_COLUMN);
     this.closeFormOnRoll = game.settings.get(ADR.ID, ADR.CONFIG_CLOSE_FORM);
     this.diceTypes = game.settings.get(ADR.ID, ADR.CONFIG_DICE_TYPES);
-    // Wild-Die-Schaltfläche: SL-Setting im Untermenü „Angezeigte Schaltflächen"
-    // (in jedem System verfügbar; Standard nur in SWADE an).
+    // Wild-Die-Schaltfläche ist in jedem System verfügbar (Standard nur in SWADE an).
     this.showWildToggle = game.settings.get(ADR.ID, ADR.CONFIG_WILD_DIE);
     this.showModifiers = game.settings.get(ADR.ID, ADR.CONFIG_MODIFIERS);
-    // Über die Buttons ausgewählte Modifikatoren (nur für Button-Optik +
-    // Toggle-Logik). Die effektive Wurfsumme liefert this.manualModifier.
+    // Über Buttons gewählte Modifikatoren – nur für Button-Optik und Toggle-
+    // Logik. Alleinige Quelle für den Wurf ist manualModifier (Wert des
+    // händischen Eingabefelds, bei Button-Klicks aus der Button-Summe gespiegelt).
     this.modifiers = [];
-    // Effektiver Modifikator (Wert des händischen Eingabefelds). Wird bei
-    // jedem Button-Klick aus der Button-Summe gespiegelt und ist die
-    // alleinige Quelle für den Wurf (_getEffectiveModifier()).
     this.manualModifier = 0;
-    // true, sobald der GM von Hand ins Feld tippt → Buttons werden gesperrt.
-    // Wird wieder false, sobald das Feld geleert wird.
+    // true, solange eine händische Eingabe im Feld steht; sperrt die Buttons.
     this.modifierLocked = false;
 
     // ── Multi-Würfel-Auswahl (Strg+Klick) ──
-    // Auswahl überlebt Re-Render (z. B. nach Maximize), daher als
-    // stabile Map<string, {type, count}> mit Key "type|count" — nicht
-    // als Set<HTMLElement>, denn die Elemente werden bei Re-Render
+    // Map mit Key "type|count" statt Set<HTMLElement>: die Auswahl muss
+    // Re-Renders (z. B. nach Maximize) überleben, die Elemente werden dabei
     // ausgetauscht.
     this._multiSelection = new Map();
     this._ctrlActive = false;
@@ -195,7 +176,7 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   /* --------------------------------------------------------- */
-  /*  Template-Kontext  (ersetzt V1 getData)                   */
+  /*  Template-Kontext                                         */
   /* --------------------------------------------------------- */
 
   /** @override */
@@ -204,10 +185,8 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
     const offset = this.enableFirstColumn ? 0 : 1;
     const totalCols = maxCount - offset;
 
-    // hiddenType ist reiner Fenster-Zustand: gesetzt vom Klick
-    // (_setHiddenRoll), beim Öffnen über _resetVolatileSettings() auf
-    // "öffentlich" zurückgesetzt. Bewusst KEIN Bezug zu einem Foundry-
-    // Würfelmodus-Setting — core.rollMode ist seit v14 deprecatet.
+    // hiddenType ist reiner Fenster-Zustand ohne Bezug zu einem Foundry-
+    // Würfelmodus-Setting (core.rollMode ist seit v14 deprecatet).
 
     return {
       enableHiddenRolls: this.enableHiddenRolls,
@@ -216,7 +195,6 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
       showKeepToggle: this.showKeepToggle,
       showCthulhuToggle: this.showCthulhuToggle,
       showModifiers: this.showModifiers,
-      // Anzeigewert für das händische Modifikator-Feld (State-Erhalt bei Re-Render).
       modifierDisplay: this._formatModifierForInput(this.manualModifier),
       user: game.user,
       enableFateRollButton: game.settings.get(ADR.ID, "enableFateRollButton"),
@@ -271,32 +249,28 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
       winHeader.appendChild(span);
     }
 
-    // Scale + Position initial setzen, Observer für spätere Änderungen starten
     this._applyUiScale();
     this._setupUiScaleObserver();
 
-    // Window-Level-Listener für Strg-Tastendruck einrichten (Multi-Würfel-
-    // Auswahl). Window-Listener statt Form-Listener, damit Strg auch dann
-    // detektiert wird, wenn der Fokus nicht im Würfelfenster liegt.
+    // Strg-Listener auf window statt auf dem Formular, damit Strg auch ohne
+    // Fokus im Würfelfenster erkannt wird.
     this._setupCtrlListeners();
   }
 
   /* --------------------------------------------------------- */
   /*  UI-Scaling: CSS-Klasse mit !important (nötig wegen       */
-  /*  ApplicationV2) + MutationObserver auf --ui-scale Element */
-  /*  für Live-Updates (wie Day-Night Slider)                  */
+  /*  ApplicationV2) + MutationObserver auf dem --ui-scale-    */
+  /*  Element für Live-Updates                                 */
   /* --------------------------------------------------------- */
 
   /** Scale lesen und per CSS-Variable + Klasse anwenden */
   _applyUiScale() {
-    // Primär: CSS-Variable --ui-scale (wie Day-Night Slider)
     const scaleEl = this._uiScaleEl ?? document.documentElement;
     let scale = parseFloat(getComputedStyle(scaleEl).getPropertyValue("--ui-scale")) || 0;
-    // Fallback: game.settings (falls CSS-Variable nicht verfügbar)
     if (!scale) scale = game.settings.get("core", "uiConfig")?.uiScale ?? 1;
 
     const el = this.element;
-    // CSS-Klasse + Variable: wird per !important-Regel angewendet (übertrumpft ApplicationV2)
+    // Die Klasse greift per !important-Regel (übertrumpft ApplicationV2).
     el.style.setProperty("--adr-ui-scale", scale);
     if (scale !== 1) {
       el.classList.add("adr-scaled");
@@ -304,9 +278,8 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
       el.classList.remove("adr-scaled");
     }
 
-    // Position rechts neben der Toolbar
-    // getBoundingClientRect liefert visuelle (post-transform) Koordinaten
-    // Offsets mitskalieren, damit der Abstand proportional bleibt
+    // Position rechts neben der Toolbar. getBoundingClientRect liefert
+    // post-transform-Koordinaten; die Offsets werden mitskaliert.
     const toolbar = document.querySelector("#ui-left > *:first-child");
     if (toolbar) {
       const rect = toolbar.getBoundingClientRect();
@@ -316,8 +289,7 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /** Elternelement mit --ui-scale finden und MutationObserver starten */
   _setupUiScaleObserver() {
-    // Dasselbe Element wie der Day-Night Slider:
-    // ui-top → nächstes Elternelement das --ui-scale im style hat
+    // Nächstes Elternelement von #ui-top, das --ui-scale im style-Attribut setzt.
     this._uiScaleEl = document.getElementById("ui-top")
       ?.closest('[style*="--ui-scale"]') ?? null;
 
@@ -331,8 +303,8 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   /**
-   * Beim Minimieren flüchtige Einstellungen zurücksetzen.
-   * Override greift bei Doppelklick auf Titelleiste, Minimize-Button und API.
+   * Beim Minimieren flüchtige Einstellungen zurücksetzen (greift bei
+   * Doppelklick auf die Titelleiste, Minimize-Button und API).
    */
   async minimize() {
     this._resetVolatileSettings();
@@ -340,10 +312,8 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   /**
-   * Beim Wiederherstellen erst Foundrys Restore-Animation komplett durchlaufen
-   * lassen, dann das DOM neu rendern. Würde render() während der Animation
-   * laufen, wird das Element unter der Animation ausgetauscht und der
-   * Übergang bricht sichtbar ab.
+   * Erst Foundrys Restore-Animation abwarten, dann neu rendern: ein render()
+   * während der Animation tauscht das Element aus und bricht den Übergang ab.
    */
   async maximize() {
     const result = await super.maximize();
@@ -352,12 +322,9 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   /**
-   * Beim Öffnen aus geschlossenem Zustand die flüchtigen Würfel-
-   * Einstellungen auf die in den Spieleinstellungen festgelegten
-   * Defaults zurücksetzen. Bei Re-Renders eines bereits offenen
-   * Fensters (`rendered === true`, z. B. nach Maximize oder einer
-   * Setting-Änderung) wird NICHT zurückgesetzt — sonst ginge der
-   * Zustand mitten in der Bedienung verloren.
+   * Flüchtige Einstellungen nur beim Öffnen aus geschlossenem Zustand
+   * zurücksetzen. Re-Renders eines offenen Fensters (Maximize, Setting-
+   * Änderung) behalten den Zustand.
    * @override
    */
   async render(...args) {
@@ -366,22 +333,17 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   /**
-   * Setzt die flüchtigen Würfel-Einstellungen (Modifikatoren, verdeckte
-   * Würfe, Wild Die, Explosionswürfel) auf ihre Defaults zurück.
-   * Wird beim Öffnen, Minimieren und Schließen aufgerufen.
+   * Setzt die flüchtigen Würfel-Einstellungen auf ihre Defaults zurück
+   * (beim Öffnen, Minimieren und Schließen).
    */
   _resetVolatileSettings() {
-    // Verdeckte Würfe: zurück auf "öffentlich". Fester Default — es gibt
-    // kein Game-Setting dafür; ein Zurücklesen aus core.rollMode wäre
-    // unter Foundry v14 zudem unzuverlässig.
+    // Verdeckte Würfe haben kein Setting; ein Zurücklesen aus core.rollMode
+    // wäre unter Foundry v14 unzuverlässig.
     this.hiddenType = null;
-    // Explosionswürfel: auf den in den Spieleinstellungen festgelegten
-    // Default. Frisch aus dem Setting gelesen, damit immer der aktuell
-    // konfigurierte Wert greift. Ist die Schaltfläche ausgeblendet
-    // (explodingMode === "off"), bleibt isExploding zwingend aus.
+    // Frisch aus dem Setting gelesen, damit der aktuell konfigurierte Wert
+    // greift. Bei ausgeblendeter Schaltfläche bleibt isExploding aus.
     this.isExploding = this.showExplodingToggle
       && !!game.settings.get(ADR.ID, ADR.CONFIG_EXPLODING_DEFAULT);
-    // Modifikatoren und Wild Die haben keinen Setting-Default → aus.
     this.isWildDie = false;
     this.keepMode = null;
     this.cthulhuMode = null;
@@ -389,7 +351,6 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
     this.modifiers = [];
     this.manualModifier = 0;
     this.modifierLocked = false;
-    // Multi-Auswahl ist flüchtig.
     this._clearMultiSelection();
   }
 
@@ -413,27 +374,27 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
     super._onRender(context, options);
     const el = this.element;
 
-    // Verdeckte Würfe – Checkboxen
+    // Verdeckte Würfe
     el.querySelectorAll("input[name='hiddenRoll']").forEach(input => {
       input.addEventListener("change", this._setHiddenRoll.bind(this));
     });
 
-    // Explosionswürfel (schließt „Höchster/Niedrigster" aus)
+    // Explosionswürfel
     const exploding = el.querySelector("#explodingDice");
     if (exploding) exploding.addEventListener("change", ev => {
       this.isExploding = ev.target.checked;
       if (this.isExploding) { this._setKeepMode(null); this._setCthulhu(null); }
     });
 
-    // Wild Die (schließt „Höchster/Niedrigster" aus)
+    // Wild Die
     const wildDie = el.querySelector("#wildDie");
     if (wildDie) wildDie.addEventListener("change", ev => {
       this.isWildDie = ev.target.checked;
       if (this.isWildDie) { this._setKeepMode(null); this._setCthulhu(null); }
     });
 
-    // „Höchster"/„Niedrigster" — höchstens einer aktiv, schließt
-    // Explodieren und Wild Die aus (in keinem Ursprungssystem kombiniert).
+    // „Höchster"/„Niedrigster" schließt Explodieren und Wild Die aus
+    // (in keinem Ursprungssystem kombiniert).
     el.querySelectorAll("input[name='keepMode']").forEach(input => {
       input.addEventListener("change", ev => {
         const t = ev.currentTarget;
@@ -446,8 +407,8 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
     });
 
     // Bonus-/Strafwurf (Call of Cthulhu): 1. Klick = ein Zusatzwürfel,
-    // 2. Klick = zwei, 3. Klick = aus. Der Browser hat die Checkbox beim
-    // zweiten Klick schon abgewählt — wir setzen sie zurück und zählen hoch.
+    // 2. Klick = zwei, 3. Klick = aus. Beim zweiten Klick hat der Browser die
+    // Checkbox bereits abgewählt; _setCthulhu setzt sie wieder auf aktiv.
     el.querySelectorAll("input[name='cthulhuMode']").forEach(input => {
       input.addEventListener("change", ev => {
         const t = ev.currentTarget;
@@ -463,7 +424,7 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
       });
     });
 
-    // Würfeln (mit Strg+Klick-Detection für Multi-Würfel-Auswahl)
+    // Würfeln
     el.querySelectorAll(".rollable").forEach(btn => {
       btn.addEventListener("click", this._handleDiceClick.bind(this));
     });
@@ -473,33 +434,27 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
       btn.addEventListener("click", this._onModifierClick.bind(this));
     });
 
-    // Modifier-Zustand wiederherstellen (nach Re-Render)
+    // Modifikator-Zustand nach Re-Render wiederherstellen
     el.querySelectorAll(".adr-modifier").forEach(btn => {
       const mod = Number(btn.dataset.modifier);
       if (this.modifiers.includes(mod)) btn.classList.add("selected");
     });
 
     // ── Händisches Modifikator-Eingabefeld ──
-    // Ersetzt die früheren ±8-Buttons. Funktioniert wie das Feld im
-    // Probenanforderungsfenster: eine Zahl ohne Vorzeichen wird beim
-    // Verlassen des Felds automatisch mit "+" versehen.
+    // Verhält sich wie das Feld im Probenanforderungsfenster: eine Zahl ohne
+    // Vorzeichen erhält beim Verlassen des Felds ein "+".
     const modInput = el.querySelector("[data-action='set-manual-modifier']");
     if (modInput) {
-      // Tippen: State aktualisieren. Jede händische Eingabe sperrt die
-      // Buttons; ein geleertes Feld gibt sie wieder frei.
       modInput.addEventListener("input", (ev) => {
         const v = String(ev.currentTarget.value).trim();
         if (v === "") {
-          // Feld geleert → Buttons wieder freigeben, kein Modifikator.
           this.modifierLocked = false;
           this.manualModifier = 0;
         } else {
-          // Händische Eingabe → Buttons sperren und ihre Auswahl verwerfen.
           this.modifierLocked = true;
           this.modifiers = [];
           this.element?.querySelectorAll(".adr-modifier.selected")
             .forEach(b => b.classList.remove("selected"));
-          // Wert parsen und auf [MODIFIER_MIN .. MODIFIER_MAX] begrenzen.
           // Zwischenstände wie "+" oder "-" sowie nicht parsbare Eingaben
           // ergeben 0; das Feld behält dabei seinen sichtbaren Text.
           const raw = Number(v);
@@ -515,14 +470,12 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
         this._refreshModifierButtonsDisabled();
         this._syncModActiveClass();
       });
-      // Verlassen des Felds: Anzeige aufs kanonische Format normalisieren
-      // ("2" → "+2"). Eine evtl. Begrenzung wird hier sichtbar ("999" → "+99").
+      // Beim Verlassen Anzeige normalisieren ("2" → "+2"); eine Begrenzung
+      // wird hier sichtbar ("999" → "+99").
       modInput.addEventListener("blur", (ev) => {
         const formatted = this._formatModifierForInput(this.manualModifier);
         ev.currentTarget.value = formatted;
-        // Falls die Normalisierung das Feld leert (z. B. nach unparsbarer
-        // Eingabe oder einer "0" → manualModifier 0), die Buttons wieder
-        // freigeben — leeres Feld bedeutet immer "Buttons benutzbar".
+        // Leeres Feld (unparsbare Eingabe, "0") bedeutet immer: Buttons benutzbar.
         if (formatted === "" && this.modifierLocked) {
           this.modifierLocked = false;
           this._refreshModifierButtonsDisabled();
@@ -531,14 +484,10 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
       });
     }
 
-    // Gesperrt-Optik der Buttons nach (Re-)Render anwenden.
     this._refreshModifierButtonsDisabled();
-    // Münz-Sperroptik mit dem wiederhergestellten Zustand abgleichen.
     this._syncModActiveClass();
 
-    // Multi-Selection visuell wiederherstellen (nach Re-Render). State ist
-    // in this._multiSelection (Map keyed nach "type|count") — buttons werden
-    // anhand der data-Attribute abgeglichen.
+    // Multi-Auswahl nach Re-Render wiederherstellen
     el.querySelectorAll(".rollable").forEach(btn => {
       const key = `${btn.dataset.diceType}|${btn.dataset.diceRoll}`;
       if (this._multiSelection.has(key)) btn.classList.add("adr-multi-selected");
@@ -558,10 +507,9 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
     } else {
       this.hiddenType = null;
     }
-    // hiddenType ist reiner Fenster-Zustand. Es wird bewusst NICHT in ein
-    // Foundry-Setting geschrieben: core.rollMode ist seit v14 zugunsten
-    // von core.messageMode deprecatet (Kompatibilität fällt mit v16 weg).
-    // Den verdeckten Wurf setzt _rollDie ohnehin direkt über whisper/blind.
+    // hiddenType wird nicht in ein Foundry-Setting geschrieben: core.rollMode
+    // ist seit v14 zugunsten von core.messageMode deprecatet (fällt mit v16
+    // weg). Der verdeckte Wurf läuft direkt über whisper/blind.
   }
 
   /** Explodieren und Wild Die abschalten (State + Checkboxen) und Strg-Auswahl verwerfen. */
@@ -595,9 +543,7 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   _onModifierClick(event) {
-    // Bei händischer Eingabe sind die Buttons gesperrt — Klick ignorieren.
-    // (CSS unterbindet den Klick bereits via pointer-events; dies ist die
-    // zweite Absicherung auf JS-Ebene.)
+    // CSS unterbindet den Klick bereits via pointer-events; zweite Absicherung.
     if (this.modifierLocked) return;
 
     const el = event.currentTarget;
@@ -609,9 +555,8 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
       el.classList.add("selected");
       this.modifiers.push(mod);
     }
-    // Button-Summe ins händische Feld spiegeln. Das direkte Setzen von
-    // `.value` löst KEIN input-Event aus — die Buttons bleiben also
-    // entsperrt, anders als bei echter Tastatureingabe.
+    // Direktes Setzen von `.value` löst kein input-Event aus; die Buttons
+    // bleiben entsperrt, anders als bei echter Tastatureingabe.
     this.manualModifier = this.modifiers.reduce((a, b) => a + b, 0);
     const inp = this.element?.querySelector("[data-action='set-manual-modifier']");
     if (inp) inp.value = this._formatModifierForInput(this.manualModifier);
@@ -619,29 +564,21 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   /**
-   * Formatiert einen Modifikator-Zahlenwert für die Anzeige im Eingabefeld:
-   * 0 (oder ungültig) → "" (Platzhalter "0" wird sichtbar), positive Werte
-   * mit explizitem "+", negative mit "-".
+   * Modifikator für das Eingabefeld: 0 oder ungültig → "" (Platzhalter
+   * wird sichtbar), sonst mit Vorzeichen.
    */
   _formatModifierForInput(n) {
     if (!Number.isFinite(n) || n === 0) return "";
     return n > 0 ? `+${n}` : String(n);
   }
 
-  /**
-   * Liefert den effektiven Modifikator für den Wurf — den händischen
-   * Feldwert, der bei Button-Klicks aus der Button-Summe gespiegelt wird.
-   * Defensiv auf [MODIFIER_MIN .. MODIFIER_MAX] begrenzt.
-   */
+  /** Effektiver Modifikator für den Wurf, auf [MODIFIER_MIN .. MODIFIER_MAX] begrenzt. */
   _getEffectiveModifier() {
     const m = Number.isFinite(this.manualModifier) ? this.manualModifier : 0;
     return Math.max(DiceForm.MODIFIER_MIN, Math.min(DiceForm.MODIFIER_MAX, m));
   }
 
-  /**
-   * Wendet die Sperr-Optik (`adr-modifier-disabled`) auf alle Modifikator-
-   * Buttons an — abhängig davon, ob der GM von Hand ins Feld getippt hat.
-   */
+  /** Sperr-Optik der Modifikator-Buttons mit modifierLocked abgleichen. */
   _refreshModifierButtonsDisabled() {
     this.element?.querySelectorAll(".adr-modifier").forEach(btn => {
       btn.classList.toggle("adr-modifier-disabled", this.modifierLocked);
@@ -649,10 +586,8 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   /**
-   * Hält die Window-Klasse `adr-mod-active` mit dem Modifikator-Zustand
-   * synchron. Steuert die CSS-Sperroptik der Münzzelle (not-allowed-
-   * Cursor + gedämpfte Optik beim Hover), solange ein Modifikator aktiv
-   * ist — Münzwürfe nehmen keine Modifikatoren an.
+   * Window-Klasse `adr-mod-active` steuert die CSS-Sperroptik der Münzzelle,
+   * solange ein Modifikator aktiv ist (Münzwürfe nehmen keine Modifikatoren an).
    */
   _syncModActiveClass() {
     this.element?.classList.toggle("adr-mod-active", this._getEffectiveModifier() !== 0);
@@ -663,16 +598,10 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
   /* --------------------------------------------------------- */
 
   /**
-   * Registriert Window-Level-Listener für Strg-Tastendruck/-Loslassen.
-   * Window statt Form, damit Strg auch ohne Fokus im Würfelfenster greift
-   * (User kann z. B. Strg drücken während Maus über die Buttons fährt,
-   * ohne vorher die Form-Titelleiste anzuklicken).
-   *
-   * Verhalten:
-   *   - keydown mit ctrlKey → CSS-Klasse `adr-ctrl-active` an die Application-
-   *     Root, Hover-Style wird damit orange (CSS-Regel in argas-dice-roller.css).
-   *   - keyup mit Key "Control" → Klasse weg + Wurf auslösen, wenn Auswahl da.
-   *   - window.blur → Klasse weg (Auswahl behalten, User kommt ggf. zurück).
+   * Window-Listener für Strg (greift auch ohne Fokus im Würfelfenster):
+   * keydown setzt `adr-ctrl-active` (orange Hover-Optik, CSS in
+   * argas-dice-roller.css), keyup von "Control" löst den Multi-Pool-Wurf aus,
+   * window.blur entfernt nur die Klasse und behält die Auswahl.
    */
   _setupCtrlListeners() {
     this._onCtrlKeydown = (ev) => {
@@ -682,25 +611,21 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
       this.element.classList.add("adr-ctrl-active");
     };
     this._onCtrlKeyup = (ev) => {
-      // Reagiert auf das Loslassen der Strg-Taste. Bei Tastenkombinationen
-      // (z. B. Strg+Shift) kann ein zweites keyup ohne Control kommen — daher
-      // explizit auf ev.key prüfen, nicht nur auf !ev.ctrlKey.
+      // Bei Tastenkombinationen (z. B. Strg+Shift) kann ein zweites keyup ohne
+      // Control kommen; daher auf ev.key prüfen, nicht nur auf !ev.ctrlKey.
       if (ev.key !== "Control" && ev.ctrlKey) return;
       if (!this._ctrlActive) return;
       this._ctrlActive = false;
       this.element?.classList.remove("adr-ctrl-active");
-      // Auswahl vorhanden? → Multi-Pool-Wurf auslösen.
       if (this._multiSelection.size > 0) {
-        // Fire-and-forget (async). Fehler werden intern geloggt.
         this._rollMultiPool().catch(err => {
           console.error(`${ADR.ID} | Multi-Pool-Wurf-Fehler:`, err);
         });
       }
     };
     this._onCtrlBlur = () => {
-      // Fenster verliert den Fokus während Strg evtl. noch gedrückt ist
-      // (Alt-Tab o. ä.). Visuell zurücksetzen, Auswahl behalten — User kann
-      // beim Zurückkommen Strg neu drücken+loslassen, um zu würfeln.
+      // Fokusverlust bei gedrückter Strg-Taste (Alt-Tab o. ä.): nur die Optik
+      // zurücksetzen, die Auswahl bleibt für erneutes Strg-Drücken erhalten.
       if (this._ctrlActive) {
         this._ctrlActive = false;
         this.element?.classList.remove("adr-ctrl-active");
@@ -721,12 +646,7 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
     this._ctrlActive = false;
   }
 
-  /**
-   * Räumt die Multi-Auswahl auf — sowohl State (Map) als auch Visuals
-   * (entfernt `.adr-multi-selected`-Klassen aus dem DOM). Wird bei normalem
-   * (Nicht-Strg-)Klick aufgerufen, bei Reset/Minimize, und nach dem
-   * Multi-Pool-Wurf selbst.
-   */
+  /** Multi-Auswahl leeren (Map und `.adr-multi-selected`-Klassen). */
   _clearMultiSelection() {
     if (this._multiSelection) this._multiSelection.clear();
     this.element?.querySelectorAll(".adr-col.adr-multi-selected").forEach(el => {
@@ -735,12 +655,9 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   /**
-   * Zentraler Dispatcher für Klicks auf Würfel-Buttons.
-   *
-   * Ohne Strg → bestehende Auswahl verwerfen, sofort `_rollDie` (alter Pfad).
-   * Mit Strg → Toggle der Auswahl (orange Hervorhebung). Münze ist im Multi-
-   *   Modus gesperrt (Spec: produziert binär 0/1, passt nicht in eine
-   *   numerische Mischpool-Summe).
+   * Klick auf einen Würfel-Button: ohne Strg Auswahl verwerfen und sofort
+   * `_rollDie`, mit Strg die Auswahl umschalten. Münze ist im Multi-Modus
+   * gesperrt (binär 0/1, passt nicht in eine Mischpool-Summe).
    */
   _handleDiceClick(event) {
     const ctrlPressed = !!event.ctrlKey;
@@ -749,17 +666,13 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
     const count = Number(btn.dataset.diceRoll);
 
     if (!ctrlPressed) {
-      // Münze + aktiver Modifikator: Münzwürfe nehmen keine
-      // Modifikatoren an. Statt den Modifikator still zu schlucken,
-      // wird der Wurf blockiert — die Münzzelle zeigt beim Hover bereits
-      // den durchgestrichenen Cursor. Der User soll den Modifikator
-      // bewusst entfernen, bevor er die Münze wirft.
+      // Münzwürfe nehmen keine Modifikatoren an; statt ihn still zu
+      // schlucken, wird der Wurf blockiert.
       if (type === "dc" && this._getEffectiveModifier() !== 0) {
         ui.notifications.warn(game.i18n.localize(`${ADR.ID}.warn.coinNoModifier`));
         return;
       }
-      // Bestehende Multi-Auswahl verwerfen + sofort werfen wie bisher.
-      // _clearMultiSelection schon hier — sonst zeigt der Button-Hover bis
+      // _clearMultiSelection vor dem Wurf, sonst zeigt der Button-Hover bis
       // zum nächsten Frame noch die orange Markierung.
       if (this._multiSelection.size > 0) this._clearMultiSelection();
       return this._rollDie(event);
@@ -768,12 +681,11 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
     event.preventDefault();
     event.stopPropagation();
 
-    // Münze: nicht selektierbar im Multi-Modus
     if (type === "dc") {
       ui.notifications.warn(game.i18n.localize(`${ADR.ID}.warn.coinNotInMulti`));
       return;
     }
-    // Fudge-Würfel (−1/0/+1) ebenfalls nicht — passt nicht in eine Mischpool-Summe.
+    // Fudge-Würfel (−1/0/+1) passen nicht in eine Mischpool-Summe.
     if (adrIsFudge(type)) {
       ui.notifications.warn(game.i18n.localize(`${ADR.ID}.warn.fudgeNotInMulti`));
       return;
@@ -783,7 +695,7 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
       ui.notifications.warn(game.i18n.localize(`${ADR.ID}.warn.keepNotInMulti`));
       return;
     }
-    // Bonus-/Strafwurf ebenfalls nur als einzelner W100.
+    // Bonus-/Strafwurf gilt nur für einen einzelnen W100.
     if (this.cthulhuMode) {
       ui.notifications.warn(game.i18n.localize(`${ADR.ID}.warn.cthulhuNotInMulti`));
       return;
@@ -791,24 +703,18 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
 
     const key = `${type}|${count}`;
     if (this._multiSelection.has(key)) {
-      // Toggle off — entfernt den Würfel aus der Auswahl
       this._multiSelection.delete(key);
       btn.classList.remove("adr-multi-selected");
     } else {
-      // Hinzufügen
       this._multiSelection.set(key, { type, count });
       btn.classList.add("adr-multi-selected");
     }
   }
 
   /**
-   * Extrahiert pro Pool-Kategorie die Einzelergebnisse aus einem Roll mit
-   * mehreren Würfel-Termen. Exploding-Chain-Logik analog zu Einzelwurf:
-   * aufeinanderfolgende explodierte Würfel werden zu einem `<sup>ex</sup>`-
-   * verketteten Display zusammengefasst.
-   *
-   * Rückgabe: `[{ type, count, faces, results: [{value,display,class}, …] }, …]`
-   * (gleiche Reihenfolge wie der Pool im Roll).
+   * Einzelergebnisse pro Pool-Kategorie aus einem Roll mit mehreren
+   * Würfel-Termen, in Pool-Reihenfolge:
+   * `[{ type, count, faces, results: [{value,display,class}, …] }, …]`
    */
   _extractMultiPoolResults(roll, pool) {
     const out = [];
@@ -824,32 +730,22 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   /**
-   * Multi-Pool-Wurf. Sammelt die aktuelle Strg+Klick-Auswahl, konsolidiert
-   * gleiche Würfeltypen (z. B. "2x W4" + "3x W4" → "5x W4"), und wirft den
-   * gesamten Pool auf einmal.
+   * Multi-Pool-Wurf: Strg+Klick-Auswahl konsolidieren (gleiche Würfeltypen
+   * aufaddieren) und den Pool auf einmal werfen.
    *
-   * Sonderfall: nach Konsolidierung nur 1 Kategorie → Pfad zurück in den
-   * normalen Einzelwurf (`_rollDie`), damit die volle Pipeline inkl.
-   * Tweaks-Hook und Patzer-Mechanik greift.
-   *
-   * Bei ≥ 2 Kategorien (echter Multi-Pool):
-   *   - Roll wird als zusammengesetzter Term-Array gebaut (Würfel mit
-   *     `+`-Operatoren dazwischen, dann Modifikator).
-   *   - Wild Die: ein einzelner globaler W6 (explodierend) wie bei Einzelwurf,
-   *     wenn Toggle aktiv.
-   *   - Tweaks-Hook wird übergangen (Spec) — bei großen Mischpools wäre der
-   *     Dialog unübersichtlich. GM bekommt einen Hinweis.
-   *   - Patzer-Mechanik wird übergangen (Spec) — kein Eigenschaftsprobe-
-   *     Charakter bei Mischpools.
+   * Bleibt nur eine Kategorie, läuft der Wurf über `_rollDie`, damit die volle
+   * Pipeline (Tweaks-Hook, Patzer-Mechanik) greift. Bei mehreren Kategorien
+   * werden Tweaks-Hook und Patzer-Mechanik übergangen: Mischpools sind keine
+   * Eigenschaftsprobe, und der Tweaks-Dialog wäre unübersichtlich.
    */
   async _rollMultiPool() {
-    // Snapshot der Auswahl, dann clearen (vor await — Race-Conditions vermeiden,
-    // falls währenddessen ein zweiter Wurf getriggert wird).
+    // Auswahl vor dem ersten await leeren, damit ein zweiter Wurf in der
+    // Zwischenzeit nicht dieselbe Auswahl erneut wirft.
     const rawEntries = Array.from(this._multiSelection.values());
     this._clearMultiSelection();
     if (rawEntries.length === 0) return;
 
-    // Speaker-Check (Gruppen/Fahrzeug nicht erlaubt) — analog `_rollDie`
+    // Gruppen-/Fahrzeug-Akteure sind nicht wurffähig (wie in `_rollDie`).
     const _checkSpeaker = ChatMessage.getSpeaker();
     const _checkActor = game.actors.get(_checkSpeaker.actor);
     if (_checkActor && (_checkActor.type === "vehicle" || _checkActor.type === "group")) {
@@ -857,8 +753,7 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
       return;
     }
 
-    // Konsolidierung: gleiche Typen aufaddieren, Reihenfolge bleibt nach
-    // erster Erwähnung erhalten.
+    // Reihenfolge der Kategorien: nach erster Nennung.
     const consolidated = new Map();
     for (const { type, count } of rawEntries) {
       consolidated.set(type, (consolidated.get(type) || 0) + count);
@@ -868,10 +763,8 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
       return { type, count, faces };
     });
 
-    // Sonderfall: nach Konsolidierung nur 1 Kategorie → behandelt wie
-    // normaler Einzelwurf (volle Pipeline). Pseudo-Event mit dataset
-    // konstruieren, damit `_rollDie` denselben Pfad nimmt wie ein direkter
-    // Button-Klick.
+    // Eine Kategorie: Pseudo-Event, damit `_rollDie` denselben Pfad nimmt
+    // wie ein direkter Button-Klick.
     if (pool.length === 1) {
       const fakeBtn = document.createElement("div");
       fakeBtn.dataset.diceType = pool[0].type;
@@ -886,7 +779,6 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
     const sumMod = this._getEffectiveModifier();
     const isExploding = !!this.isExploding;
 
-    // Term-Array: Würfel + Operator + Würfel + Operator + … + Modifikator
     const terms = [];
     for (let i = 0; i < pool.length; i++) {
       const p = pool[i];
@@ -894,7 +786,7 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
       terms.push(new foundry.dice.terms.Die({
         number: p.count,
         faces: p.faces,
-        modifiers: (isExploding && p.faces !== 100) ? [adrExplodingModifier()] : [],
+        modifiers: isExploding ? [adrExplodingModifier()] : [],
       }));
     }
     if (sumMod !== 0) {
@@ -903,7 +795,7 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
     }
     const mainRoll = await Roll.fromTerms(terms).evaluate();
 
-    // Wild Die (optional, ein einzelner globaler W6)
+    // Wild Die: ein einzelner W6 für den ganzen Pool
     let wildRoll = null;
     if (this.isWildDie) {
       const wildTerms = [new foundry.dice.terms.Die({ number: 1, faces: 6, modifiers: [adrExplodingModifier()] })];
@@ -914,22 +806,17 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
       wildRoll = await Roll.fromTerms(wildTerms).evaluate();
     }
 
-    // Tweaks-Hook wird bei Multi-Pool übergangen (Spec): bei mehreren
-    // Würfel-Kategorien wäre der Bearbeitungs-Dialog unübersichtlich.
+    // Kein Tweaks-Hook bei Mischpools (siehe JSDoc).
 
-    // Einzelergebnisse pro Kategorie (für Detail-Toggle)
     const multiPoolResults = this._extractMultiPoolResults(mainRoll, pool);
-    // Flache Liste für Backward-Compat mit bestehenden Helpern, die
-    // `mainIndividualResults` als flaches Array erwarten.
+    // Flache Liste für Helfer, die `mainIndividualResults` als flaches Array erwarten.
     const mainIndividualResults = multiPoolResults.flatMap(c => c.results);
 
-    // Wild Die-Einzelergebnisse (identisch zur Einzelwurf-Logik)
     let wildIndividualResults = [];
     if (wildRoll?.dice?.length) {
       wildIndividualResults = adrBuildDieResults(wildRoll.dice[0]);
     }
 
-    // Hidden-Roll-Info (analog Einzelwurf)
     let hiddenText = "";
     if (this.hiddenType === DiceForm.GM_ROLL)
       hiddenText = `<div class="adr-hidden-info" data-adr-hidden-key="gmRoll" style="font-size:0.9rem;margin:0;color:#e56917;font-weight:bold;text-align:center;"></div>`;
@@ -938,9 +825,8 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
     else if (this.hiddenType === DiceForm.SELF_ROLL)
       hiddenText = `<div class="adr-hidden-info" data-adr-hidden-key="selfRoll" style="font-size:0.9rem;margin:0;color:#e56917;font-weight:bold;text-align:center;"></div>`;
 
-    // Detail-Toggle: Marker für sprach-empfänger-korrekte client-seitige
-    // Rendering (analog data-adr-i18n / data-adr-hidden-key). Der Inhalt
-    // wird in `renderChatMessageHTML` aus `multiPoolResults` rekonstruiert.
+    // Detail-Toggle nur als Marker; der Inhalt wird in `renderChatMessageHTML`
+    // beim Betrachter aus `multiPoolResults` in dessen Sprache aufgebaut.
     const toggleLabelAttr = `data-adr-i18n="argas-dice-roller.individualResults.toggle"`;
     const resultLines = `<div class="adr-individual-toggle-container">`
       + `<div class="adr-individual-toggle" ${toggleLabelAttr}></div>`
@@ -948,7 +834,6 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
       + `<div class="adr-individual adr-individual-multi" data-adr-multi-details="1"></div>`
       + `</div></div>`;
 
-    // Speaker + Flags + Chat-Nachricht
     const speaker = ChatMessage.getSpeaker();
     const flavor = wildRoll
       ? game.i18n.format(`${ADR.ID}.chat.flavorMultiWild`, { total: mainRoll.total, wild: wildRoll.total })
@@ -959,9 +844,8 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
     const flags = {
       "argas-dice-roller": {
         mainResult: mainRoll.total,
-        // mainFormula als Marker (truthig), damit die ADR-Erkennungs-Checks
-        // in adr-hooks.js greifen. Eigentlicher Render läuft über multiPool /
-        // multiPoolResults.
+        // Truthiger Marker, damit die ADR-Erkennung in adr-hooks.js greift;
+        // gerendert wird über multiPool / multiPoolResults.
         mainFormula: "_multi_pool",
         mainIndividualResults,
         mainExploding: isExploding,
@@ -971,17 +855,15 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
         wildIndividualResults,
         actorName: speaker.alias,
         actorImg,
-        // Highlights nicht gesetzt → kein Patzer-Render (Spec).
+        // Keine Patzer-Auswertung bei Mischpools.
         mainHighlight: false,
         wildHighlight: false,
         hideRecipients: (this.hiddenType === DiceForm.GM_ROLL) || (this.hiddenType === DiceForm.BLIND_ROLL),
         isSelfRoll: this.hiddenType === DiceForm.SELF_ROLL,
         isWildcard: !!actor?.system?.wildcard,
-        // Multi-Pool-spezifische Flags
         multiPool: pool.map(p => ({ type: p.type, count: p.count, faces: p.faces })),
         multiPoolResults,
-        // dieType/dieCount im Multi-Modus nicht eindeutig — null setzen,
-        // damit Patzer-/Münzpfade defensiv defaulten.
+        // Im Multi-Modus nicht eindeutig; null lässt Patzer-/Münzpfade defensiv defaulten.
         dieType: null,
         dieCount: null,
         appliedModifier: sumMod,
@@ -995,11 +877,10 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
     const rolls = [mainRoll];
     if (wildRoll) rolls.push(wildRoll);
     const msgData = { content: fullContent, speaker, flavor, flags, rolls };
-    // Verdeckter Wurf ausschließlich über die Kern-Felder whisper/blind —
-    // diese sind nicht deprecatet. Kein msgData.rollMode: der rollMode-
-    // Begriff wurde in v14 durch messageMode ersetzt und fällt mit v16
-    // weg. whisper (nicht leer) genügt; Foundry überschreibt es dann auch
-    // nicht mehr mit dem globalen Modus.
+    // Verdeckter Wurf nur über die Kern-Felder whisper/blind. Kein
+    // msgData.rollMode: in v14 zugunsten von messageMode deprecatet, fällt
+    // mit v16 weg. Ein nicht leeres whisper überschreibt Foundry nicht mit
+    // dem globalen Modus.
     if (this.hiddenType === DiceForm.GM_ROLL) {
       msgData.whisper = gmIds;
     } else if (this.hiddenType === DiceForm.BLIND_ROLL) {
@@ -1020,10 +901,9 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
   async _rollDie(event) {
     event.preventDefault();
 
-    // ── Block: Würfeln als Aktor-Typ "group" oder "vehicle" verhindern. ──
-    // SWADE-Aktoren dieses Typs haben keine Trait-Werte und sind nicht
-    // wurffähig. Ein versehentlich selektiertes Gruppen-/Fahrzeug-Token
-    // würde sonst mit irreführendem Speaker im Chat landen.
+    // SWADE-Akteure vom Typ "group"/"vehicle" haben keine Trait-Werte; ein
+    // versehentlich selektiertes Token landete sonst mit irreführendem
+    // Speaker im Chat.
     const _checkSpeaker = ChatMessage.getSpeaker();
     const _checkActor = game.actors.get(_checkSpeaker.actor);
     if (_checkActor && (_checkActor.type === "vehicle" || _checkActor.type === "group")) {
@@ -1034,8 +914,7 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
     const count = Number(event.currentTarget.dataset.diceRoll);
     const type = String(event.currentTarget.dataset.diceType);
     const isFudge = adrIsFudge(type);
-    // „Höchster"/„Niedrigster": nur für Zahlenwürfel und nur ab 2 Würfeln
-    // sinnvoll — sonst Hinweis statt stillschweigend normalem Wurf.
+    // „Höchster"/„Niedrigster": Hinweis statt stillschweigend normalem Wurf.
     const keep = adrKeepModifier(this.keepMode);
     if (keep && (type === "dc" || isFudge)) {
       ui.notifications.warn(game.i18n.localize(`${ADR.ID}.warn.keepNoCoinFudge`));
@@ -1066,15 +945,14 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
     } else {
       faces = Number(String(type).replace(/^[dDwW]/, "")) || 0;
     }
-    // Münzwürfe (dc) nehmen grundsätzlich keine Modifikatoren an —
-    // sumMod hart auf 0, unabhängig vom UI-Zustand. Greift als
-    // Sicherheitsnetz auch dann, falls die UI-Sperre umgangen würde.
+    // Münzwürfe nehmen keine Modifikatoren an; Sicherheitsnetz, falls die
+    // UI-Sperre umgangen wird.
     const sumMod = (type === "dc")
       ? 0
       : this._getEffectiveModifier();
-    // Fudge-Würfel explodieren nie und haben keinen Wild Die (wie die Münze).
-    // „Höchster/Niedrigster" schließt Explodieren aus (UI erzwingt das bereits).
-    const canExplode = this.isExploding && faces !== 100 && type !== "dc" && !isFudge && !keep;
+    // Nie explodieren: Münze, Fudge, Höchster/Niedrigster (gleiche Liste wie
+    // beim Reroll-Rebuild in adr-hooks.js).
+    const canExplode = this.isExploding && type !== "dc" && !isFudge && !keep;
     const displayFormula = `${count}${type}${keep ?? ""}${canExplode ? "!" : ""}${sumMod !== 0 ? (sumMod > 0 ? `+${sumMod}` : `${sumMod}`) : ""}`;
 
     const dieTerm = isFudge
@@ -1110,23 +988,19 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
     }
 
     /* --- Hook: argas-dice-roller:onTraitRoll (Argas Tweaks etc.) --- */
-    // Greift in freie ADR-Würfe — nicht bei DC (binär 0/1, nicht sinnvoll
-    // anpassbar). Pseudo-Roll bündelt Trait-Würfel + Wild Die wie ein
-    // SWADE-Wildcard-Wurf; die `dice`-Einträge sind References auf die echten
-    // Roll-Objekte, also wirken Hook-Modifikationen automatisch dort.
-    // Fudge-Würfel (−1/0/+1) ebenfalls ausgenommen — keine Eigenschaftsprobe.
-    // „Höchster/Niedrigster" ebenfalls: Hook-Empfänger summieren alle Würfel,
-    // hier zählt aber nur einer — die Summe wäre falsch.
+    // Ausgenommen: Münze (binär, nicht anpassbar), Fudge (keine
+    // Eigenschaftsprobe) und Höchster/Niedrigster (Hook-Empfänger summieren
+    // alle Würfel, hier zählt aber nur einer). Der Pseudo-Roll bündelt
+    // Haupt- und Wild Die wie ein SWADE-Wildcard-Wurf; die `dice`-Einträge
+    // referenzieren die echten Roll-Objekte, Hook-Änderungen wirken dort.
     if (type !== "dc" && !isFudge && !keep) {
-      // Schwelle: bei zu vielen Würfeln (Wild Die nicht mitgezählt) wird der
-      // Hook nicht gefeuert — Hook-Empfänger sind in der Regel auf einzelne
-      // Trait-Würfel ausgelegt. Schwelle kommt aus dem Tweaks-Modul (sofern
-      // installiert), sonst greift sie nicht.
+      // Oberhalb der Würfel-Schwelle des Tweaks-Moduls (Wild Die nicht
+      // mitgezählt) wird der Hook nicht gefeuert; ohne Tweaks keine Schwelle.
       const _tweaksActive = !!game.modules.get("argas-tweaks")?.active;
       let _tweaksTooMany = false;
       if (_tweaksActive) {
-        // try/catch: Foundry wirft bei nicht registrierten Setting-Keys —
-        // eine Tweaks-Version ohne "maxDice" darf den Wurf nicht abbrechen.
+        // Foundry wirft bei nicht registrierten Setting-Keys; eine Tweaks-
+        // Version ohne "maxDice" darf den Wurf nicht abbrechen.
         let _tweaksMaxDice = Infinity;
         try { _tweaksMaxDice = game.settings.get("argas-tweaks", "maxDice") ?? Infinity; } catch (e) { /* */ }
         const _mainDiceCount = mainRoll?.dice?.[0]?.number ?? 0;
@@ -1153,29 +1027,22 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
           requestId: null,
           messageId: null,
           entryIndex: null,
-          // Kennzeichnet ADR-freie-Würfe gegenüber Hook-Empfängern: Roll-
-          // Struktur ist ein Pseudo-Roll mit N-Würfel-Haupt-Term + optionalem
-          // Wild Die, KEINE SWADE-Trait-`kh`-Struktur. Tweaks schaltet damit
-          // den Pool-Modus statt Wildcard-Modus.
+          // Freier Wurf: N-Würfel-Haupt-Term + optionaler Wild Die, keine
+          // SWADE-Trait-`kh`-Struktur. Tweaks schaltet damit in den Pool-Modus.
           rollKind: "free",
-          // Wurf-Eigenschaften, die Hook-Empfänger brauchen können:
-          //  - exploding: ob die Haupt-Würfel explodieren. Wild Die hat IMMER
-          //    Exploding (unabhängig vom Toggle, vgl. wildTerms oben).
-          //  - hasWildDie: ob ein Wild Die mitgewürfelt wurde.
-          //  - fumbleMechanic: SWADE-Patzer-Mechanik aktiv (ADR-Setting). Bei
-          //    aktiver Mechanik darf ein erzwungener Niedrigwert keinen
-          //    unbeabsichtigten Patzer erzeugen.
+          // exploding betrifft nur die Hauptwürfel; der Wild Die explodiert
+          // immer. Bei aktiver Patzer-Mechanik darf ein vom Hook erzwungener
+          // Niedrigwert keinen unbeabsichtigten Patzer erzeugen.
           exploding: canExplode,
           hasWildDie: !!wildRoll,
           fumbleMechanic: !!game.settings.get(ADR.ID, ADR.CONFIG_HIGHLIGHT_ONES),
         };
 
         const _finalRoll = await _fireTraitRollHook(_hookData);
-        if (_finalRoll === false) return;  // Vom Hook abgebrochen
+        if (_finalRoll === false) return;
 
-        // Falls der Hook die Würfel-Ergebnisse verändert hat, muss `_total`
-        // beider echter Rolls neu berechnet werden — Foundry cacht es nach
-        // evaluate() und mainRoll/wildRoll referenzieren denselben dice-Eintrag.
+        // Foundry cacht `_total` nach evaluate(); nach Hook-Änderungen an den
+        // Würfelergebnissen muss es für beide Rolls neu berechnet werden.
         if (mainRoll?.dice?.length) {
           const _sum = mainRoll.dice[0].results.reduce((a, r) => a + (r.result || 0), 0);
           mainRoll._total = _sum + sumMod;
@@ -1191,8 +1058,8 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
 
     let mainIndividualResults = [];
     if (mainRoll?.dice?.length) {
-      // Fudge: Symbole +/▢/− statt Zahlen; die min/max-Logik von
-      // adrBuildDieResults würde die +1 fälschlich rot färben.
+      // Fudge: Symbole statt Zahlen; die min/max-Logik von adrBuildDieResults
+      // würde die +1 fälschlich rot färben.
       mainIndividualResults = isFudge
         ? adrBuildFudgeResults(mainRoll.dice[0])
         : adrBuildDieResults(mainRoll.dice[0]);
@@ -1206,14 +1073,12 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
     // Einsen-Regel gilt nicht für Fudge-Würfel (+1 ist dort das beste Ergebnis).
     let mainHighlight = false, wildHighlight = false;
     if (!isFudge && game.settings.get(ADR.ID, ADR.CONFIG_HIGHLIGHT_ONES)) {
-      // Nur die NATÜRLICHEN Würfel zählen (die ersten `number` Einträge) —
+      // Nur die natürlichen Würfel (erste `number` Einträge) zählen;
       // Explosions-Nachwürfe hängen hinten im results-Array und würden
-      // Zähler wie Nenner verfälschen (z. B. 2W6 [1, 6→1]: 2 von 3 Einsen
-      // wäre Mehrheit, obwohl nur 1 von 2 natürlichen Würfeln eine 1 zeigt).
+      // Zähler wie Nenner verfälschen (2W6 [1, 6→1]: 2 von 3 statt 1 von 2).
       if (mainRoll?.dice?.length) {
         const term = mainRoll.dice[0];
-        // Bei „Höchster/Niedrigster" zählen nur die gewerteten Würfel
-        // (discarded-Würfel sind nicht Teil des Ergebnisses).
+        // Bei „Höchster/Niedrigster" zählen nur die gewerteten Würfel.
         const vals = term.results.slice(0, term.number).filter(r => !r.discarded).map(r => r.result);
         const ones = vals.filter(x => x === 1).length;
         if (vals.length === 1 && ones === 1) mainHighlight = true;
@@ -1227,9 +1092,8 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
     }
 
     /* --- Hidden-Info-Text --- */
-    // Inhalt bewusst leer lassen und nur einen Marker (data-adr-hidden-key)
-    // setzen — das Befüllen passiert client-seitig in renderChatMessageHTML,
-    // damit Empfänger den Text in IHRER Interface-Sprache sehen (kein Sprachmix).
+    // Nur Marker (data-adr-hidden-key), kein Inhalt: renderChatMessageHTML
+    // befüllt ihn beim Betrachter in dessen Sprache.
     let hiddenText = "";
     if (this.hiddenType === DiceForm.GM_ROLL)
       hiddenText = `<div class="adr-hidden-info" data-adr-hidden-key="gmRoll" style="font-size:0.9rem;margin:0;color:#e56917;font-weight:bold;text-align:center;"></div>`;
@@ -1239,19 +1103,14 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
       hiddenText = `<div class="adr-hidden-info" data-adr-hidden-key="selfRoll" style="font-size:0.9rem;margin:0;color:#e56917;font-weight:bold;text-align:center;"></div>`;
 
     /* --- Einzelergebnis-Toggle --- */
-    // Toggle-Beschriftung als data-adr-i18n Marker — clientseitig im
-    // renderChatMessageHTML-Hook lokalisiert, damit Empfänger den Text in
-    // ihrer Interface-Sprache sehen.
+    // Beschriftung als data-adr-i18n-Marker, lokalisiert beim Betrachter.
 
     let resultLines = "";
-    // Münzwurf (dc): keine Einzelergebnis-/Benny-Zeile. Ohne den
-    // Toggle-Container steigt _adrInjectFreeRollBennyButton ohnehin aus,
-    // also entfällt damit auch der Benny-Reroll-Button.
+    // Münzwurf: kein Toggle-Container; damit steigt auch
+    // _adrInjectFreeRollBennyButton aus und der Benny-Reroll-Button entfällt.
     if ((mainIndividualResults.length || wildIndividualResults.length) && type !== "dc") {
-      // Einreihiges Detail-Rendering analog Probenanforderung:
-      //   "3 (WD: 2) (Mod. +2)" via _buildInlineRollContent.
-      // mainIndividualResults/wildIndividualResults sind vorgekocht (display + class),
-      // also _renderDicePrecomputed statt _renderDiceArr.
+      // Einreihige Darstellung wie in der Probenanforderung ("3 (WD: 2) (Mod. +2)");
+      // die Ergebnisse sind vorgerendert (display + class), daher _renderDicePrecomputed.
       const content = _buildInlineRollContent({
         mainHTML: _renderDicePrecomputed(mainIndividualResults),
         wildHTML: wildIndividualResults.length ? _renderDicePrecomputed(wildIndividualResults) : "",
@@ -1280,11 +1139,9 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
         mainResult: mainRoll.total,
         mainFormula: displayFormula,
         mainIndividualResults,
-        // W100-Ausnahme mitführen (wie beim Bau des Wurfs oben): das Flag
-        // steuert u. a. den Reroll-Rebuild in adr-hooks.js — ohne die
-        // Ausnahme würde der Benny-Reroll eines W100 explodieren.
+        // Steuert den Reroll-Rebuild in adr-hooks.js.
         mainExploding: canExplode,
-        // Wild Die gibt es bei Münze/Fudge nicht — Flag nur setzen, wenn er wirklich gewürfelt wurde.
+        // Nur gesetzt, wenn ein Wild Die tatsächlich gewürfelt wurde (nicht bei Münze/Fudge).
         wildExploding: !!wildRoll,
         wildResult: wildRoll?.total,
         wildFormula: wildRoll?.formula,
@@ -1295,31 +1152,21 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
         wildHighlight,
         hideRecipients: (this.hiddenType === DiceForm.GM_ROLL) || (this.hiddenType === DiceForm.BLIND_ROLL),
         isSelfRoll: this.hiddenType === DiceForm.SELF_ROLL,
-        // Wildcard-Status zum Wurfzeitpunkt festhalten (nur SWADE liefert
-        // dieses Flag). Wird im renderChatMessageHTML-Hook benutzt, um den
-        // GM-Patzer-Check-Button bei Wildcards zu unterdrücken: ein
-        // Wildcard hätte bei einer Eigenschaftsprobe immer einen Wild Die
-        // mitgewürfelt — ein Einzelwürfel ohne Wild Die kann also keine
-        // Eigenschaftsprobe gewesen sein, der Check macht nur bei
-        // Statisten Sinn.
+        // Wildcard-Status zum Wurfzeitpunkt (nur SWADE). renderChatMessageHTML
+        // unterdrückt damit den GM-Patzer-Check bei Wildcards: ein Einzelwürfel
+        // ohne Wild Die kann bei einem Wildcard keine Eigenschaftsprobe sein.
         isWildcard: !!actor?.system?.wildcard,
-        // Reroll-Kontext für den Benny-Button im freien Wurf: type + count +
-        // angewendeter Modifier werden hier explizit abgelegt, weil sie
-        // beim Reroll-Klick sonst nur fragil aus `mainFormula` parsbar
-        // wären. `wildExploding` doppelt sich semantisch als „hasWildDie"
-        // (Wild Die wird in `adr-dice-form.js` immer mit dem
-        // explodingMode-Modifikator konstruiert, also gleichbedeutend
-        // mit „explodierend, wenn da").
+        // Reroll-Kontext für den Benny-Button; aus `mainFormula` wären
+        // type/count nur fragil parsbar. `wildExploding` steht zugleich für
+        // „hasWildDie", da der Wild Die immer explodierend konstruiert wird.
         dieType: type,
         dieCount: count,
-        // „Höchster"/„Niedrigster" ("kh"/"kl") oder null — steuert Chat-
-        // Kennzeichnung und den Benny-Reroll-Rebuild in adr-hooks.js.
+        // Steuert Chat-Kennzeichnung und Benny-Reroll-Rebuild in adr-hooks.js.
         keepMode: keep,
         appliedModifier: sumMod,
-        // Chronologische Sequenznummer dieses Wurfs (für korrekte Sortierung
-        // der Einzelergebnisse bei Mehrfach-Bennies). Der Initialwurf hat
-        // immer seq=1; jeder folgende Benny-Reroll bekommt die nächste
-        // freie Nummer via flags.nextRollSeq (siehe _adrApplyBennyRerollFree).
+        // Sequenznummer für die Sortierung der Einzelergebnisse bei Mehrfach-
+        // Bennies; Rerolls bekommen die nächste Nummer aus flags.nextRollSeq
+        // (siehe _adrApplyBennyRerollFree).
         rollSeq: 1,
         nextRollSeq: 2
       }
@@ -1331,9 +1178,8 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
     const rolls = [mainRoll];
     if (wildRoll) rolls.push(wildRoll);
     const msgData = { content: fullContent, speaker, flavor, flags, rolls };
-    // Verdeckter Wurf ausschließlich über whisper/blind (Kern-Felder, nicht
-    // deprecatet) — kein msgData.rollMode, siehe Erläuterung im Einzelwurf-
-    // Pfad oben.
+    // Verdeckter Wurf nur über whisper/blind, kein msgData.rollMode
+    // (Begründung in _rollMultiPool).
     if (this.hiddenType === DiceForm.GM_ROLL) {
       msgData.whisper = gmIds;
     } else if (this.hiddenType === DiceForm.BLIND_ROLL) {
@@ -1369,11 +1215,11 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
     const tensRaw = roll.dice[0].results.map(r => r.result);
     const onesRaw = roll.dice[1].results[0].result;
     const ev = adrEvalCthulhu(onesRaw, tensRaw, mode);
-    // Foundry-Summe der W10 ist bedeutungslos — Gesamtwert selbst setzen.
+    // Die Foundry-Summe der W10 ist bedeutungslos; Gesamtwert selbst setzen.
     roll._total = ev.total + sumMod;
 
-    // Einzelergebnisse: je Zehnerwürfel das mögliche Ergebnis, nicht
-    // gewertete durchgestrichen. Keine min/max-Färbung (1 ist hier gut).
+    // Je Zehnerwürfel ein mögliches Ergebnis, nicht gewertete durchgestrichen.
+    // Keine min/max-Färbung (1 ist hier gut).
     const pad = v => (v === 100 ? "100" : String(v).padStart(2, "0"));
     const mainIndividualResults = ev.candidates.map((v, i) => ({
       value: v,
@@ -1452,23 +1298,13 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
   }
 
   /**
-   * Erstellt die Chat-Nachricht für einen Wurf aus dem Würfelfenster.
+   * Chat-Nachricht für einen Wurf aus dem Würfelfenster.
    *
-   * Je nach Einstellung "chatDesign":
-   *  - "fantasy" / "modern": ADR-Eigengrafik wie bisher — das volle
-   *    msgData (Custom-content, argas-dice-roller-Flags, ADR-flavor)
-   *    wird unverändert übergeben; der renderChatMessageHTML-Hook
-   *    erkennt die Nachricht an den Flags und rendert die ADR-Karte.
-   *  - "standard": KEINE ADR-Eigengrafik. Custom-content, ADR-Flags und
-   *    ADR-flavor werden weggelassen; übrig bleibt das, was Foundry aus
-   *    dem rolls-Array selbst rendert — die generische, systemneutrale
-   *    Foundry-Würfelkarte. Da keine argas-dice-roller-Flags gesetzt
-   *    sind, steigt der renderChatMessageHTML-Hook früh aus (kein
-   *    ADR-Render, kein ADR-Benny-Button).
-   *
-   * In beiden Fällen erhalten bleiben die Foundry-Kernfelder speaker,
-   * rolls (für korrekte Darstellung + Dice-So-Nice) sowie whisper/blind
-   * (verdeckte Würfe) — das ist keine ADR-Grafik, sondern Basisverhalten.
+   * Bei chatDesign "standard" werden content, ADR-Flags und flavor
+   * weggelassen; Foundry rendert die generische Würfelkarte aus dem
+   * rolls-Array, und der renderChatMessageHTML-Hook steigt ohne Flags früh
+   * aus (kein ADR-Render, kein Benny-Button). Speaker, rolls (Dice So Nice)
+   * und whisper/blind bleiben in beiden Fällen erhalten.
    *
    * @param {object} msgData  Voll aufgebautes ChatMessage-Datenobjekt.
    * @returns {Promise<ChatMessage>}
@@ -1479,7 +1315,6 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
       return ChatMessage.create(msgData);
     }
 
-    // Standard (Foundry): auf die Kernfelder reduzieren.
     const stdData = {
       speaker: msgData.speaker,
       rolls: msgData.rolls

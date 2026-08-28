@@ -115,7 +115,6 @@ export class SupportDialogForm extends HandlebarsApplicationMixin(ApplicationV2)
     const message = game.messages.get(this.messageId);
     const flags = message?.flags?.[ADR.ID];
 
-    // Helfer-Infos
     const helperEntry = flags?.entries?.find(e => e.actorId === this.helperId);
     const helperActor = resolveActorById(this.helperId);
     const helper = {
@@ -152,7 +151,6 @@ export class SupportDialogForm extends HandlebarsApplicationMixin(ApplicationV2)
         };
       });
 
-    // Traits des Helfers (Attribute + Fertigkeiten)
     const traits = helperActor ? collectActorTraits(helperActor) : {
       attributes: [], skills: [], coreSkills: [], otherSkills: [],
     };
@@ -189,8 +187,7 @@ export class SupportDialogForm extends HandlebarsApplicationMixin(ApplicationV2)
     // ── Titel-Span in den Window-Header einhängen ──
     // ApplicationV2 zeigt den nativen `.window-title` nicht (per CSS auf
     // `visibility: hidden` für alle `argas-dice-roller-window`-Instanzen).
-    // Wir injizieren stattdessen ein eigenes `.adrgs-title-extra`-Element,
-    // analog zu adr-request-roll-form.js.
+    // Stattdessen wird ein eigenes `.adrgs-title-extra`-Element eingehängt.
     const winHeader = root.querySelector(".window-header");
     if (winHeader && !winHeader.querySelector(".adrgs-title-extra")) {
       const span = document.createElement("span");
@@ -203,7 +200,6 @@ export class SupportDialogForm extends HandlebarsApplicationMixin(ApplicationV2)
       const targetChip = ev.target.closest("[data-action='adr-support-select-target']");
       if (targetChip) {
         const id = targetChip.dataset.actorId;
-        // Toggle-Verhalten: nochmaliges Klicken löscht die Auswahl
         if (this.selectedTargetId === id) {
           this.selectedTargetId = null;
           this.selectedTraitType = null;
@@ -222,7 +218,6 @@ export class SupportDialogForm extends HandlebarsApplicationMixin(ApplicationV2)
         const key = traitBtn.dataset.traitKey;
         const name = traitBtn.dataset.traitName;
         if (this.selectedTraitKey === key && this.selectedTraitType === type) {
-          // Abwählen bei erneutem Klick
           this.selectedTraitType = null;
           this.selectedTraitKey = null;
           this.selectedTraitName = null;
@@ -363,7 +358,6 @@ export class SupportDialogForm extends HandlebarsApplicationMixin(ApplicationV2)
     let fumbleCheckDie = null;
 
     if (classification === "confirmed") {
-      // Wildcard-SC mit Wild-Die-Patzer-Regel: bestätigt
       critFail = true;
     } else if (classification === "needs-check") {
       // NSC mit einzelner natürlicher 1 — GM klickt Button im Chat,

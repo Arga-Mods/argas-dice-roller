@@ -133,24 +133,19 @@ export function resolveAttributeLabel(key) {
     if (!cfgLabel.includes(".")) return cfgLabel;
   }
 
-  // Versuch 1: Langer Name  "SWADE.AttrAgility"
   const longKey = `SWADE.Attr${cap}`;
   let label = game.i18n.localize(longKey);
   if (label !== longKey) return label;
-  // Versuch 2: Kurzer Name  "SWADE.AttrAgi"
   const shortKey = `SWADE.Attr${cap.slice(0, 3)}`;
   label = game.i18n.localize(shortKey);
   if (label !== shortKey) return label;
-  // Versuch 3: "SWADE.AttrShort.Agility"
   const dotKey = `SWADE.AttrShort.${cap}`;
   label = game.i18n.localize(dotKey);
   if (label !== dotKey) return label;
-  // Versuch 4: "SWADE.Attributes.spirit" (Kleinbuchstaben)
   const lowerKey = `SWADE.Attributes.${key}`;
   label = game.i18n.localize(lowerKey);
   if (label !== lowerKey) return label;
 
-  // Fallback: Hardcoded Map
   const lang = game.i18n.lang?.toLowerCase() ?? "en";
   const fb = ATTR_FALLBACK[key];
   if (fb) return fb[lang] ?? fb.en ?? cap;
@@ -159,12 +154,13 @@ export function resolveAttributeLabel(key) {
 }
 
 /**
- * RequestRollForm — GM-Fenster für Probenanforderungen (SWADE only).
+ * RequestRollForm — GM-Fenster für Probenanforderungen (nur SWADE).
  *
  * Modi:
- *   single   – Ein Akteur, ein Trait
+ *   single   – Ein Akteur, ein Trait (eine Chatnachricht je Akteur)
  *   group    – Mehrere Akteure, ein Trait (Sammel-Ergebnis)
  *   opposed  – Zwei Akteure, je ein Trait (gegeneinander)
+ *   dramatic – Dramatische Aufgabe (mehrere Akteure, je ein Trait, Runden/Marker)
  */
 export class RequestRollForm extends HandlebarsApplicationMixin(ApplicationV2) {
 
@@ -202,7 +198,7 @@ export class RequestRollForm extends HandlebarsApplicationMixin(ApplicationV2) {
     super(opts);
     this.mode = "single";            // "single" | "group" | "opposed"
     this.selectedActors = new Set();  // IDs: actor-ID (PCs) oder token-doc-ID (NPCs)
-    this.activeActorId = null;        // Currently viewing traits (single/opposed only)
+    this.activeActorId = null;        // Akteur, dessen Traits angezeigt werden (single/opposed)
     this.highlightedGroupActors = new Set(); // Vorgemerkte Akteure (Gruppenprobe, grün ohne Haken)
     this.selectedTraits = new Map();  // id → { type, key, name }
     this.modifier = 0;                 // Freitext-Modifikator
@@ -262,15 +258,14 @@ export class RequestRollForm extends HandlebarsApplicationMixin(ApplicationV2) {
    * Zeigt alle verfügbaren Traits; markiert "allHave" basierend auf angehakten Akteuren.
    *
    * Pro Trait wird zusätzlich ein `tooltipText` vorberechnet, der im Template
-   * direkt als title-Attribut benutzt wird. Format (Komma-getrennt):
-   *   „Aragorn: W8, Boromir: W10, Gimli: W12"
-   * Diprefix ("W" / "D") aus Lokalisierung (requestRoll.diePrefix).
+   * direkt als title-Attribut benutzt wird. Format:
+   *   „Aragorn (W8) -- Boromir (W10) -- Gimli (W12)"
+   * Würfelpräfix ("W" / "D") aus Lokalisierung (requestRoll.diePrefix).
    */
   _buildUnifiedTraitsAllPCs() {
     const allPCs = this._getPlayerActors();
     if (allPCs.length === 0) return { attributes: [], skills: [] };
 
-    // Für Partial-Berechnung: angehakte ODER vorgemerkte Akteure
     const checkedIds = [...this.selectedActors];
     const effectiveIds = checkedIds;
     const effectiveCount = effectiveIds.length;
@@ -285,7 +280,6 @@ export class RequestRollForm extends HandlebarsApplicationMixin(ApplicationV2) {
     }
     const diePrefix = game.i18n.localize(`${ADR.ID}.requestRoll.diePrefix`);
 
-    // Alle Traits von ALLEN PCs sammeln
     const allTraitsMap = new Map();
     for (const actor of allPCs) {
       allTraitsMap.set(actor.id, this._getActorTraits(actor));
@@ -304,7 +298,6 @@ export class RequestRollForm extends HandlebarsApplicationMixin(ApplicationV2) {
         entry.bearers.push({ name: actorName, dieSides: attr.dieSides });
       }
     }
-    // Zähle wie viele ANGEHAKTE Akteure das Attribut haben
     for (const id of effectiveIds) {
       const traits = allTraitsMap.get(id);
       if (!traits) continue;
@@ -433,7 +426,7 @@ export class RequestRollForm extends HandlebarsApplicationMixin(ApplicationV2) {
         checked,
         highlighted,
         active,
-        selected: checked,  // backward compat for group template
+        selected: checked,
       };
       // Per-Akteur Traits nur für den aktiven Akteur (single/opposed)
       if (!isGroupMode && active) {
@@ -574,11 +567,9 @@ export class RequestRollForm extends HandlebarsApplicationMixin(ApplicationV2) {
       if (!chip) return;
       const actorId = chip.dataset.actorId;
       if (this.selectedActors.has(actorId)) {
-        // War angehakt → Haken + Trait entfernen
         this.selectedActors.delete(actorId);
         this.selectedTraits.delete(actorId);
       } else if (this.highlightedGroupActors.has(actorId)) {
-        // War vorgemerkt → Vormerkung entfernen
         this.highlightedGroupActors.delete(actorId);
       } else {
         // Neu angeklickt: Wenn bereits ein Trait gewählt ist → direkt abhaken + Trait setzen
@@ -658,7 +649,7 @@ export class RequestRollForm extends HandlebarsApplicationMixin(ApplicationV2) {
     });
 
     // ── Akteur-Chip: Haken-Bereich klicken ──
-    //   Wenn angehakt → Akteur entfernen (bisheriges Verhalten).
+    //   Wenn angehakt → Akteur entfernen.
     //   Wenn nicht angehakt → Akteur aktivieren (grün unterlegen), analog Label-Klick.
     el.querySelectorAll("[data-action='uncheck-actor']").forEach(slot => {
       slot.addEventListener("click", ev => {
@@ -716,7 +707,6 @@ export class RequestRollForm extends HandlebarsApplicationMixin(ApplicationV2) {
                 this.selectedActors.add(actor.id);
               }
             }
-            // Trait für alle angehakten setzen
             this.selectedTraits.clear();
             for (const id of this.selectedActors) {
               this.selectedTraits.set(id, { type: traitType, key: traitKey, name: traitName });
@@ -728,11 +718,9 @@ export class RequestRollForm extends HandlebarsApplicationMixin(ApplicationV2) {
           const current = this.selectedTraits.get(actorId);
           if (current && current.key === traitKey && current.type === traitType) {
             this.selectedTraits.delete(actorId);
-            // Haken entfernen wenn kein Trait mehr gewählt
             this.selectedActors.delete(actorId);
           } else {
             this.selectedTraits.set(actorId, { type: traitType, key: traitKey, name: traitName });
-            // Haken setzen wenn Trait gewählt
             if (!this.selectedActors.has(actorId)) {
               if (this.mode === "opposed" && this.selectedActors.size >= 2) {
                 const first = this.selectedActors.values().next().value;
@@ -768,23 +756,22 @@ export class RequestRollForm extends HandlebarsApplicationMixin(ApplicationV2) {
     // ── Modifikator-Eingabe + Stepper-Buttons ──
     const modInput = el.querySelector("[data-action='set-modifier']");
 
-    // Hilfsfunktion: Wert ins Anzeigeformat normalisieren ("", "+N", "-N").
     const formatModifierForInput = (n) => {
       if (!Number.isFinite(n) || n === 0) return "";
       return n > 0 ? `+${n}` : String(n);
     };
 
     if (modInput) {
-      // Beim Tippen: silent State aktualisieren (keine Warnung pro Tastenanschlag).
-      // Die sichtbare Warnung + Submit-Block erfolgt erst in _validateModifierInput()
-      // beim Submit-Versuch. So gibt's GENAU eine eindeutige Warnung pro Submit-Klick,
-      // ohne Race-Condition mit dem Blur/Change-Event des Inputs.
+      // Beim Tippen nur den State aktualisieren, keine Warnung pro Tastenanschlag.
+      // Warnung und Submit-Block erfolgen erst in _validateModifierInput() beim
+      // Submit-Versuch — genau eine Warnung pro Submit-Klick, ohne Race-Condition
+      // mit dem Blur-Event des Inputs.
       modInput.addEventListener("input", ev => {
         const inp = ev.currentTarget;
         const v = inp.value.trim();
         if (v === "" || v === "+" || v === "-") {
           // Leeres Feld oder isoliertes Vorzeichen während des Tippens: State auf 0,
-          // Anzeige NICHT erzwingen (User tippt evtl. gerade weiter).
+          // Anzeige nicht erzwingen (Eingabe ist möglicherweise noch nicht abgeschlossen).
           this.modifier = 0;
           return;
         }
@@ -792,8 +779,8 @@ export class RequestRollForm extends HandlebarsApplicationMixin(ApplicationV2) {
         if (Number.isFinite(raw) && raw >= MODIFIER_MIN && raw <= MODIFIER_MAX) {
           this.modifier = raw;
         } else {
-          // Ungültiger Wert (außerhalb Range / nicht parsbar) → State auf 0,
-          // aber Feld behält den sichtbaren Wert, damit der User korrigieren kann.
+          // Ungültiger Wert (außerhalb Bereich / nicht parsbar) → State auf 0,
+          // Feld behält den sichtbaren Wert zur Korrektur.
           this.modifier = 0;
         }
       });
@@ -805,7 +792,7 @@ export class RequestRollForm extends HandlebarsApplicationMixin(ApplicationV2) {
       });
     }
 
-    // Stepper-Buttons (−/+): Modifier in 1er-Schritten ändern, auf [MIN, MAX] geclampt.
+    // ── Stepper-Buttons (−/+) ──
     el.querySelectorAll("[data-action='modifier-step']").forEach(btn => {
       btn.addEventListener("click", ev => {
         const step = Number(ev.currentTarget.dataset.step) || 0;
@@ -884,18 +871,10 @@ export class RequestRollForm extends HandlebarsApplicationMixin(ApplicationV2) {
   /* -------------------------------------------------------------- */
 
   /**
-   * Prüft das Modifikator-Eingabefeld auf Gültigkeit. Gibt eine Warnung aus
-   * und liefert false zurück, wenn der aktuell sichtbare Wert ungültig ist.
-   *
-   * Ungültig ist:
-   *  - badInput (Browser hat Inhalt nicht als Zahl akzeptiert: "1-20", "abc", ...)
-   *  - Eine Zahl, die nicht endlich ist oder außerhalb [MODIFIER_MIN .. MODIFIER_MAX] liegt
-   *  - Ein nicht-leerer Text, der nicht in eine Zahl konvertierbar ist
-   *
-   * Bei leerem Feld (Placeholder "0" sichtbar) → modifier = 0, return true.
-   *
-   * Wird aus _submitRequest (single/group/opposed) und _submitDramaticTask
-   * aufgerufen, damit alle 4 Modi konsistent validieren.
+   * Prüft das Modifikator-Eingabefeld. Gibt eine Warnung aus und liefert false,
+   * wenn der sichtbare Wert ungültig ist (badInput, kein reines Zahlformat,
+   * außerhalb [MODIFIER_MIN .. MODIFIER_MAX]). Leeres Feld → modifier = 0, true.
+   * Gemeinsame Validierung für alle vier Modi.
    */
   _validateModifierInput() {
     const inp = this.element?.querySelector("[data-action='set-modifier']");
@@ -905,7 +884,7 @@ export class RequestRollForm extends HandlebarsApplicationMixin(ApplicationV2) {
       ui.notifications.warn(game.i18n.format(`${ADR.ID}.requestRoll.warn.invalidModifier`, {
         min: MODIFIER_MIN, max: MODIFIER_MAX,
       }));
-      // Fokus zurück ins Feld, damit der User direkt korrigieren kann
+      // Fokus zurück ins Feld zur direkten Korrektur
       try { inp.focus(); inp.select(); } catch (_) { /* ignore */ }
     };
 
@@ -915,9 +894,7 @@ export class RequestRollForm extends HandlebarsApplicationMixin(ApplicationV2) {
       return false;
     }
 
-    // 2) Sichtbarer Text holen — robust gegen Edge-Cases:
-    //    Bei type="number" liefert .value leer wenn ungültig, aber wir prüfen
-    //    zusätzlich .value sowie das Roh-DOM-Attribut, um nichts zu übersehen.
+    // 2) Sichtbarer Text
     const rawText = (inp.value ?? "").trim();
 
     // 3) Leeres Feld → 0, kein Modifier, gültig
@@ -1103,7 +1080,6 @@ export class RequestRollForm extends HandlebarsApplicationMixin(ApplicationV2) {
       const isNPC = !actor.hasPlayerOwner;
       const isWildcard = !!actor.system?.wildcard;
 
-      // Würfelgröße bestimmen
       let traitDie = 4;
       if (trait.type === "attribute") {
         traitDie = actor.system.attributes?.[trait.key]?.die?.sides ?? 4;
