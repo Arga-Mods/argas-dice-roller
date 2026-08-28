@@ -39,7 +39,7 @@ For the chat display, the *Fantasy* and *Modern* theme graphics are available. A
 
 ## General Features
 Regardless of the game system, ***Arga's Dice Roller*** offers the following features:
-- ***Dice Window:*** Clicking the orange d20 icon in the left control panel opens the dice window with the standard dice d4, d6, d8, d10, d12, and d20. Optionally available: d2, d100, and coin tosses.
+- ***Dice Window:*** Clicking the orange d20 icon in the left control panel opens the dice window with the standard dice d4, d6, d8, d10, d12, and d20. The GM decides in the submenu *Displayed dice types* which rows are offered — e.g. d6 only for Shadowrun; optionally available: coin toss, d2, d100, and Fudge dice (dF, showing +, blank or − per die).
 
 <table align="center">
   <tr>
@@ -57,6 +57,9 @@ Regardless of the game system, ***Arga's Dice Roller*** offers the following fea
 - ***Mixed Rolls:*** Holding the Ctrl key while clicking a die button lets you combine several die types (e.g. 2× d8 and 1× d6). Releasing the Ctrl key then triggers the roll.
 - ***Exploding Dice:*** When a die rolls its maximum, it is rolled again and the results are added together. You can configure whether dice may explode multiple times or only once. In the chat, dice that are able to explode are marked with a superscript "ex".
 - ***Modifiers:*** The optional modifier buttons range from -6 to +6 and can be applied cumulatively. Alternatively, you can enter the modifier freely (up to two digits). The modifier does not affect the individual dice, only the total result (and the result of the SWADE Wild Die). The modifiers in effect are highlighted in color on the chat card.
+- ***Highest / Lowest:*** Two optional buttons (on by default for D&D 5e, Level Up, SW5e and Dragonbane) roll all dice but count only the highest or the lowest one — advantage/disadvantage, boon/bane. Discarded dice are shown struck through on the chat card.
+- ***Bonus / Penalty Die:*** Two optional buttons (on by default for Call of Cthulhu 7e) add one or two extra tens dice to a d100 roll; the bonus die keeps the lowest tens, the penalty die the highest.
+- ***Displayed Buttons (GM only):*** One submenu where the GM switches the buttons for hidden rolls, exploding dice, modifiers, Wild Die, Highest/Lowest, Bonus/Penalty die and the Fate roll on or off for the whole world.
 - ***Individual Results:*** Every chat card with a dice roll has a button for displaying the individual results. For example, when several different dice have been rolled, or when a roll has been rerolled with a Benny in SWADE, it can sometimes matter which die produced which result.
 - ***Fate Roll (GM only):*** On the canvas, the GM selects all the tokens to choose randomly between. After pressing the "Fate Roll" button, one of the selected tokens is picked at random and its name is announced in the chat.
 

@@ -10,6 +10,8 @@ import {
   requestRollSubject,
   subjectBennies,
   subjectSpendBenny,
+  subjectRefundBenny,
+  requireActiveGM,
 } from "./adr-benny-helpers.js";
 
 /**
@@ -413,7 +415,7 @@ function _buildDiceDetailsHTML(diceDetails, previousRolls = null, currentFumbleC
     rollSeq: currentRollSeq,
   });
 
-  const toggleLabel = game.i18n.localize("argas-dice-roller.individualResults.toggle");
+  const toggleLabel = game.i18n.localize(`${ADR.ID}.individualResults.toggle`);
   return `<div class="adr-individual-toggle-container">`
     + `<div class="adr-individual-toggle">${toggleLabel}</div>`
     + `<div class="adr-individual-details adr-individual-hidden">`
@@ -1913,10 +1915,14 @@ export async function _executeSWADERoll(actor, entry, modifier, { suppressChat =
 export const _swadeSuppressFlag = { active: false };
 
 Hooks.on("preCreateChatMessage", (message) => {
-  if (_swadeSuppressFlag.active) {
-    _swadeSuppressFlag.active = false;
-    return false;  // Nachricht blockieren
-  }
+  if (!_swadeSuppressFlag.active) return;
+  // Nur die SWADE-Wurfkarte schlucken — die trägt immer Rolls. Andere
+  // Nachrichten desselben Clients (z. B. eine getippte Chatzeile, während
+  // der SWADE-Wurf-Dialog offen ist) passieren unverändert und verbrauchen
+  // den Einmal-Unterdrücker nicht.
+  if (!message.rolls?.length) return;
+  _swadeSuppressFlag.active = false;
+  return false;  // Nachricht blockieren
 });
 
 /* ================================================================ */
@@ -1926,7 +1932,13 @@ Hooks.on("preCreateChatMessage", (message) => {
 Hooks.once("ready", () => {
 
   // ── Socket: GM empfängt Würfelergebnisse von Spielern ──
-  game.socket.on(ADR.SOCKET, async (data) => {
+  // Die Handler machen Read-Modify-Write auf den Message-Flags. Zwei fast
+  // gleichzeitige Spieler-Ergebnisse dürfen deshalb nicht parallel laufen —
+  // sonst liest der zweite Handler die Flags, bevor das Update des ersten
+  // durch ist, und überschreibt dessen Ergebnis. Die Warteschlange
+  // serialisiert alle eingehenden Socket-Nachrichten strikt nacheinander.
+  let socketQueue = Promise.resolve();
+  const handleSocketMessage = async (data) => {
     if (!game.user.isGM) return;
 
     const message = game.messages.get(data.messageId);
@@ -1988,6 +2000,11 @@ Hooks.once("ready", () => {
       [`flags.${ADR.ID}.entries`]: entries,
     });
     setTimeout(() => _refreshRequestChatHTML(message), 150);
+  };
+  game.socket.on(ADR.SOCKET, (data) => {
+    socketQueue = socketQueue
+      .then(() => handleSocketMessage(data))
+      .catch(err => console.error(`${ADR.ID} | Socket-Handler-Fehler:`, err));
   });
 
   // ── Würfeln-Button ──
@@ -2010,10 +2027,13 @@ Hooks.once("ready", () => {
     const entry = flags.entries[entryIndex];
 
     // ── Berechtigung prüfen ──
-    if (!entry.ownerIds.includes(game.user.id) && !game.user.isGM) {
+    if (!entry.ownerIds?.includes(game.user.id) && !game.user.isGM) {
       ui.notifications.warn(game.i18n.localize(`${ADR.ID}.requestRoll.warn.notOwner`));
       return;
     }
+
+    // Ohne verbundenen GM kann das Ergebnis nicht gespeichert werden
+    if (!requireActiveGM()) return;
 
     const isDramatic = flags.mode === "dramatic";
     const roundState = entry.roundState ?? null;
@@ -2149,7 +2169,10 @@ Hooks.once("ready", () => {
     const entry = flags.entries[entryIndex];
 
     // Berechtigung
-    if (!entry.ownerIds.includes(game.user.id) && !game.user.isGM) return;
+    if (!entry.ownerIds?.includes(game.user.id) && !game.user.isGM) return;
+
+    // Ohne verbundenen GM kann das Ergebnis nicht gespeichert werden
+    if (!requireActiveGM()) return;
 
     const isDramatic = flags.mode === "dramatic";
     const dramaticRoundState = entry.roundState ?? null;
@@ -2215,11 +2238,19 @@ Hooks.once("ready", () => {
       } catch (err) {
         console.error(`${ADR.ID} | Supporter Benny Re-Roll error:`, err);
         ui.notifications.error(game.i18n.localize(`${ADR.ID}.requestRoll.warn.rollError`));
+        // Unterdrücker vor dem Refund entschärfen, sonst schluckt er die
+        // "Benny erhalten"-Chatnachricht der Rückerstattung
+        _swadeSuppressFlag.active = false;
+        await subjectRefundBenny(subject);
         return;
       } finally {
         _swadeSuppressFlag.active = false;
       }
-      if (!roll) return;
+      if (!roll) {
+        // Wurf-Dialog abgebrochen — Benny zurückerstatten
+        await subjectRefundBenny(subject);
+        return;
+      }
 
       // Hook (Argas Tweaks etc.)
       const hookData = {
@@ -2229,7 +2260,11 @@ Hooks.once("ready", () => {
         isSupportRoll: true, supportTargetId: sg.targetId, isBennyReroll: true,
       };
       const finalRoll = await _fireTraitRollHook(hookData);
-      if (finalRoll === false) return;
+      if (finalRoll === false) {
+        // Hook hat abgebrochen — Benny zurückerstatten
+        await subjectRefundBenny(subject);
+        return;
+      }
       const usedRoll = finalRoll || roll;
 
       const resultTotal = usedRoll.total ?? roll.total ?? 0;
@@ -2342,11 +2377,19 @@ Hooks.once("ready", () => {
     } catch (err) {
       console.error(`${ADR.ID} | Benny Re-Roll error:`, err);
       ui.notifications.error(game.i18n.localize(`${ADR.ID}.requestRoll.warn.rollError`));
+      // Unterdrücker vor dem Refund entschärfen, sonst schluckt er die
+      // "Benny erhalten"-Chatnachricht der Rückerstattung
+      _swadeSuppressFlag.active = false;
+      await subjectRefundBenny(subject);
       return;
     } finally {
       _swadeSuppressFlag.active = false;
     }
-    if (!roll) return;
+    if (!roll) {
+      // Wurf-Dialog abgebrochen — Benny zurückerstatten
+      await subjectRefundBenny(subject);
+      return;
+    }
 
     // ── Hook: argas-dice-roller:onTraitRoll (Argas Tweaks etc.) ──
     const bennyHookData = {
@@ -2357,7 +2400,11 @@ Hooks.once("ready", () => {
       rollKind: "trait",
     };
     const bennyFinalRoll = await _fireTraitRollHook(bennyHookData);
-    if (bennyFinalRoll === false) return;
+    if (bennyFinalRoll === false) {
+      // Hook hat abgebrochen — Benny zurückerstatten
+      await subjectRefundBenny(subject);
+      return;
+    }
     const bennyUsedRoll = bennyFinalRoll || roll;
 
     const resultTotal = bennyUsedRoll.total ?? roll.total ?? 0;
@@ -2473,7 +2520,8 @@ Hooks.once("ready", () => {
     const actorId = btn.dataset.actorId;
     const entry = flags.entries?.find(e => e.actorId === actorId);
     if (!entry) return;
-    if (!entry.ownerIds.includes(game.user.id) && !game.user.isGM) return;
+    if (!entry.ownerIds?.includes(game.user.id) && !game.user.isGM) return;
+    if (!requireActiveGM()) return;
 
     if (game.user.isGM) {
       await _applyDramaticSkip(message, actorId);
@@ -2505,7 +2553,7 @@ Hooks.once("ready", () => {
     if (!helperEntry) return;
 
     // Berechtigung: Nur Eigentümer des Helfer-Charakters (bzw. GM) darf unterstützen
-    if (!helperEntry.ownerIds.includes(game.user.id) && !game.user.isGM) {
+    if (!helperEntry.ownerIds?.includes(game.user.id) && !game.user.isGM) {
       ui.notifications.warn(game.i18n.localize(`${ADR.ID}.requestRoll.warn.notOwner`));
       return;
     }
@@ -2552,7 +2600,7 @@ Hooks.once("ready", () => {
     if (!entry) return;
 
     // Berechtigung: Nur Eigentümer des Charakters (bzw. GM)
-    if (!entry.ownerIds.includes(game.user.id) && !game.user.isGM) {
+    if (!entry.ownerIds?.includes(game.user.id) && !game.user.isGM) {
       ui.notifications.warn(game.i18n.localize(`${ADR.ID}.requestRoll.warn.notOwner`));
       return;
     }
@@ -2839,15 +2887,6 @@ export function _fireTraitRollHook(hookData) {
 /*  Hilfsfunktionen                                                  */
 /* ================================================================ */
 
-async function _rollUntrained(actor, modifier = 0) {
-  const isWildcard = actor.system.wildcard ?? false;
-  const totalMod = -2 + modifier;
-  const formula = isWildcard ? `{1d4, 1d6}kh + ${totalMod}` : `1d4 + ${totalMod}`;
-  const roll = new Roll(formula);
-  await roll.evaluate();
-  return roll;
-}
-
 async function _updateRequestMessage(message, entryIndex, resultTotal, diceDetails) {
   const entries = foundry.utils.deepClone(message.getFlag(ADR.ID, "entries") || []);
   const completedCount = (message.getFlag(ADR.ID, "completedCount") || 0) + 1;
@@ -3012,7 +3051,8 @@ function _buildBennyHintEl(actorId, isNPC, previousRolls, lastRerollProtected, n
     const key = `${base}${namedSuffix}${counterSuffix}`;
     let tmpl = game.i18n.localize(`${ADR.ID}.requestRoll.${key}`);
     if (withCounter && useCounter) tmpl = tmpl.replace("{n}", ordinal);
-    if (allowNamed && namedActor) tmpl = tmpl.replace("{actor}", namedActor);
+    // Akteurname escapen — das Ergebnis landet per innerHTML im Chat
+    if (allowNamed && namedActor) tmpl = tmpl.replace("{actor}", foundry.utils.escapeHTML(namedActor));
     return tmpl;
   };
 
@@ -3405,12 +3445,12 @@ function _updateGroupToggle(container, entries) {
   for (const entry of withResults) {
     const historyHTML = _buildRollHistoryHTML(entry);
     detailsInner += `<div class="adr-group-detail-block">`
-      + `<div class="adr-group-detail-name">${entry.actorName}</div>`
+      + `<div class="adr-group-detail-name">${foundry.utils.escapeHTML(entry.actorName ?? "")}</div>`
       + `<div class="adr-group-detail-body">${historyHTML}</div>`
       + `</div>`;
   }
 
-  const toggleLabel = game.i18n.localize("argas-dice-roller.individualResults.toggle");
+  const toggleLabel = game.i18n.localize(`${ADR.ID}.individualResults.toggle`);
   const html = `<div class="adr-group-toggle-container">`
     + `<div class="adr-group-divider"></div>`
     + `<div class="adr-individual-toggle-container">`
@@ -3451,12 +3491,12 @@ function _updateOpposedToggle(container, entries) {
   for (const entry of withResults) {
     const historyHTML = _buildRollHistoryHTML(entry);
     detailsInner += `<div class="adr-opposed-detail-block">`
-      + `<div class="adr-opposed-detail-name">${entry.actorName}</div>`
+      + `<div class="adr-opposed-detail-name">${foundry.utils.escapeHTML(entry.actorName ?? "")}</div>`
       + `<div class="adr-opposed-detail-body">${historyHTML}</div>`
       + `</div>`;
   }
 
-  const toggleLabel = game.i18n.localize("argas-dice-roller.individualResults.toggle");
+  const toggleLabel = game.i18n.localize(`${ADR.ID}.individualResults.toggle`);
   const html = `<div class="adr-group-toggle-container adr-opposed-toggle-container">`
     + `<div class="adr-group-divider"></div>`
     + `<div class="adr-individual-toggle-container">`
@@ -3506,7 +3546,7 @@ function _updateOpposedToggle(container, entries) {
           hintEl = document.createElement("div");
           hintEl.className = "adr-benny-protected-hint adr-first-fumble-hint";
           const tmpl = game.i18n.localize(`${ADR.ID}.requestRoll.firstRollFumbleNamed`);
-          const text = tmpl.replace("{actor}", entry.actorName ?? "");
+          const text = tmpl.replace("{actor}", foundry.utils.escapeHTML(entry.actorName ?? ""));
           hintEl.innerHTML = `<div class="adr-benny-protected-line adr-benny-protected-fumble">${text}</div>`;
         }
       }
@@ -3784,7 +3824,7 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
       _updateEntryDOM(li, entry.actorId, entry.result, entry.bennyUsed ?? false, entry.diceDetails, isGroup, entry.isNPC ?? false, entry.fumbleCheckResult, entry.fumbleCheckDie, entry.previousRolls ?? null, !!entry.lastRerollProtected, entry.rollSeq ?? null, !!entry.fumbleCheckAccepted, !!entry.lastRerollFumbleOverwrite);
     }
 
-    const isMine = entry.ownerIds.includes(game.user.id) || game.user.isGM;
+    const isMine = entry.ownerIds?.includes(game.user.id) || game.user.isGM;
 
     const rollBtn = li.querySelector(`[data-action="adr-roll-trait"][data-actor-id="${entry.actorId}"]`);
     if (rollBtn && !isMine && entry.result === null) {

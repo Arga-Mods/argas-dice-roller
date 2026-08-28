@@ -6,7 +6,10 @@
       "explodingDiceRolls": "Explosionswürfel",
       "coin": "Münze",
       "wildDie": "Wild Die",
+      "keepDice": "Höchster / Niedrigster",
+      "cthulhuDice": "Call of Cthulhu",
       "d2Rolls": "D2-Würfel",
+      "fudgeRolls": "Fudge-Würfel: je Würfel + (+1), leer (0) oder − (−1). Kein Explodieren, kein Wild Die.",
       "d100Rolls": "D100-Würfel",
       "modifiers": "Modifikatoren (Mehrfachauswahl möglich)",
       "freeRollLabel": "Freies Würfeln",
@@ -20,12 +23,23 @@
       "makeBlindRoll": "Verdeckter SL-Wurf (sichtbar nur für SL)",
       "makeSelfRoll": "Privater Wurf (sichtbar nur für Dich)",
       "explodingDice": "Alle Würfel können explodieren",
-      "wildDie": "Wildcard-Würfel (W6) mitwürfeln"
+      "wildDie": "Wildcard-Würfel (W6) mitwürfeln",
+      "keepHighest": "Nur der höchste Würfel zählt",
+      "keepLowest": "Nur der niedrigste Würfel zählt",
+      "bonusDie": "Bonuswürfel (W100): zusätzliche Zehnerwürfel, der niedrigste zählt. 1. Klick: ein Würfel, 2. Klick: zwei, 3. Klick: aus",
+      "penaltyDie": "Strafwürfel (W100): zusätzliche Zehnerwürfel, der höchste zählt. 1. Klick: ein Würfel, 2. Klick: zwei, 3. Klick: aus"
     },
     "warn": {
       "cannotRollAsGroupOrVehicle": "Man kann nicht als 'Gruppe' oder 'Fahrzeug' würfeln.",
       "coinNotInMulti": "Die Münze kann nicht in einem Mehrfach-Wurf gemischt werden.",
+      "fudgeNotInMulti": "Fudge-Würfel können nicht in einem Mehrfach-Wurf gemischt werden.",
       "coinNoModifier": "Münzwürfe nehmen keine Modifikatoren an. Bitte zuerst die Modifikatoren abwählen.",
+      "keepNeedsTwoDice": "„Höchster/Niedrigster\" braucht mindestens zwei Würfel.",
+      "keepNoCoinFudge": "„Höchster/Niedrigster\" gilt nicht für Münze und Fudge-Würfel.",
+      "keepNotInMulti": "„Höchster/Niedrigster\" kann nicht mit einem Mehrfach-Wurf kombiniert werden.",
+      "cthulhuOnlyD100": "Bonus-/Strafwürfel gibt es nur für den W100.",
+      "cthulhuSingleRoll": "Bonus-/Strafwürfel: bitte nur einen W100 werfen (Spalte 1).",
+      "cthulhuNotInMulti": "Bonus-/Strafwürfel können nicht mit einem Mehrfach-Wurf kombiniert werden.",
       "selectToken": "Bitte wähle mindestens einen Token aus."
     },
     "chat": {
@@ -46,7 +60,12 @@
       "flavorMulti": "Multi-Pool: {total}",
       "flavorMultiWild": "Multi-Pool: {total} | Wild Die: {wild}",
       "rollName": "Probe",
-      "fumbleCheckName": "Patzer-Check"
+      "keepHighest": "Nur der höchste Würfel zählt",
+      "keepLowest": "Nur der niedrigste Würfel zählt",
+      "bonusDie": "Bonuswürfel: niedrigster Zehnerwürfel zählt",
+      "penaltyDie": "Strafwürfel: höchster Zehnerwürfel zählt",
+      "fumbleCheckName": "Patzer-Check",
+      "unknownActor": "Unbekannt"
     },
     "multiSelect": {
       "tooltipHint": "Mit gedrückter Strg-Taste können mehrere verschiedene Würfel zum gleichzeitigen Wurf ausgewählt werden."
@@ -157,7 +176,8 @@
         "bennyUsed": "Für diesen Wurf wurde bereits ein Benny eingesetzt.",
         "noBennies": "Keine Bennies mehr vorhanden.",
         "noGMBennies": "Der Spielleiter hat keine Bennys mehr.",
-        "invalidModifier": "Gib einen Wert zwischen {min} und {max} ein."
+        "invalidModifier": "Gib einen Wert zwischen {min} und {max} ein.",
+        "noActiveGM": "Kein Spielleiter verbunden – das Ergebnis kann nicht gespeichert werden. Bitte warten, bis ein SL online ist."
       },
       "dramatic": {
         "presetStandard": "Standard (3/3)",
@@ -263,11 +283,31 @@
       "dramaticTaskFailureComplicationLine1": "Fehlschlag bei Komplikation",
       "dramaticTaskFailureComplicationLine2": "Aufgabe gescheitert"
     },
+    "diceTypes": {
+      "menuName": "Angezeigte Würfeltypen",
+      "menuHint": "Wähle aus, welche Würfeltypen im Würfelfenster angeboten werden.",
+      "menuLabel": "Auswahl (nur SL)",
+      "windowTitle": "Angezeigte Würfeltypen",
+      "intro": "Wähle aus, welche Arten von Würfeln in dem Würfelfenstern angezeigt und welche ausgeblendet werden sollen.",
+      "coin": "Münzwurf",
+      "fudge": "Fudge-Würfel"
+    },
+    "buttons": {
+      "menuName": "Angezeigte Schaltflächen",
+      "menuHint": "Wähle aus, welche Schaltflächen allen zur Verfügung stehen.",
+      "menuLabel": "Auswahl (nur SL)",
+      "windowTitle": "Angezeigte Schaltflächen",
+      "systemNote": "Folgende Einstellungen sind speziell für bestimmte Spielsysteme:"
+    },
     "swadeSettings": {
       "windowTitle": "Spielmechanik SWADE-System",
       "menuName": "Spielmechanik SWADE-System",
+      "menuHint": "Zusätzliche Einstellungen für Savage Worlds.",
       "menuLabel": "Einstellungen (nur SL)",
-      "save": "Speichern"
+      "save": "Speichern",
+      "warningLabel": "Hinweis:",
+      "warningSystem": "Savage Worlds",
+      "warningText": "Da du nicht das offizielle Spielsystem von {system} nutzt, würde eine Anforderung von SWADE-spezifischen Proben zu Fehlern führen. Die Funktion der Probenanforderung wurde daher deaktiviert."
     },
     "settings": {
       "chatDesign": {
@@ -285,7 +325,7 @@
       },
       "explodingMode": {
         "name": "Schaltfläche \"Explosionswürfel\"",
-        "hint": "Aktiviert oder deaktiviert einen Button, der beim Anwählen die Explosionsmechanik bei Würfeln anwendet (Würfel, die den höchstmöglichen Wert zeigen, werden erneut gewürfelt und die jeweiligen Ergebnisse werden addiert).",
+        "hint": "Würfel, die den höchstmöglichen Wert zeigen, werden erneut gewürfelt und die jeweiligen Ergebnisse werden addiert.",
         "choices": {
           "multi": "Mehrfach explodierend",
           "once": "Nur 1x explodierend",
@@ -297,12 +337,20 @@
         "hint": "Die Schaltfläche \"Explosionswürfel\" ist standardmäßig aktiviert."
       },
       "enableWildDie": {
-        "name": "Schaltfläche \"Wild Die\"",
-        "hint": "Fügt einen Button für den 'Savage Worlds' Wildcard-Würfel hinzu. Dieser kann immer explodieren, unabhängig von der Schaltfläche 'Explosionswürfel'."
+        "name": "Schaltfläche \"Wild Die\" (Savage Worlds)",
+        "hint": "Fügt einen Button für den Wildcard-Würfel hinzu. Dieser kann immer explodieren, unabhängig von der Schaltfläche 'Explosionswürfel'."
       },
       "enableModifiers": {
         "name": "Schaltfläche \"Modifikatoren\"",
-        "hint": "Ermöglicht das Hinzufügen von Würfel-Modifikatoren. Mehrere Werte lassen sich kombinieren."
+        "hint": "Füge Würfel-Modifikationen hinzu, entweder durch manuelle Eingabe oder durch Buttons."
+      },
+      "enableKeepDice": {
+        "name": "Schaltflächen \"Höchster / Niedrigster\" (z.B. D&D oder Dragonbane)",
+        "hint": "Zwei Schaltflächen im Würfelfenster: Alle Würfel werden geworfen, aber nur der höchste bzw. niedrigste zählt."
+      },
+      "enableCthulhuDice": {
+        "name": "Schaltflächen \"Bonus-/Strafwürfel\" (Call of Cthulhu)",
+        "hint": "Zwei Schaltflächen für den W100: Ein oder zwei zusätzliche Zehnerwürfel werden mitgeworfen; beim Bonuswürfel zählt der niedrigste, beim Strafwürfel der höchste Zehner (00+0 = 100)."
       },
       "enableFirstColumn": {
         "name": "Zusätzliche Spalte für \"1\" Würfel",
@@ -315,18 +363,6 @@
       "maxDiceCount": {
         "name": "Maximale Anzahl an Würfeln:",
         "hint": "Anzahl der Würfel, die zeitgleich geworfen werden können."
-      },
-      "enableCoins": {
-        "name": "Aktiviere \"Münzwurf\"",
-        "hint": "Die 'Münze' liefert die Ergebnisse ~Kopf~ oder ~Zahl~."
-      },
-      "enableD2Rolls": {
-        "name": "Aktiviere \"W2\" - Würfe",
-        "hint": "Macht die Zeile mit den 'W2'-Würfeln sichtbar."
-      },
-      "enableD100Rolls": {
-        "name": "Aktiviere \"W100\" - Würfe",
-        "hint": "Macht die Zeile mit den 'W100'-Würfeln sichtbar."
       },
       "enableFateRollButton": {
         "name": "Schaltfläche \"Schicksalswurf\"",

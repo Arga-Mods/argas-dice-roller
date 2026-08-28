@@ -324,8 +324,10 @@
   border-color: rgba(80, 180, 80, 0.5);
   box-shadow: inset 0 0 0 1px rgba(60, 160, 60, 0.2);
 }
-/* Gruppenprobe: Checkbox nur visuell, nicht direkt klickbar */
-[data-action="highlight-group-actor"] input[type="checkbox"] {
+/* Gruppenprobe: Checkbox nur visuell, nicht direkt klickbar.
+   Auf das eigene Fenster gescoped — ein fremdes Modul könnte denselben
+   data-action-Wert nutzen. */
+#adr-request-roll [data-action="highlight-group-actor"] input[type="checkbox"] {
   pointer-events: none;
 }
 

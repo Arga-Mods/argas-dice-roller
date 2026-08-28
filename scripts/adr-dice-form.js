@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Copyright (C) 2026 Arga-Mods */
 
-import { ADR } from "./adr-constants.js";
+import { ADR, adrIsFudge, adrSignedNumber, adrBuildFudgeResults, adrKeepModifier, adrCthulhuMode, adrEvalCthulhu } from "./adr-constants.js";
 import {
   _fireTraitRollHook,
   _renderDicePrecomputed,
@@ -87,7 +87,12 @@ export function adrBuildDieResults(dieTerm) {
     if (chain.includes(1)) cssClass = "min";
     if (chain.includes(faces)) cssClass = "max";
     const display = chain.join("<sup class='adr-ex'>ex</sup>");
-    out.push({ value: display, display, class: cssClass });
+    // „Höchster"/„Niedrigster" (kh/kl): Foundry markiert nicht gewertete
+    // Würfel mit discarded=true — im Chat durchgestrichen, bei der
+    // Einsen-Regel nicht mitgezählt.
+    const discarded = !!results[i].discarded;
+    if (discarded) cssClass = `${cssClass} adr-discarded`.trim();
+    out.push({ value: display, display, class: cssClass, discarded });
   }
   return out;
 }
@@ -107,7 +112,9 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
 
   /** @override */
   static DEFAULT_OPTIONS = {
-    id: "dice-form",
+    // Modul-Präfix in der Element-ID — eine generische ID wie "dice-form"
+    // kollidiert mit anderen Modulen (CSS-Regeln stylen sich gegenseitig um)
+    id: "adr-dice-form",
     classes: ["argas-dice-roller-window"],
     window: {
       frame: true,
@@ -137,6 +144,13 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
     this.hiddenType = null;
     this.isExploding = false;
     this.isWildDie = false;
+    // „Höchster"/„Niedrigster": null | "kh" | "kl" (flüchtig, wie Wild Die).
+    this.keepMode = null;
+    this.showKeepToggle = game.settings.get(ADR.ID, ADR.CONFIG_KEEP_DICE);
+    // Bonus-/Strafwurf (Call of Cthulhu): null | "bonus" | "penalty", Zusatzwürfel 1 oder 2.
+    this.cthulhuMode = null;
+    this.cthulhuCount = 1;
+    this.showCthulhuToggle = game.settings.get(ADR.ID, ADR.CONFIG_CTHULHU_DICE);
     this.enableHiddenRolls = game.settings.get(ADR.ID, ADR.CONFIG_HIDDEN_ROLLS);
     this.explodingMode = game.settings.get(ADR.ID, ADR.CONFIG_EXPLODING_MODE);
     this.showExplodingToggle = (this.explodingMode !== "off");
@@ -144,16 +158,10 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
     if (this.showExplodingToggle && this.explodingDefault) this.isExploding = true;
     this.enableFirstColumn = game.settings.get(ADR.ID, ADR.CONFIG_1ST_COLUMN);
     this.closeFormOnRoll = game.settings.get(ADR.ID, ADR.CONFIG_CLOSE_FORM);
-    this.enableCoins = game.settings.get(ADR.ID, ADR.CONFIG_COINS);
-    this.enableD2 = game.settings.get(ADR.ID, ADR.CONFIG_D2);
-    this.enableD100 = game.settings.get(ADR.ID, ADR.CONFIG_D100);
-    // Wild Die ist eine reine SWADE-Mechanik. Zusätzlich zum
-    // settings-seitigen Gate (config/default = isSwade in adr-hooks.js)
-    // hier ein harter System-Check: ein in einer früheren SWADE-Welt
-    // gespeicherter `true`-Wert darf in einem Nicht-SWADE-System weder
-    // den Toggle anzeigen noch aktiv sein.
-    this.showWildToggle = game.system.id === "swade"
-      && game.settings.get(ADR.ID, ADR.CONFIG_WILD_DIE);
+    this.diceTypes = game.settings.get(ADR.ID, ADR.CONFIG_DICE_TYPES);
+    // Wild-Die-Schaltfläche: SL-Setting im Untermenü „Angezeigte Schaltflächen"
+    // (in jedem System verfügbar; Standard nur in SWADE an).
+    this.showWildToggle = game.settings.get(ADR.ID, ADR.CONFIG_WILD_DIE);
     this.showModifiers = game.settings.get(ADR.ID, ADR.CONFIG_MODIFIERS);
     // Über die Buttons ausgewählte Modifikatoren (nur für Button-Optik +
     // Toggle-Logik). Die effektive Wurfsumme liefert this.manualModifier.
@@ -183,12 +191,7 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
   /* --------------------------------------------------------- */
 
   _getDiceTypes() {
-    const types = [];
-    if (this.enableCoins) types.push("dc");
-    if (this.enableD2) types.push("d2");
-    types.push(...DiceForm.STANDARD_DICE.filter(d => d !== "d2"));
-    if (this.enableD100) types.push("d100");
-    return types;
+    return ADR.DICE_TYPES.filter(t => this.diceTypes?.[t] ?? ADR.DICE_TYPES_DEFAULT[t]);
   }
 
   /* --------------------------------------------------------- */
@@ -210,18 +213,25 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
       enableHiddenRolls: this.enableHiddenRolls,
       showExplodingToggle: this.showExplodingToggle,
       showWildToggle: this.showWildToggle,
+      showKeepToggle: this.showKeepToggle,
+      showCthulhuToggle: this.showCthulhuToggle,
       showModifiers: this.showModifiers,
       // Anzeigewert für das händische Modifikator-Feld (State-Erhalt bei Re-Render).
       modifierDisplay: this._formatModifierForInput(this.manualModifier),
       user: game.user,
       enableFateRollButton: game.settings.get(ADR.ID, "enableFateRollButton"),
-      enableRequestRoll: game.settings.get(ADR.ID, ADR.CONFIG_REQUEST_ROLL),
+      enableRequestRoll: game.system.id === "swade" && game.settings.get(ADR.ID, ADR.CONFIG_REQUEST_ROLL),
       showFirstColumn: this.enableFirstColumn,
-      modulePath: game.modules.get(ADR.ID)?.path || `modules/${ADR.ID}`,
+      modulePath: `modules/${ADR.ID}`,
 
       // Toggle-Zustände für State-Erhalt bei Re-Render
       isExploding: this.isExploding,
       isWildDie: this.isWildDie,
+      isKeepHighest: this.keepMode === "kh",
+      isKeepLowest: this.keepMode === "kl",
+      isBonusDie: this.cthulhuMode === "bonus",
+      isPenaltyDie: this.cthulhuMode === "penalty",
+      cthulhuCount: this.cthulhuCount,
       isGMRoll: this.hiddenType === DiceForm.GM_ROLL,
       isBlindRoll: this.hiddenType === DiceForm.BLIND_ROLL,
       isSelfRoll: this.hiddenType === DiceForm.SELF_ROLL,
@@ -230,7 +240,7 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
         const isGerman = game.i18n.lang.startsWith("de");
         const label = die === "dc"
           ? game.i18n.localize("argas-dice-roller.legend.coin")
-          : (isGerman ? die.replace(/^d/, "W") : die);
+          : (adrIsFudge(die) ? "Fudge" : (isGerman ? die.replace(/^d/, "W") : die));
 
         const isCoin = (die === "dc");
         const rolls = isCoin
@@ -373,6 +383,9 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
       && !!game.settings.get(ADR.ID, ADR.CONFIG_EXPLODING_DEFAULT);
     // Modifikatoren und Wild Die haben keinen Setting-Default → aus.
     this.isWildDie = false;
+    this.keepMode = null;
+    this.cthulhuMode = null;
+    this.cthulhuCount = 1;
     this.modifiers = [];
     this.manualModifier = 0;
     this.modifierLocked = false;
@@ -405,13 +418,50 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
       input.addEventListener("change", this._setHiddenRoll.bind(this));
     });
 
-    // Explosionswürfel
+    // Explosionswürfel (schließt „Höchster/Niedrigster" aus)
     const exploding = el.querySelector("#explodingDice");
-    if (exploding) exploding.addEventListener("change", ev => { this.isExploding = ev.target.checked; });
+    if (exploding) exploding.addEventListener("change", ev => {
+      this.isExploding = ev.target.checked;
+      if (this.isExploding) { this._setKeepMode(null); this._setCthulhu(null); }
+    });
 
-    // Wild Die
+    // Wild Die (schließt „Höchster/Niedrigster" aus)
     const wildDie = el.querySelector("#wildDie");
-    if (wildDie) wildDie.addEventListener("change", ev => { this.isWildDie = ev.target.checked; });
+    if (wildDie) wildDie.addEventListener("change", ev => {
+      this.isWildDie = ev.target.checked;
+      if (this.isWildDie) { this._setKeepMode(null); this._setCthulhu(null); }
+    });
+
+    // „Höchster"/„Niedrigster" — höchstens einer aktiv, schließt
+    // Explodieren und Wild Die aus (in keinem Ursprungssystem kombiniert).
+    el.querySelectorAll("input[name='keepMode']").forEach(input => {
+      input.addEventListener("change", ev => {
+        const t = ev.currentTarget;
+        this._setKeepMode(t.checked ? t.value : null);
+        if (t.checked) {
+          this._setCthulhu(null);
+          this._switchOffExplodingAndWild();
+        }
+      });
+    });
+
+    // Bonus-/Strafwurf (Call of Cthulhu): 1. Klick = ein Zusatzwürfel,
+    // 2. Klick = zwei, 3. Klick = aus. Der Browser hat die Checkbox beim
+    // zweiten Klick schon abgewählt — wir setzen sie zurück und zählen hoch.
+    el.querySelectorAll("input[name='cthulhuMode']").forEach(input => {
+      input.addEventListener("change", ev => {
+        const t = ev.currentTarget;
+        if (t.checked) {
+          this._setCthulhu(t.value, 1);
+          this._setKeepMode(null);
+          this._switchOffExplodingAndWild();
+        } else if (this.cthulhuMode === t.value && this.cthulhuCount === 1) {
+          this._setCthulhu(t.value, 2);
+        } else {
+          this._setCthulhu(null);
+        }
+      });
+    });
 
     // Würfeln (mit Strg+Klick-Detection für Multi-Würfel-Auswahl)
     el.querySelectorAll(".rollable").forEach(btn => {
@@ -512,6 +562,36 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
     // Foundry-Setting geschrieben: core.rollMode ist seit v14 zugunsten
     // von core.messageMode deprecatet (Kompatibilität fällt mit v16 weg).
     // Den verdeckten Wurf setzt _rollDie ohnehin direkt über whisper/blind.
+  }
+
+  /** Explodieren und Wild Die abschalten (State + Checkboxen) und Strg-Auswahl verwerfen. */
+  _switchOffExplodingAndWild() {
+    this.isExploding = false;
+    this.isWildDie = false;
+    const ex = this.element?.querySelector("#explodingDice"); if (ex) ex.checked = false;
+    const wd = this.element?.querySelector("#wildDie"); if (wd) wd.checked = false;
+    // Eine laufende Strg-Auswahl passt nicht zum Einzelwurf-Modus.
+    this._clearMultiSelection();
+  }
+
+  /** Setzt Bonus-/Strafwurf (null/"bonus"/"penalty") samt Anzahl und gleicht Umschalter + Ziffer ab. */
+  _setCthulhu(mode, count = 1) {
+    this.cthulhuMode = adrCthulhuMode(mode);
+    this.cthulhuCount = this.cthulhuMode ? Math.min(2, Math.max(1, count)) : 1;
+    this.element?.querySelectorAll("input[name='cthulhuMode']").forEach(input => {
+      const active = (input.value === this.cthulhuMode);
+      input.checked = active;
+      const badge = input.parentElement?.querySelector(".adr-cthulhu-count");
+      if (badge) badge.textContent = active ? String(this.cthulhuCount) : "";
+    });
+  }
+
+  /** Setzt keepMode (null/"kh"/"kl") und gleicht die beiden Umschalter ab. */
+  _setKeepMode(mode) {
+    this.keepMode = adrKeepModifier(mode);
+    this.element?.querySelectorAll("input[name='keepMode']").forEach(input => {
+      input.checked = (input.value === this.keepMode);
+    });
   }
 
   _onModifierClick(event) {
@@ -691,6 +771,21 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
     // Münze: nicht selektierbar im Multi-Modus
     if (type === "dc") {
       ui.notifications.warn(game.i18n.localize(`${ADR.ID}.warn.coinNotInMulti`));
+      return;
+    }
+    // Fudge-Würfel (−1/0/+1) ebenfalls nicht — passt nicht in eine Mischpool-Summe.
+    if (adrIsFudge(type)) {
+      ui.notifications.warn(game.i18n.localize(`${ADR.ID}.warn.fudgeNotInMulti`));
+      return;
+    }
+    // „Höchster/Niedrigster" gilt nur für einen einzelnen Würfeltyp.
+    if (this.keepMode) {
+      ui.notifications.warn(game.i18n.localize(`${ADR.ID}.warn.keepNotInMulti`));
+      return;
+    }
+    // Bonus-/Strafwurf ebenfalls nur als einzelner W100.
+    if (this.cthulhuMode) {
+      ui.notifications.warn(game.i18n.localize(`${ADR.ID}.warn.cthulhuNotInMulti`));
       return;
     }
 
@@ -938,9 +1033,36 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
 
     const count = Number(event.currentTarget.dataset.diceRoll);
     const type = String(event.currentTarget.dataset.diceType);
+    const isFudge = adrIsFudge(type);
+    // „Höchster"/„Niedrigster": nur für Zahlenwürfel und nur ab 2 Würfeln
+    // sinnvoll — sonst Hinweis statt stillschweigend normalem Wurf.
+    const keep = adrKeepModifier(this.keepMode);
+    if (keep && (type === "dc" || isFudge)) {
+      ui.notifications.warn(game.i18n.localize(`${ADR.ID}.warn.keepNoCoinFudge`));
+      return;
+    }
+    if (keep && count < 2) {
+      ui.notifications.warn(game.i18n.localize(`${ADR.ID}.warn.keepNeedsTwoDice`));
+      return;
+    }
+    // Bonus-/Strafwurf (Call of Cthulhu): eigener Pfad, nur 1× W100.
+    const cthulhu = adrCthulhuMode(this.cthulhuMode);
+    if (cthulhu) {
+      if (type !== "d100") {
+        ui.notifications.warn(game.i18n.localize(`${ADR.ID}.warn.cthulhuOnlyD100`));
+        return;
+      }
+      if (count !== 1) {
+        ui.notifications.warn(game.i18n.localize(`${ADR.ID}.warn.cthulhuSingleRoll`));
+        return;
+      }
+      return this._rollCthulhu(cthulhu, this.cthulhuCount);
+    }
     let faces;
     if (type === "dc") {
       faces = 2;
+    } else if (isFudge) {
+      faces = 3;   // Foundry-FateDie: intern 3 Seiten (−1/0/+1)
     } else {
       faces = Number(String(type).replace(/^[dDwW]/, "")) || 0;
     }
@@ -950,13 +1072,19 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
     const sumMod = (type === "dc")
       ? 0
       : this._getEffectiveModifier();
-    const displayFormula = `${count}${type}${(this.isExploding && faces !== 100 && type !== "dc") ? "!" : ""}${sumMod !== 0 ? (sumMod > 0 ? `+${sumMod}` : `${sumMod}`) : ""}`;
+    // Fudge-Würfel explodieren nie und haben keinen Wild Die (wie die Münze).
+    // „Höchster/Niedrigster" schließt Explodieren aus (UI erzwingt das bereits).
+    const canExplode = this.isExploding && faces !== 100 && type !== "dc" && !isFudge && !keep;
+    const displayFormula = `${count}${type}${keep ?? ""}${canExplode ? "!" : ""}${sumMod !== 0 ? (sumMod > 0 ? `+${sumMod}` : `${sumMod}`) : ""}`;
 
-    const dieTerm = new foundry.dice.terms.Die({
-      number: count,
-      faces,
-      modifiers: (this.isExploding && faces !== 100 && type !== "dc") ? [adrExplodingModifier()] : []
-    });
+    const dieTerm = isFudge
+      ? new foundry.dice.terms.FateDie({ number: count })
+      : new foundry.dice.terms.Die({
+          number: count,
+          faces,
+          // "kh"/"kl" ohne Zahl = genau ein Würfel zählt (Foundry-Standard).
+          modifiers: keep ? [keep] : (canExplode ? [adrExplodingModifier()] : [])
+        });
     const terms = [dieTerm];
     if (sumMod !== 0) {
       terms.push(new foundry.dice.terms.OperatorTerm({ operator: sumMod > 0 ? "+" : "-" }));
@@ -972,7 +1100,7 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
     }
 
     let wildRoll = null;
-    if (this.isWildDie && type !== "dc") {
+    if (this.isWildDie && type !== "dc" && !isFudge && !keep) {
       const wildTerms = [new foundry.dice.terms.Die({ number: 1, faces: 6, modifiers: [adrExplodingModifier()] })];
       if (sumMod !== 0) {
         wildTerms.push(new foundry.dice.terms.OperatorTerm({ operator: sumMod > 0 ? "+" : "-" }));
@@ -986,7 +1114,10 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
     // anpassbar). Pseudo-Roll bündelt Trait-Würfel + Wild Die wie ein
     // SWADE-Wildcard-Wurf; die `dice`-Einträge sind References auf die echten
     // Roll-Objekte, also wirken Hook-Modifikationen automatisch dort.
-    if (type !== "dc") {
+    // Fudge-Würfel (−1/0/+1) ebenfalls ausgenommen — keine Eigenschaftsprobe.
+    // „Höchster/Niedrigster" ebenfalls: Hook-Empfänger summieren alle Würfel,
+    // hier zählt aber nur einer — die Summe wäre falsch.
+    if (type !== "dc" && !isFudge && !keep) {
       // Schwelle: bei zu vielen Würfeln (Wild Die nicht mitgezählt) wird der
       // Hook nicht gefeuert — Hook-Empfänger sind in der Regel auf einzelne
       // Trait-Würfel ausgelegt. Schwelle kommt aus dem Tweaks-Modul (sofern
@@ -994,7 +1125,10 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
       const _tweaksActive = !!game.modules.get("argas-tweaks")?.active;
       let _tweaksTooMany = false;
       if (_tweaksActive) {
-        const _tweaksMaxDice = game.settings.get("argas-tweaks", "maxDice") ?? Infinity;
+        // try/catch: Foundry wirft bei nicht registrierten Setting-Keys —
+        // eine Tweaks-Version ohne "maxDice" darf den Wurf nicht abbrechen.
+        let _tweaksMaxDice = Infinity;
+        try { _tweaksMaxDice = game.settings.get("argas-tweaks", "maxDice") ?? Infinity; } catch (e) { /* */ }
         const _mainDiceCount = mainRoll?.dice?.[0]?.number ?? 0;
         _tweaksTooMany = _mainDiceCount > _tweaksMaxDice;
       }
@@ -1031,7 +1165,7 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
           //  - fumbleMechanic: SWADE-Patzer-Mechanik aktiv (ADR-Setting). Bei
           //    aktiver Mechanik darf ein erzwungener Niedrigwert keinen
           //    unbeabsichtigten Patzer erzeugen.
-          exploding: (this.isExploding && faces !== 100 && type !== "dc"),
+          exploding: canExplode,
           hasWildDie: !!wildRoll,
           fumbleMechanic: !!game.settings.get(ADR.ID, ADR.CONFIG_HIGHLIGHT_ONES),
         };
@@ -1057,7 +1191,11 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
 
     let mainIndividualResults = [];
     if (mainRoll?.dice?.length) {
-      mainIndividualResults = adrBuildDieResults(mainRoll.dice[0]);
+      // Fudge: Symbole +/▢/− statt Zahlen; die min/max-Logik von
+      // adrBuildDieResults würde die +1 fälschlich rot färben.
+      mainIndividualResults = isFudge
+        ? adrBuildFudgeResults(mainRoll.dice[0])
+        : adrBuildDieResults(mainRoll.dice[0]);
     }
 
     let wildIndividualResults = [];
@@ -1065,16 +1203,25 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
       wildIndividualResults = adrBuildDieResults(wildRoll.dice[0]);
     }
 
+    // Einsen-Regel gilt nicht für Fudge-Würfel (+1 ist dort das beste Ergebnis).
     let mainHighlight = false, wildHighlight = false;
-    if (game.settings.get(ADR.ID, ADR.CONFIG_HIGHLIGHT_ONES)) {
+    if (!isFudge && game.settings.get(ADR.ID, ADR.CONFIG_HIGHLIGHT_ONES)) {
+      // Nur die NATÜRLICHEN Würfel zählen (die ersten `number` Einträge) —
+      // Explosions-Nachwürfe hängen hinten im results-Array und würden
+      // Zähler wie Nenner verfälschen (z. B. 2W6 [1, 6→1]: 2 von 3 Einsen
+      // wäre Mehrheit, obwohl nur 1 von 2 natürlichen Würfeln eine 1 zeigt).
       if (mainRoll?.dice?.length) {
-        const vals = mainRoll.dice[0].results.map(r => r.result);
+        const term = mainRoll.dice[0];
+        // Bei „Höchster/Niedrigster" zählen nur die gewerteten Würfel
+        // (discarded-Würfel sind nicht Teil des Ergebnisses).
+        const vals = term.results.slice(0, term.number).filter(r => !r.discarded).map(r => r.result);
         const ones = vals.filter(x => x === 1).length;
         if (vals.length === 1 && ones === 1) mainHighlight = true;
         else if (vals.length > 1 && ones > (vals.length / 2)) mainHighlight = true;
       }
       if (wildRoll?.dice?.length) {
-        const vals = wildRoll.dice[0].results.map(r => r.result);
+        const term = wildRoll.dice[0];
+        const vals = term.results.slice(0, term.number).map(r => r.result);
         if (vals.includes(1)) wildHighlight = true;
       }
     }
@@ -1123,7 +1270,7 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
     const speaker = ChatMessage.getSpeaker();
     const flavor = this.isWildDie && wildRoll
       ? game.i18n.format(`${ADR.ID}.chat.flavorMain`, { main: mainRoll.total, wild: wildRoll.total })
-      : game.i18n.format(`${ADR.ID}.chat.flavorResult`, { total: mainRoll.total });
+      : game.i18n.format(`${ADR.ID}.chat.flavorResult`, { total: isFudge ? adrSignedNumber(mainRoll.total) : mainRoll.total });
 
     const actor = game.actors.get(speaker.actor);
     const actorImg = actor?.prototypeToken?.texture?.src || actor?.img || "";
@@ -1133,8 +1280,12 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
         mainResult: mainRoll.total,
         mainFormula: displayFormula,
         mainIndividualResults,
-        mainExploding: (type !== "dc") && this.isExploding,
-        wildExploding: !!this.isWildDie,
+        // W100-Ausnahme mitführen (wie beim Bau des Wurfs oben): das Flag
+        // steuert u. a. den Reroll-Rebuild in adr-hooks.js — ohne die
+        // Ausnahme würde der Benny-Reroll eines W100 explodieren.
+        mainExploding: canExplode,
+        // Wild Die gibt es bei Münze/Fudge nicht — Flag nur setzen, wenn er wirklich gewürfelt wurde.
+        wildExploding: !!wildRoll,
         wildResult: wildRoll?.total,
         wildFormula: wildRoll?.formula,
         wildIndividualResults,
@@ -1161,6 +1312,9 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
         // mit „explodierend, wenn da").
         dieType: type,
         dieCount: count,
+        // „Höchster"/„Niedrigster" ("kh"/"kl") oder null — steuert Chat-
+        // Kennzeichnung und den Benny-Reroll-Rebuild in adr-hooks.js.
+        keepMode: keep,
         appliedModifier: sumMod,
         // Chronologische Sequenznummer dieses Wurfs (für korrekte Sortierung
         // der Einzelergebnisse bei Mehrfach-Bennies). Der Initialwurf hat
@@ -1189,6 +1343,110 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
       msgData.whisper = [game.user.id];
     }
 
+    DiceForm._emitChatMessage(msgData);
+    if (this.closeFormOnRoll) this.close();
+  }
+
+  /**
+   * Bonus-/Strafwurf nach Call of Cthulhu 7e: ein W10 als Einerwürfel plus
+   * (1 + n) W10 als Zehnerwürfel. Je Zehnerwürfel ergibt sich ein mögliches
+   * Ergebnis (Zehner + Einer, 00+0 = 100); beim Bonuswurf zählt das
+   * niedrigste, beim Strafwurf das höchste. Kein Explodieren, kein Wild Die,
+   * kein Tweaks-Hook, keine Einsen-Regel, kein Benny (nicht SWADE).
+   *
+   * @param {"bonus"|"penalty"} mode
+   * @param {number} extra  Anzahl Zusatz-Zehnerwürfel (1 oder 2)
+   */
+  async _rollCthulhu(mode, extra) {
+    const sumMod = this._getEffectiveModifier();
+    const tensTerm = new foundry.dice.terms.Die({ number: 1 + extra, faces: 10 });
+    const onesTerm = new foundry.dice.terms.Die({ number: 1, faces: 10 });
+    const roll = await Roll.fromTerms([
+      tensTerm,
+      new foundry.dice.terms.OperatorTerm({ operator: "+" }),
+      onesTerm,
+    ]).evaluate();
+    const tensRaw = roll.dice[0].results.map(r => r.result);
+    const onesRaw = roll.dice[1].results[0].result;
+    const ev = adrEvalCthulhu(onesRaw, tensRaw, mode);
+    // Foundry-Summe der W10 ist bedeutungslos — Gesamtwert selbst setzen.
+    roll._total = ev.total + sumMod;
+
+    // Einzelergebnisse: je Zehnerwürfel das mögliche Ergebnis, nicht
+    // gewertete durchgestrichen. Keine min/max-Färbung (1 ist hier gut).
+    const pad = v => (v === 100 ? "100" : String(v).padStart(2, "0"));
+    const mainIndividualResults = ev.candidates.map((v, i) => ({
+      value: v,
+      display: pad(v),
+      class: i === ev.chosenIndex ? "adr-cthulhu-chosen" : "adr-discarded",
+      discarded: i !== ev.chosenIndex,
+    }));
+
+    let hiddenText = "";
+    if (this.hiddenType === DiceForm.GM_ROLL)
+      hiddenText = `<div class="adr-hidden-info" data-adr-hidden-key="gmRoll" style="font-size:0.9rem;margin:0;color:#e56917;font-weight:bold;text-align:center;"></div>`;
+    else if (this.hiddenType === DiceForm.BLIND_ROLL)
+      hiddenText = `<div class="adr-hidden-info" data-adr-hidden-key="blindRoll" style="font-size:0.9rem;margin:0;color:#e56917;font-weight:bold;text-align:center;"></div>`;
+    else if (this.hiddenType === DiceForm.SELF_ROLL)
+      hiddenText = `<div class="adr-hidden-info" data-adr-hidden-key="selfRoll" style="font-size:0.9rem;margin:0;color:#e56917;font-weight:bold;text-align:center;"></div>`;
+
+    const content = _buildInlineRollContent({
+      mainHTML: _renderDicePrecomputed(mainIndividualResults),
+      wildHTML: "",
+      appliedModifier: sumMod,
+    });
+    const resultLines = `<div class="adr-individual-toggle-container">`
+      + `<div class="adr-individual-toggle" data-adr-i18n="argas-dice-roller.individualResults.toggle"></div>`
+      + `<div class="adr-individual-details adr-individual-hidden">`
+      + `<div class="adr-individual">${content}</div>`
+      + `</div></div>`;
+
+    const speaker = ChatMessage.getSpeaker();
+    const flavor = game.i18n.format(`${ADR.ID}.chat.flavorResult`, { total: roll.total });
+    const actor = game.actors.get(speaker.actor);
+    const actorImg = actor?.prototypeToken?.texture?.src || actor?.img || "";
+    const modStr = sumMod !== 0 ? (sumMod > 0 ? `+${sumMod}` : `${sumMod}`) : "";
+
+    const flags = {
+      "argas-dice-roller": {
+        mainResult: roll.total,
+        // Kennung in der Formel („b1"/„p2"), parseDice in adr-hooks.js überliest sie.
+        mainFormula: `1d100${mode === "bonus" ? "b" : "p"}${extra}${modStr}`,
+        mainIndividualResults,
+        mainExploding: false,
+        wildExploding: false,
+        wildResult: undefined,
+        wildFormula: undefined,
+        wildIndividualResults: [],
+        actorName: speaker.alias,
+        actorImg,
+        mainHighlight: false,
+        wildHighlight: false,
+        hideRecipients: (this.hiddenType === DiceForm.GM_ROLL) || (this.hiddenType === DiceForm.BLIND_ROLL),
+        isSelfRoll: this.hiddenType === DiceForm.SELF_ROLL,
+        isWildcard: !!actor?.system?.wildcard,
+        dieType: "d100",
+        dieCount: 1,
+        keepMode: null,
+        // Bonus-/Strafwurf-Daten (steuern Kopfzeilen-Icon und sperren Benny/Einsen-Regel).
+        cthulhu: { mode, extra, ones: ev.ones, candidates: ev.candidates, chosenIndex: ev.chosenIndex },
+        appliedModifier: sumMod,
+        rollSeq: 1,
+        nextRollSeq: 2,
+      }
+    };
+
+    const fullContent = `<div class="adr-body">${hiddenText}${resultLines}</div>`;
+    const gmIds = game.users.filter(u => u.isGM).map(u => u.id);
+    const msgData = { content: fullContent, speaker, flavor, flags, rolls: [roll] };
+    if (this.hiddenType === DiceForm.GM_ROLL) {
+      msgData.whisper = gmIds;
+    } else if (this.hiddenType === DiceForm.BLIND_ROLL) {
+      msgData.whisper = gmIds;
+      msgData.blind = true;
+    } else if (this.hiddenType === DiceForm.SELF_ROLL) {
+      msgData.whisper = [game.user.id];
+    }
     DiceForm._emitChatMessage(msgData);
     if (this.closeFormOnRoll) this.close();
   }

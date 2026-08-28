@@ -7,8 +7,8 @@
   font-weight: 100 900;
   font-style: normal;
 }
-#dice-form,
-.window-app#dice-form,
+#adr-dice-form,
+.window-app#adr-dice-form,
 .argas-dice-roller-window {
   font-family: 'Roboto Slab', sans-serif !important;
 }
@@ -97,6 +97,33 @@
   text-align: center;
   margin-right: 0.5em;
 }
+/* Sidebar-Button (Szenen-Steuerung): W20-Form aus assets/icons/d20.svg als
+   CSS-Maske, Farbe = ADR-Orange, bewusst größer als die Standard-Icons.
+   Foundrys Button ist 32px (var(--control-size)) und ein Flex-Container —
+   deshalb feste Maße + flex:none, sonst schrumpft die Maske auf Textgröße. */
+button[data-control="argas-dice-roller"] {
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  overflow: visible !important;
+}
+[data-control="argas-dice-roller"] .adr-control-icon {
+  display: block !important;
+  flex: none !important;
+  width: 28px !important;
+  height: 28px !important;
+  min-width: 28px !important;
+  min-height: 28px !important;
+  background-color: #e56917 !important;
+  -webkit-mask: url("../assets/icons/d20.svg") center / 100% 100% no-repeat;
+  mask: url("../assets/icons/d20.svg") center / 100% 100% no-repeat;
+  opacity: 1 !important;
+  pointer-events: none;
+}
+[data-control="argas-dice-roller"]:hover .adr-control-icon {
+  filter: drop-shadow(0 0 6px rgb(159,255,159));
+}
 /* SVG Würfel-Icons (game-icons.net) */
 .adr-dice-icon {
   width: 38px;
@@ -118,7 +145,7 @@
   opacity: 1;
   filter: sepia(0) drop-shadow(0 0 6px rgb(159,255,159));
 }
-.dice-label {
+#adr-dice-form .dice-label {
   font-weight: bold;
   color: #eee;
   font-size: 1.1em;
@@ -232,21 +259,40 @@
   outline-offset: 2px;
   box-shadow: inset 0 0 10px rgba(159,255,159,0.5);
 }
-.d100-icons {
+#adr-dice-form .d100-icons {
   display: inline-flex;
   align-items: center;
   vertical-align: middle !important;
   margin-right: 0.4em;
 }
-.d100-icons i {
+#adr-dice-form .d100-icons i {
   margin: 0;
   padding: 0;
 }
-.d100-icons .adr-dice-icon-small + .adr-dice-icon-small {
+#adr-dice-form .d100-icons .adr-dice-icon-small + .adr-dice-icon-small {
   margin-left: -8px;
 }
-.d100-icons i:first-child {
+#adr-dice-form .d100-icons i:first-child {
   margin-right: -3px;
+}
+/* Fudge-Zeile: zwei Font-Awesome-Quadrate (+ / −) nebeneinander */
+#adr-dice-form .adr-fudge-icons {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 3px;
+  width: 54px;               /* 54 + 2 px Einzug = gemessene Breite der W100-Doppelsymbole → Beschriftung steht genau unter „W100" */
+  padding-left: 2px;         /* Symbole eine Winzigkeit nach rechts */
+  margin-right: 0.4em;       /* wie .d100-icons */
+  vertical-align: middle;    /* Beschriftung mittig zu den Symbolen */
+}
+#adr-dice-form .adr-fudge-icons .adr-fudge-icon {
+  width: auto;
+  height: auto;
+  font-size: 24px;
+  line-height: 1;
+  color: #fff;
+  margin: 0;
 }
 
 
@@ -336,28 +382,20 @@
   display: block;
   margin-bottom: 5px;
 }
-.dice-form .die-button {
-  display: inline-flex;
-  align-items: center;
-}
 /* ADR-Button: eigenständiges Top-Level-Control unten in der Spalte.
    Position macht das injizierte <li> selbst (Inline-`order: 9999`), den
    Abstand liefert der normale Flex-`gap` der Leiste — bewusst KEIN eigenes
    margin, damit der ADR-Eintrag denselben Abstand hat wie alle übrigen
    Buttons. (Frühere Regel `order: 999` + `margin-top: 0.5rem` traf nur den
    inneren Button: order wirkungslos, margin verursachte den Zusatz-Abstand.) */
-[data-control="argas-dice-roller"] i {
-  color: #e56917 !important;
-  opacity: 1 !important;
-}
 /* Nur ADR-Würfelfenster, Dialoge unberührt lassen */
-.window-app#dice-form .window-header,
-#dice-form .window-header,
+.window-app#adr-dice-form .window-header,
+#adr-dice-form .window-header,
 .argas-dice-roller-window .window-header {
   position: relative;
 }
-.window-app#dice-form .window-title,
-#dice-form .window-title,
+.window-app#adr-dice-form .window-title,
+#adr-dice-form .window-title,
 .argas-dice-roller-window .window-title {
   flex: 1 1 0;
   text-align: left;
@@ -366,8 +404,8 @@
   visibility: hidden;  /* nativen Titel verstecken, Platz bleibt erhalten */
 }
 /* nur Dice-Form: Titel mittig im Header */
-.window-app#dice-form .adrgs-title-extra,
-#dice-form .adrgs-title-extra,
+.window-app#adr-dice-form .adrgs-title-extra,
+#adr-dice-form .adrgs-title-extra,
 .argas-dice-roller-window .adrgs-title-extra {
   position: absolute;
   left: 50%;
@@ -383,8 +421,8 @@
   z-index: 10;
 }
 
-.window-app#dice-form,
-#dice-form,
+.window-app#adr-dice-form,
+#adr-dice-form,
 .argas-dice-roller-window {
   isolation: isolate;
 }
@@ -475,7 +513,7 @@
 }
 
 /* Dice window: mehr Abstand zwischen den Blöcken */
-.window-app#dice-form .app + .app,
+.window-app#adr-dice-form .app + .app,
 .argas-dice-roller-window .app + .app {
   margin-top: 10px; /* Abstand zwischen Modifiers, Random Token Selection, etc. */
 }
@@ -518,7 +556,7 @@
 /* ---------------------------------------------------------------- */
 
 /* --- Äußerer Container --- */
-#dice-form.application,
+#adr-dice-form.application,
 .argas-dice-roller-window {
   border: none !important;
   border-image: none !important;
@@ -534,7 +572,7 @@
 }
 
 /* --- Titelleiste: System-Dekorationen blockieren --- */
-#dice-form .window-header,
+#adr-dice-form .window-header,
 .argas-dice-roller-window .window-header {
   border: none !important;
   border-image: none !important;
@@ -548,7 +586,7 @@
 }
 
 /* --- Window-Title --- */
-#dice-form .window-header .window-title,
+#adr-dice-form .window-header .window-title,
 .argas-dice-roller-window .window-header .window-title {
   color: #eee !important;
   font-family: 'Roboto Slab', sans-serif !important;
@@ -559,8 +597,8 @@
 }
 
 /* --- Close-Button --- */
-#dice-form .window-header .header-control,
-#dice-form .window-header .close,
+#adr-dice-form .window-header .header-control,
+#adr-dice-form .window-header .close,
 .argas-dice-roller-window .window-header .header-control,
 .argas-dice-roller-window .window-header .close {
   background: transparent !important;
@@ -572,7 +610,7 @@
 }
 
 /* --- Window-Content --- */
-#dice-form > .window-content,
+#adr-dice-form > .window-content,
 .argas-dice-roller-window > .window-content {
   border: none !important;
   border-image: none !important;
@@ -584,7 +622,7 @@
 }
 
 /* --- Fieldsets & Legends: Systeme stylen diese oft radikal um --- */
-#dice-form fieldset,
+#adr-dice-form fieldset,
 .argas-dice-roller-window fieldset {
   border: 2px solid #777 !important;
   border-image: none !important;
@@ -595,7 +633,7 @@
   color: inherit !important;
   text-shadow: none !important;
 }
-#dice-form legend,
+#adr-dice-form legend,
 .argas-dice-roller-window legend {
   background: inherit !important;
   background-image: none !important;
@@ -611,7 +649,7 @@
 }
 
 /* --- Buttons innerhalb des Dice-Fensters --- */
-#dice-form button,
+#adr-dice-form button,
 .argas-dice-roller-window button {
   background-image: none !important;
   border-image: none !important;
@@ -621,8 +659,8 @@
 }
 
 /* --- Inputs (Checkboxen, Radios) --- */
-#dice-form input[type="checkbox"],
-#dice-form input[type="radio"],
+#adr-dice-form input[type="checkbox"],
+#adr-dice-form input[type="radio"],
 .argas-dice-roller-window input[type="checkbox"],
 .argas-dice-roller-window input[type="radio"] {
   background: transparent !important;
@@ -632,13 +670,13 @@
 }
 
 /* --- Icons innerhalb des Fensters: System-Farbübernahme verhindern --- */
-#dice-form .adr-toggle i,
+#adr-dice-form .adr-toggle i,
 .argas-dice-roller-window .adr-toggle i {
   text-shadow: none !important;
 }
 
 /* --- SVG Dice Icons: System-Overrides blockieren --- */
-#dice-form .adr-dice-icon,
+#adr-dice-form .adr-dice-icon,
 .argas-dice-roller-window .adr-dice-icon {
   border: none !important;
   border-image: none !important;
@@ -648,8 +686,8 @@
 }
 
 /* --- Allgemeine Pseudo-Elemente auf Fenster-Ebene abfangen --- */
-#dice-form *::before,
-#dice-form *::after,
+#adr-dice-form *::before,
+#adr-dice-form *::after,
 .argas-dice-roller-window *::before,
 .argas-dice-roller-window *::after {
   border-image: none !important;
@@ -661,18 +699,18 @@
 /* ---------------------------------------------------------------- */
 
 /* V2 Pseudo-Elemente komplett abschalten (Glaseffekt, backdrop etc.) */
-#dice-form.application::before,
-#dice-form.application::after,
+#adr-dice-form.application::before,
+#adr-dice-form.application::after,
 .argas-dice-roller-window .window-header::before,
 .argas-dice-roller-window .window-header::after,
-#dice-form > .window-content::before,
-#dice-form > .window-content::after {
+#adr-dice-form > .window-content::before,
+#adr-dice-form > .window-content::after {
   content: none !important;
   display: none !important;
 }
 
 /* Äußerer Frame: Denim-Textur wie in V1, leicht aufgehellt */
-#dice-form.application {
+#adr-dice-form.application {
   background:
     linear-gradient(rgba(255,255,255,0.10), rgba(255,255,255,0.10)),
     #3e3e3e url("/ui/denim075.png") repeat !important;
@@ -692,7 +730,7 @@
 }
 
 /* Window-Content: Pergament wie in V1, eigener Compositing-Layer */
-#dice-form > .window-content {
+#adr-dice-form > .window-content {
   background: #b5a68c url("/ui/parchment.jpg") repeat !important;
   padding: 0 !important;
   overflow: visible !important;
@@ -726,7 +764,7 @@
 }
 
 /* UI-Scaling: Fenster an Foundry UI-Scale anpassen */
-#dice-form.adr-scaled {
+#adr-dice-form.adr-scaled {
   transform: scale(var(--adr-ui-scale, 1)) !important;
   transform-origin: top left !important;
 }
@@ -804,21 +842,27 @@
   transform: scale(1.15);
 }
 
-/* Münze im Ctrl-Modus: nicht selektierbar (Spec-Entscheidung: dc
+/* Münze und Fudge-Würfel (dF) im Ctrl-Modus: nicht selektierbar (Spec-Entscheidung: dc
    produziert 0/1 und passt nicht in eine numerische Mischpool-Summe).
    Cursor + gedämpfte Optik signalisieren das. */
 .argas-dice-roller-window.adr-ctrl-active .adr-1stcol[data-dice-type="dc"],
-.argas-dice-roller-window.adr-ctrl-active .adr-col[data-dice-type="dc"] {
+.argas-dice-roller-window.adr-ctrl-active .adr-col[data-dice-type="dc"],
+.argas-dice-roller-window.adr-ctrl-active .adr-1stcol[data-dice-type="df"],
+.argas-dice-roller-window.adr-ctrl-active .adr-col[data-dice-type="df"] {
   cursor: not-allowed;
 }
 .argas-dice-roller-window.adr-ctrl-active .adr-1stcol[data-dice-type="dc"]:hover,
-.argas-dice-roller-window.adr-ctrl-active .adr-col[data-dice-type="dc"]:hover {
+.argas-dice-roller-window.adr-ctrl-active .adr-col[data-dice-type="dc"]:hover,
+.argas-dice-roller-window.adr-ctrl-active .adr-1stcol[data-dice-type="df"]:hover,
+.argas-dice-roller-window.adr-ctrl-active .adr-col[data-dice-type="df"]:hover {
   color: inherit;
   box-shadow: none;
   opacity: 0.5;
 }
 .argas-dice-roller-window.adr-ctrl-active .adr-1stcol[data-dice-type="dc"]:hover .adr-dice-icon,
-.argas-dice-roller-window.adr-ctrl-active .adr-col[data-dice-type="dc"]:hover .adr-dice-icon {
+.argas-dice-roller-window.adr-ctrl-active .adr-col[data-dice-type="dc"]:hover .adr-dice-icon,
+.argas-dice-roller-window.adr-ctrl-active .adr-1stcol[data-dice-type="df"]:hover .adr-dice-icon,
+.argas-dice-roller-window.adr-ctrl-active .adr-col[data-dice-type="df"]:hover .adr-dice-icon {
   filter: sepia(0.25);
   opacity: 0.85;
 }
@@ -868,4 +912,84 @@
 input[type="number"][name="argas-dice-roller.maxDiceCount"] {
   width: 100px;
   text-align: right;
+}
+
+/* Warnhinweis im SWADE-Einstellungsfenster auf Fremdsystemen */
+.adr-swade-settings .adr-swade-warning p {
+  margin: 0 0 8px 0;
+}
+.adr-swade-settings .adr-swade-warning strong {
+  color: var(--color-level-error, #c62828);
+  font-weight: bold;
+}
+.adr-swade-settings .adr-swade-warning em {
+  font-style: italic;
+}
+.adr-swade-settings .adr-swade-warning hr {
+  margin: 0 0 12px 0;
+}
+
+/* Bonus-/Strafwurf-Umschalter: kleine Ziffer (Anzahl Zusatzwürfel) oben links */
+.adr-toggle .adr-cthulhu-count {
+  position: absolute;
+  left: 4px;
+  top: 3px;
+  font-size: 12px;
+  font-weight: bold;
+  line-height: 1;
+  color: rgb(159,255,159);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Untermenü „Angezeigte Schaltflächen": Beschriftung nicht umbrechen — Foundry
+   gibt dem Label sonst nur ein Drittel der Breite (flex 1 : 2). */
+.adr-buttons-settings .form-group > label {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.adr-buttons-settings hr {
+  margin: 12px 0 6px 0;
+}
+.adr-buttons-settings .adr-buttons-system-note {
+  margin: 0 0 5px 0;
+}
+
+/* Untermenü „Angezeigte Würfeltypen" */
+.adr-dice-types .adr-dice-types-intro {
+  margin: 0 0 8px 0;
+}
+.adr-dice-types hr {
+  margin: 0 0 12px 0;
+}
+.adr-dice-types .adr-dice-types-list {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-left: 2.5em;       /* Liste etwas nach rechts: die zentrierte 10em-Box wirkt sonst linkslastig */
+  margin-bottom: 8px;
+}
+.adr-dice-types .adr-dice-types-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 10em;               /* feste Breite → alle Zeilen linksbündig untereinander; breit genug für „Fudge-Würfel" */
+  margin: 0 0 10px 0;
+  font-weight: bold;
+  font-size: calc(var(--font-size-14, 14px) + 1.33px);   /* 1 pt größer als der Foundry-Standard */
+  white-space: nowrap;
+  cursor: pointer;
+}
+.adr-dice-types .adr-dice-types-row input[type="checkbox"] {
+  margin: 0;
+  flex: none;
+}
+
+/* Auswahlliste „Chat-Design" in den Spieleinstellungen: Text mittig */
+select[name="argas-dice-roller.chatDesign"] {
+  text-align: center;
+  text-align-last: center;
+}
+select[name="argas-dice-roller.chatDesign"] option {
+  text-align: center;
 }

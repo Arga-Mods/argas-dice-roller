@@ -303,6 +303,25 @@ li.chat-message.adr-chat.blind.whisper.roll.scifi .adr-actor-name {
 .adr-individual-details .min { color: red; font-weight: bold; }
 .adr-individual-details .max { color: green; font-weight: bold; }
 
+/* „Höchster"/„Niedrigster" (kh/kl): nicht gewertete Würfel durchgestrichen,
+   Pfeil-Icon hinter dem Würfeltyp in der Kopfzeile. */
+.adr-individual-details .adr-discarded { text-decoration: line-through; opacity: 0.55; }
+.adr-chat .adr-dice-info .adr-keep-icon { font-size: 1.15em; margin-left: 0.2em; vertical-align: -0.02em; }
+/* Bonus-/Strafwurf (Call of Cthulhu): Daumen + Anzahl Zusatzwürfel; gewertetes Ergebnis fett. */
+.adr-chat .adr-dice-info .adr-cthulhu-mark { white-space: nowrap; }
+.adr-chat .adr-dice-info .adr-cthulhu-mark .adr-keep-icon { margin-right: 0.1em; }
+.adr-individual-details .adr-cthulhu-chosen { font-weight: bold; }
+
+/* Fudge-Würfel (dF): Einzelwürfel als Symbole + / ▢ / −,
+   Gesamtergebnis grün bei „alle +", rot bei „alle −". */
+.adr-chat .adr-fudge-die { font-weight: bold; }
+.adr-chat .adr-fudge-plus  { color: #1a8a1a; }
+.adr-chat .adr-fudge-minus { color: #d10000; }
+.adr-chat .adr-fudge-blank { color: #777; }
+.adr-chat .adr-fudge-blank i { font-size: 0.7em; vertical-align: 0.1em; }
+.adr-chat .adr-summary-total.adr-fudge-all-plus  { color: #1a8a1a !important; }
+.adr-chat .adr-summary-total.adr-fudge-all-minus { color: #d10000 !important; }
+
 /* Tatsächlich angewandter Modifikator (kann vom Spieler im SWADE-Dialog
    geändert worden sein — daher in der Einzelergebnis-Liste dokumentiert) */
 .adr-applied-mod-pos { color: green; font-weight: bold; }

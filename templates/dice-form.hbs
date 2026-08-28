@@ -5,7 +5,7 @@
 <div class="adr-wrapper">
 
 {{!-- Toggle Controls Section --}}
-{{#if (or enableHiddenRolls showExplodingToggle showWildToggle)}}
+{{#if (or enableHiddenRolls showExplodingToggle showWildToggle showKeepToggle showCthulhuToggle)}}
   <div class="app adr-toggle-box">
     {{#if enableHiddenRolls}}
       <fieldset class="adr-field-set">
@@ -44,6 +44,36 @@
         </div>
       </fieldset>
     {{/if}}
+
+    {{#if showKeepToggle}}
+      <fieldset class="adr-field-set">
+        <legend>{{localize "argas-dice-roller.legend.keepDice"}}</legend>
+        <div class="adr-toggle" title="{{localize 'argas-dice-roller.tooltip.keepHighest'}}">
+          <input type="checkbox" name="keepMode" id="keepHighest" value="kh" {{#if isKeepHighest}}checked{{/if}}/>
+          <i class="fa-solid fa-square-up"></i>
+        </div>
+        <div class="adr-toggle" title="{{localize 'argas-dice-roller.tooltip.keepLowest'}}">
+          <input type="checkbox" name="keepMode" id="keepLowest" value="kl" {{#if isKeepLowest}}checked{{/if}}/>
+          <i class="fa-solid fa-square-down"></i>
+        </div>
+      </fieldset>
+    {{/if}}
+
+    {{#if showCthulhuToggle}}
+      <fieldset class="adr-field-set">
+        <legend>{{localize "argas-dice-roller.legend.cthulhuDice"}}</legend>
+        <div class="adr-toggle adr-cthulhu-toggle" title="{{localize 'argas-dice-roller.tooltip.bonusDie'}}">
+          <input type="checkbox" name="cthulhuMode" id="bonusDie" value="bonus" {{#if isBonusDie}}checked{{/if}}/>
+          <i class="fa-solid fa-thumbs-up"></i>
+          <span class="adr-cthulhu-count">{{#if isBonusDie}}{{cthulhuCount}}{{/if}}</span>
+        </div>
+        <div class="adr-toggle adr-cthulhu-toggle" title="{{localize 'argas-dice-roller.tooltip.penaltyDie'}}">
+          <input type="checkbox" name="cthulhuMode" id="penaltyDie" value="penalty" {{#if isPenaltyDie}}checked{{/if}}/>
+          <i class="fa-solid fa-thumbs-down"></i>
+          <span class="adr-cthulhu-count">{{#if isPenaltyDie}}{{cthulhuCount}}{{/if}}</span>
+        </div>
+      </fieldset>
+    {{/if}}
   </div>
 {{/if}}
 
@@ -54,10 +84,17 @@
       <div class="adr-col adr-1stcol rollable"
            data-dice-type="{{diceType}}"
            data-dice-roll="1"
-           {{#if (isD100 diceType)}}title="{{localize 'argas-dice-roller.legend.d100Rolls'}}"{{/if}}>
+           {{#if (isD100 diceType)}}title="{{localize 'argas-dice-roller.legend.d100Rolls'}}"{{/if}}
+           {{#if (isFudge diceType)}}title="{{localize 'argas-dice-roller.legend.fudgeRolls'}}"{{/if}}>
 
         {{#if (isCoin diceType)}}
           <img class="adr-dice-icon" src="{{../modulePath}}/assets/icons/coin.svg" alt="Coin">
+          <span class="dice-label">{{diceLabel}}</span>
+        {{else if (isFudge diceType)}}
+          <span class="adr-fudge-icons">
+            <i class="fa-solid fa-square-plus adr-dice-icon adr-fudge-icon"></i>
+            <i class="fa-solid fa-square-minus adr-dice-icon adr-fudge-icon"></i>
+          </span>
           <span class="dice-label">{{diceLabel}}</span>
         {{else if (isD2 diceType)}}
           <img class="adr-dice-icon" src="{{../modulePath}}/assets/icons/d2.svg" alt="D2">

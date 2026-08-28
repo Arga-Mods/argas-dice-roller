@@ -124,14 +124,18 @@ function _collectRoundActions(entries, round) {
 
 /**
  * Zieht N Karten vom Deck. Ist das Deck leer oder reicht es nicht,
- * wird kommentarlos neu gemischt (analog zur SWADE-Joker-Regel).
+ * wird kommentarlos ein frisches Deck nachgelegt — allerdings OHNE die in
+ * diesem Zug bereits ausgeteilten Karten, damit dieselbe Karte nicht
+ * zweimal in derselben Runde erscheinen kann (mit einem physischen Deck
+ * wäre das unmöglich).
  * Mutiert den übergebenen deck-Array (pop von oben), gibt gezogene Karten zurück.
  */
 function _drawFromDeck(deck, count) {
   const drawn = [];
   for (let i = 0; i < count; i++) {
     if (!deck.length) {
-      const fresh = _shuffle(_buildDeck());
+      const dealtIds = new Set(drawn.map(c => c.id));
+      const fresh = _shuffle(_buildDeck().filter(c => !dealtIds.has(c.id)));
       deck.push(...fresh);
     }
     drawn.push(deck.pop());
@@ -152,6 +156,13 @@ export function dealDramaticRound(entries, round = 1, deck = null) {
 
 export function advanceDramaticRound(entries, nextRound, deck = null) {
   const cloned = foundry.utils.deepClone(entries ?? []);
+  // SWADE-Regel: Wurde in der soeben abgeschlossenen Runde ein Joker
+  // ausgeteilt, wird das Deck vor der nächsten Runde komplett neu gemischt.
+  // (In-place, weil der Aufrufer dieselbe Array-Referenz persistiert.)
+  if (Array.isArray(deck) && cloned.some(e => e.roundState?.card?.isJoker)) {
+    deck.length = 0;
+    deck.push(..._shuffle(_buildDeck()));
+  }
   const prepared = cloned.map(entry => {
     const history = Array.isArray(entry.history) ? entry.history : [];
     if (entry.roundState) history.push(foundry.utils.deepClone(entry.roundState));

@@ -2,6 +2,7 @@
 /* Copyright (C) 2026 Arga-Mods */
 
 import { ADR } from "./adr-constants.js";
+import { requireActiveGM } from "./adr-benny-helpers.js";
 import {
   collectActorTraits,
   resolveActorById,
@@ -245,6 +246,8 @@ export class ChangeTraitDialogForm extends HandlebarsApplicationMixin(Applicatio
   }
 
   async _onConfirm() {
+    // Ohne verbundenen GM kann die Änderung nicht gespeichert werden
+    if (!requireActiveGM()) return;
     if (!this._isRoundStillOpen()) {
       ui.notifications.warn(game.i18n.localize(`${ADR.ID}.requestRoll.dramaticChangeTrait.noLongerPossible`));
       this.close();
@@ -274,6 +277,8 @@ export class ChangeTraitDialogForm extends HandlebarsApplicationMixin(Applicatio
   }
 
   async _onReset() {
+    // Ohne verbundenen GM kann die Änderung nicht gespeichert werden
+    if (!requireActiveGM()) return;
     if (!this._isRoundStillOpen()) {
       ui.notifications.warn(game.i18n.localize(`${ADR.ID}.requestRoll.dramaticChangeTrait.noLongerPossible`));
       this.close();

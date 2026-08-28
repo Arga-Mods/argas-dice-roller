@@ -6,7 +6,10 @@
       "explodingDiceRolls": "Exploding Dice",
       "coin": "Coin",
       "wildDie": "Wild Die",
+      "keepDice": "Highest / Lowest",
+      "cthulhuDice": "Call of Cthulhu",
       "d2Rolls": "D2 Dice",
+      "fudgeRolls": "Fudge dice: each die shows + (+1), blank (0) or − (−1). No exploding, no Wild Die.",
       "d100Rolls": "D100 Dice",
       "modifiers": "Modifiers (multiple selection possible)",
       "freeRollLabel": "Free Roll",
@@ -20,12 +23,23 @@
       "makeBlindRoll": "Blind to Gamemasters (visible to GMs only)",
       "makeSelfRoll": "Self only (visible only to you)",
       "explodingDice": "All dice can explode",
-      "wildDie": "Roll a Wildcard die (d6)"
+      "wildDie": "Roll a Wildcard die (d6)",
+      "keepHighest": "Only the highest die counts",
+      "keepLowest": "Only the lowest die counts",
+      "bonusDie": "Bonus die (d100): extra tens dice, the lowest counts. 1st click: one die, 2nd click: two, 3rd click: off",
+      "penaltyDie": "Penalty die (d100): extra tens dice, the highest counts. 1st click: one die, 2nd click: two, 3rd click: off"
     },
     "warn": {
       "cannotRollAsGroupOrVehicle": "You cannot roll as 'Group' or 'Vehicle'.",
       "coinNotInMulti": "The coin cannot be mixed into a multi-die roll.",
+      "fudgeNotInMulti": "Fudge dice cannot be mixed into a multi-die roll.",
       "coinNoModifier": "Coin rolls do not take modifiers. Please deselect the modifiers first.",
+      "keepNeedsTwoDice": "\"Highest/Lowest\" needs at least two dice.",
+      "keepNoCoinFudge": "\"Highest/Lowest\" does not apply to the coin or Fudge dice.",
+      "keepNotInMulti": "\"Highest/Lowest\" cannot be combined with a multi-pool roll.",
+      "cthulhuOnlyD100": "Bonus/penalty dice only apply to the d100.",
+      "cthulhuSingleRoll": "Bonus/penalty die: please roll a single d100 (column 1).",
+      "cthulhuNotInMulti": "Bonus/penalty dice cannot be combined with a multi-pool roll.",
       "selectToken": "Please select at least one token."
     },
     "chat": {
@@ -46,7 +60,12 @@
       "flavorMulti": "Multi-Pool: {total}",
       "flavorMultiWild": "Multi-Pool: {total} | Wild Die: {wild}",
       "rollName": "Roll",
-      "fumbleCheckName": "Fumble Check"
+      "keepHighest": "Only the highest die counts",
+      "keepLowest": "Only the lowest die counts",
+      "bonusDie": "Bonus die: lowest tens die counts",
+      "penaltyDie": "Penalty die: highest tens die counts",
+      "fumbleCheckName": "Fumble Check",
+      "unknownActor": "Unknown"
     },
     "multiSelect": {
       "tooltipHint": "Hold Ctrl to select multiple different dice for a combined roll."
@@ -157,7 +176,8 @@
         "bennyUsed": "A Benny has already been used for this roll.",
         "noBennies": "No Bennies remaining.",
         "noGMBennies": "The GM has no Bennies remaining.",
-        "invalidModifier": "Please enter a value between {min} and {max}."
+        "invalidModifier": "Please enter a value between {min} and {max}.",
+        "noActiveGM": "No GM connected – the result cannot be saved. Please wait until a GM is online."
       },
       "dramatic": {
         "presetStandard": "Standard (3/3)",
@@ -263,11 +283,31 @@
       "dramaticTaskFailureComplicationLine1": "Failure during complication",
       "dramaticTaskFailureComplicationLine2": "Task failed"
     },
+    "diceTypes": {
+      "menuName": "Displayed dice types",
+      "menuHint": "Choose which dice types are offered in the dice window.",
+      "menuLabel": "Selection (GM only)",
+      "windowTitle": "Displayed dice types",
+      "intro": "Choose which kinds of dice are shown in the dice window and which are hidden.",
+      "coin": "Coin flip",
+      "fudge": "Fudge dice"
+    },
+    "buttons": {
+      "menuName": "Displayed buttons",
+      "menuHint": "Choose which buttons are available to everyone.",
+      "menuLabel": "Selection (GM only)",
+      "windowTitle": "Displayed buttons",
+      "systemNote": "The following settings are specific to certain game systems:"
+    },
     "swadeSettings": {
       "windowTitle": "SWADE System Mechanics",
       "menuName": "SWADE System Mechanics",
+      "menuHint": "Additional settings for Savage Worlds.",
       "menuLabel": "Settings (GM only)",
-      "save": "Save"
+      "save": "Save",
+      "warningLabel": "Note:",
+      "warningSystem": "Savage Worlds",
+      "warningText": "Since you are not using the official {system} game system, requesting SWADE-specific rolls would cause errors. The roll request feature has therefore been disabled."
     },
     "settings": {
       "chatDesign": {
@@ -285,7 +325,7 @@
       },
       "explodingMode": {
         "name": "Button \"Exploding Dice\"",
-        "hint": "Activates or deactivates a button that, when selected, applies the exploding dice mechanic (dice that show the highest possible value are rolled again and the results are added).",
+        "hint": "Dice that show the highest possible value are rolled again and the results are added.",
         "choices": {
           "multi": "Multiple explosions",
           "once": "Single explosion only",
@@ -297,12 +337,20 @@
         "hint": "The \"Exploding Dice\" toggle is enabled by default."
       },
       "enableWildDie": {
-        "name": "\"Wild Die\" button",
-        "hint": "Adds a button for the 'Savage Worlds' Wildcard die. It can always explode, regardless of the \"Exploding Dice\" toggle."
+        "name": "\"Wild Die\" button (Savage Worlds)",
+        "hint": "Adds a button for the Wildcard die. It can always explode, regardless of the \"Exploding Dice\" toggle."
       },
       "enableModifiers": {
         "name": "Button \"Modifiers\"",
-        "hint": "Allows adding dice modifiers. Multiple values can be combined."
+        "hint": "Add dice modifiers, either by typing a value or via buttons."
+      },
+      "enableKeepDice": {
+        "name": "\"Highest / Lowest\" buttons (e.g. D&D or Dragonbane)",
+        "hint": "Two buttons in the dice window: all dice are rolled, but only the highest or lowest one counts."
+      },
+      "enableCthulhuDice": {
+        "name": "\"Bonus / penalty die\" buttons (Call of Cthulhu)",
+        "hint": "Two buttons for the d100: one or two extra tens dice are rolled along; the bonus die keeps the lowest tens, the penalty die the highest (00+0 = 100)."
       },
       "enableFirstColumn": {
         "name": "Extra column for \"1\" die",
@@ -315,18 +363,6 @@
       "maxDiceCount": {
         "name": "Maximum number of dice:",
         "hint": "Number of dice that can be rolled simultaneously."
-      },
-      "enableCoins": {
-        "name": "Enable \"Coin Toss\"",
-        "hint": "The 'coin' yields the results ~heads~ or ~tails~."
-      },
-      "enableD2Rolls": {
-        "name": "Enable \"d2\" rolls",
-        "hint": "Makes the row with the 'D2' dice visible."
-      },
-      "enableD100Rolls": {
-        "name": "Enable \"d100\" rolls",
-        "hint": "Makes the row with the 'D100' dice visible."
       },
       "enableFateRollButton": {
         "name": "Button \"Fate Roll\"",

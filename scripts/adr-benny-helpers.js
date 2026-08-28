@@ -95,13 +95,16 @@ export function subjectBennies(subject) {
 export async function subjectSpendBenny(subject) {
   if (!subject) return false;
   if (subject.kind === "actor") {
-    await subject.actor.spendBenny();
-    return true;
+    // SWADE liefert false, wenn keine Bennys mehr da sind (Race zwischen
+    // Vorab-Check und Abzug) — nicht pauschal true melden.
+    const result = await subject.actor.spendBenny();
+    return result !== false;
   }
   if (subject.kind === "gm") {
     if (typeof subject.user.spendBenny === "function") {
-      await subject.user.spendBenny();
-      return true;
+      // SWADE liefert auch hier false bei 0 Bennys (analog Akteur-Zweig)
+      const result = await subject.user.spendBenny();
+      return result !== false;
     }
     // Fallback: Flag direkt manipulieren (ältere SWADE-Versionen)
     const cur = Number(subject.user.getFlag("swade", "bennies") ?? 0);
@@ -113,13 +116,68 @@ export async function subjectSpendBenny(subject) {
 }
 
 /**
+ * Benny zurückerstatten — Gegenstück zu subjectSpendBenny für Abbruchpfade
+ * (Wurf-Dialog abgebrochen, Wurf-Fehler, Hook-Abbruch). Ohne Rückerstattung
+ * wäre der Benny verbraucht, obwohl kein Reroll stattgefunden hat.
+ * Nutzt die SWADE-API (getBenny) wo vorhanden, sonst Direkt-Update analog
+ * zum Spend-Fallback.
+ */
+export async function subjectRefundBenny(subject) {
+  if (!subject) return;
+  try {
+    if (subject.kind === "actor") {
+      if (typeof subject.actor.getBenny === "function") {
+        await subject.actor.getBenny();
+      } else {
+        const cur = Number(subject.actor.system?.bennies?.value ?? 0);
+        await subject.actor.update({ "system.bennies.value": cur + 1 });
+      }
+      return;
+    }
+    if (subject.kind === "gm") {
+      if (typeof subject.user.getBenny === "function") {
+        await subject.user.getBenny();
+      } else {
+        const cur = Number(subject.user.getFlag("swade", "bennies") ?? 0);
+        await subject.user.setFlag("swade", "bennies", cur + 1);
+      }
+    }
+  } catch (err) {
+    console.error("argas-dice-roller | Benny-Rückerstattung fehlgeschlagen:", err);
+  }
+}
+
+/**
+ * Prüft, ob die Aktion beim GM ankommen kann: Spieler-Ergebnisse werden per
+ * Socket an den GM-Client geschickt, der sie als Einziger in die Nachricht
+ * schreibt. Ist kein GM verbunden, verpufft der Emit kommentarlos und das
+ * Ergebnis geht beim nächsten Re-Render verloren — deshalb hier vorab
+ * abbrechen und den Spieler warnen. Für GMs immer true.
+ */
+export function requireActiveGM() {
+  if (game.user.isGM) return true;
+  if (game.users.activeGM) return true;
+  ui.notifications.warn(game.i18n.localize(`${ADR.ID}.requestRoll.warn.noActiveGM`));
+  return false;
+}
+
+/**
  * Darf der aktuelle User den Reroll-Klick auslösen?
  *   – Akteur-Subjekt: Owner-Berechtigung am Akteur (Spieler-Owner oder GM).
  *   – GM-Subjekt:     nur der GM-User selbst (seine eigenen Bennies).
+ *
+ * Optional `message`: Wird der Reroll direkt per message.update() geschrieben
+ * (freier Wurf — KEIN Socket-Pfad), muss der Klicker die Nachricht auch
+ * ändern dürfen (Autor oder GM). Ein Akteur-Mitbesitzer, der nicht Autor
+ * ist, würde sonst erst den Benny verlieren und dann am Update scheitern.
  */
-export function subjectCanClick(subject) {
+export function subjectCanClick(subject, message = null) {
   if (!subject) return false;
-  if (subject.kind === "actor") return !!subject.actor.isOwner;
+  if (subject.kind === "actor") {
+    if (!subject.actor.isOwner) return false;
+    if (message && !game.user.isGM && !message.canUserModify(game.user, "update")) return false;
+    return true;
+  }
   if (subject.kind === "gm") return game.user.id === subject.user.id;
   return false;
 }

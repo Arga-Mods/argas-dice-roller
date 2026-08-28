@@ -2,6 +2,7 @@
 /* Copyright (C) 2026 Arga-Mods */
 
 import { ADR } from "./adr-constants.js";
+import { requireActiveGM } from "./adr-benny-helpers.js";
 import {
   collectActorTraits,
   resolveActorById,
@@ -251,6 +252,10 @@ export class SupportDialogForm extends HandlebarsApplicationMixin(ApplicationV2)
   /* -------------------------------------------------------------- */
 
   async _onConfirm() {
+    // Ohne verbundenen GM kann das Ergebnis nicht gespeichert werden —
+    // vor dem Wurf abbrechen (Dialog bleibt offen)
+    if (!requireActiveGM()) return;
+
     // ── 1) Race-Check: Ist das Ziel überhaupt noch unterstützbar? ──
     const message = game.messages.get(this.messageId);
     const flags = message?.flags?.[ADR.ID];

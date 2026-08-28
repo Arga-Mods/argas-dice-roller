@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Copyright (C) 2026 Arga-Mods */
 
-import { ADR } from "./adr-constants.js";
+import { ADR, adrSwadeMechanicsOffered, adrDieTypeLabel, adrIsFudge, adrSignedNumber, adrKeepModifier, adrCthulhuMode } from "./adr-constants.js";
 import { DiceForm, buildHiddenInfoHTML, adrExplodingModifier, adrBuildDieResults } from "./adr-dice-form.js";
 import { RequestRollForm } from "./adr-request-roll-form.js";
 import {
@@ -13,10 +13,40 @@ import {
   freeRollSubject,
   subjectBennies,
   subjectSpendBenny,
+  subjectRefundBenny,
   subjectCanClick,
 } from "./adr-benny-helpers.js";
 
 let globalDiceForm;
+
+/**
+ * Dice-So-Nice-Animation unter Wahrung des Sichtbarkeits-Modus der Nachricht:
+ * Bei Whisper-/Blind-Nachrichten sehen nur die Empfänger die 3D-Würfel —
+ * sonst würden verdeckte Würfe (SL-/Blind-/Selbst-Wurf) über die Animation
+ * an alle Clients leaken, obwohl die Chatkarte verborgen ist.
+ */
+async function _adrShowRoll3d(roll, message) {
+  if (!game.dice3d || !roll) return;
+  const whisperUsers = (message?.whisper ?? [])
+    .map(id => game.users.get(id))
+    .filter(Boolean);
+  try {
+    // DSNs blind-Parameter bedeutet "auf dem AUSLÖSENDEN Client nicht
+    // anzeigen" — hier bewusst false: Der Klicker ist bei verdeckten Würfen
+    // immer legitimer Empfänger (GM), und die Whisper-Liste beschränkt die
+    // übrigen Clients bereits korrekt.
+    await game.dice3d.showForRoll(
+      roll, game.user, true,
+      whisperUsers.length ? whisperUsers : null,
+      false
+    );
+  } catch (e) { /* */ }
+}
+
+/** true, wenn die Nachricht nicht öffentlich ist (Whisper oder Blind). */
+function _adrIsHiddenMessage(message) {
+  return !!message && ((message.whisper ?? []).length > 0 || !!message.blind);
+}
 let globalRequestRollForm;
 
 Hooks.once("init", async () => {
@@ -230,9 +260,11 @@ function _adrInjectControlButton(root) {
     el.removeAttribute("title");
   }
 
-  // 12) ADR-eigenes Icon einsetzen.
-  const newIcon = document.createElement("i");
-  newIcon.className = "fas fa-dice-d20";
+  // 12) ADR-eigenes Icon einsetzen: dasselbe W20-SVG wie im Würfelfenster
+  //     (assets/icons/d20.svg); Größe über .adr-control-icon in argas-dice-roller.css.
+  //     Als CSS-Maske (span), damit die Farbe per CSS gesetzt werden kann.
+  const newIcon = document.createElement("span");
+  newIcon.className = "adr-control-icon";
   newIcon.setAttribute("aria-hidden", "true");
   inner.appendChild(newIcon);
 
@@ -318,10 +350,8 @@ Hooks.once("ready", () => {
       roll._total = sum;
     }
 
-    // Dice So Nice 3D-Animation
-    if (game.dice3d) {
-      await game.dice3d.showForRoll(roll, game.user, true);
-    }
+    // Dice So Nice 3D-Animation (empfängerbeschränkt bei verdeckten Würfen)
+    await _adrShowRoll3d(roll, message);
 
     // Flags setzen → löst renderChatMessageHTML erneut aus
     await message.update({
@@ -350,7 +380,7 @@ Hooks.once("ready", () => {
     // Subject + Berechtigungs-Check
     const subject = freeRollSubject(message);
     if (!subject) return;
-    if (!subjectCanClick(subject)) {
+    if (!subjectCanClick(subject, message)) {
       ui.notifications.warn(game.i18n.localize(`${ADR.ID}.requestRoll.chatNoPermission`));
       return;
     }
@@ -380,9 +410,13 @@ Hooks.once("ready", () => {
       ({ mainRoll, wildRoll, sumMod, type, hasWildDie, isExploding, pool } = await _adrFreshFreeRoll(message));
     } catch (err) {
       console.error(`${ADR.ID} | Benny-Reroll (freier Wurf) Wurf-Fehler:`, err);
+      await subjectRefundBenny(subject);
       return;
     }
-    if (!mainRoll) return;
+    if (!mainRoll) {
+      await subjectRefundBenny(subject);
+      return;
+    }
 
     // Patzer-Mechanik-Schalter für die Anzeige-Datenextraktion (Highlights).
     // Wird auch unten für den Tweaks-Hook ausgewertet.
@@ -422,7 +456,11 @@ Hooks.once("ready", () => {
         fumbleMechanic,
       };
       const finalRoll = await _fireTraitRollHook(hookData);
-      if (finalRoll === false) return;  // Hook hat abgebrochen
+      if (finalRoll === false) {
+        // Hook hat abgebrochen — Benny zurückerstatten
+        await subjectRefundBenny(subject);
+        return;
+      }
 
       // Totals neu berechnen (Hook könnte Würfel-Werte manipuliert haben)
       if (mainRoll?.dice?.length) {
@@ -438,14 +476,11 @@ Hooks.once("ready", () => {
     // DSN-Animation für den Reroll-Wurf (zeigt finale Werte nach Hook).
     // Roll-Sound manuell triggern — Foundry spielt den Würfelsound nur
     // bei ChatMessage.create(), wir machen aber update(), daher fehlt
-    // er sonst beim Benny-Reroll.
-    try { foundry.audio.AudioHelper.play({ src: CONFIG.sounds.dice }, true); } catch (e) { /* */ }
-    if (game.dice3d) {
-      try { await game.dice3d.showForRoll(mainRoll, game.user, true); } catch (e) { /* */ }
-      if (wildRoll) {
-        try { await game.dice3d.showForRoll(wildRoll, game.user, true); } catch (e) { /* */ }
-      }
-    }
+    // er sonst beim Benny-Reroll. Bei verdeckten Würfen nur lokal abspielen,
+    // damit der Sound den Wurf nicht an alle Clients verrät.
+    try { foundry.audio.AudioHelper.play({ src: CONFIG.sounds.dice }, !_adrIsHiddenMessage(message)); } catch (e) { /* */ }
+    await _adrShowRoll3d(mainRoll, message);
+    if (wildRoll) await _adrShowRoll3d(wildRoll, message);
 
     // Anzeigedaten extrahieren (pool durchreichen für Multi-Kategorisierung)
     const newData = _adrExtractFreeRollData(mainRoll, wildRoll, fumbleMechanic, pool);
@@ -506,10 +541,8 @@ Hooks.once("ready", () => {
       roll._total = sum;
     }
 
-    // Dice So Nice 3D-Animation
-    if (game.dice3d) {
-      await game.dice3d.showForRoll(roll, game.user, true);
-    }
+    // Dice So Nice 3D-Animation (empfängerbeschränkt bei verdeckten Würfen)
+    await _adrShowRoll3d(roll, message);
 
     // Letzten verworfenen Eintrag updaten → renderChatMessageHTML zeigt das Ergebnis
     const newFlags = foundry.utils.deepClone(flags);
@@ -608,9 +641,7 @@ Hooks.once("ready", () => {
       roll._total = sum;
     }
 
-    if (game.dice3d) {
-      try { await game.dice3d.showForRoll(roll, game.user, true); } catch (e) { /* */ }
-    }
+    await _adrShowRoll3d(roll, message);
 
     const dieValue = roll.total;
     const isFumble = dieValue === 1;
@@ -816,8 +847,7 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
   if (message.getFlag(ADR.ID, "fate")) {
     li.classList.add("adr-chat", "adr-fate");
 
-    const modulePath = game.modules.get(ADR.ID)?.path || `modules/${ADR.ID}`;
-    const bgUrl = `${modulePath}/assets/layout/background_finger.webp`;
+    const bgUrl = `modules/${ADR.ID}/assets/layout/background_finger.webp`;
 
     // Host vorbereiten
     li.style.setProperty("position", "relative", "important");
@@ -941,9 +971,18 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
   });
 
   // ── Zweizeiliger Akteurname ──
+  // Der Hook feuert, bevor das Element ins Dokument eingehängt ist —
+  // offsetHeight wäre hier immer 0. Deshalb erst "one-line" setzen und die
+  // Messung auf den nächsten Frame (nach dem Attach) verschieben.
   const nameBox = html.querySelector(".adr-actor-name");
   if (nameBox) {
-    html.classList.add(nameBox.offsetHeight > 40 ? "two-line" : "one-line");
+    html.classList.add("one-line");
+    requestAnimationFrame(() => {
+      if (nameBox.isConnected && nameBox.offsetHeight > 40) {
+        html.classList.remove("one-line");
+        html.classList.add("two-line");
+      }
+    });
   }
 
   // ── Empfängerzeile ausblenden ──
@@ -963,11 +1002,14 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
     if (message.getFlag(ADR.ID, "fate")) li.classList.add("adr-fate");
     html.querySelectorAll(".flavor-text").forEach(el => el.remove());
 
-    const actorName = message.getFlag(ADR.ID, "actorName") || "Unbekannt";
-    const modulePath = game.modules.get(ADR.ID)?.path || `modules/${ADR.ID}`;
-    const defaultSrc = `${modulePath}/assets/layout/default_token.webp`;
+    const actorName = message.getFlag(ADR.ID, "actorName")
+      || game.i18n.localize(`${ADR.ID}.chat.unknownActor`);
+    const defaultSrc = `modules/${ADR.ID}/assets/layout/default_token.webp`;
     const flagSrc = message.getFlag(ADR.ID, "actorImg") || "";
-    const portraitSrc = flagSrc || defaultSrc;
+    // Akteurname/Bildpfad stammen aus Token-/Akteurdaten, die auch Spieler
+    // setzen können — vor dem Einfügen in HTML immer escapen.
+    const esc = foundry.utils.escapeHTML;
+    const portraitSrc = esc(flagSrc || defaultSrc);
 
     _setHeaderLabel(li, game.i18n.localize(`${ADR.ID}.legend.freeRollLabel`));
 
@@ -976,7 +1018,7 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
 
     const msgContent = html.querySelector(".message-content");
     if (msgContent) {
-      msgContent.innerHTML = `<div class="adr-actor-name"><span class="adr-actor-name-text">${actorName}</span></div><div class="adr-result-container"><div class="adr-dice-value">???</div><div class="adr-dice-content"></div></div>`;
+      msgContent.innerHTML = `<div class="adr-actor-name"><span class="adr-actor-name-text">${esc(actorName)}</span></div><div class="adr-result-container"><div class="adr-dice-value">???</div><div class="adr-dice-content"></div></div>`;
     }
 
     let hiddenInfoKey;
@@ -1030,19 +1072,21 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
 
   _setHeaderLabel(li, game.i18n.localize(`${ADR.ID}.legend.freeRollLabel`));
 
+  const modulePath = `modules/${ADR.ID}`;
   const flagSrc = message.getFlag(ADR.ID, "actorImg") || "";
-  const modulePath = game.modules.get(ADR.ID)?.path || `modules/${ADR.ID}`;
   const defaultSrc = `${modulePath}/assets/layout/default_token.webp`;
-  const portraitSrc = flagSrc || defaultSrc;
+  // Escaping wie im Hidden-Zweig: Token-/Akteurdaten sind Nutzereingaben.
+  const portraitSrc = foundry.utils.escapeHTML(flagSrc || defaultSrc);
   if (portraitSrc) {
     li.querySelector(".message-header")?.insertAdjacentHTML("afterend",
       `<img class="adr-actor-img" src="${portraitSrc}" alt="Portrait">`);
   }
 
-  const actorName = message.getFlag(ADR.ID, "actorName") || "Unbekannt";
+  const actorName = message.getFlag(ADR.ID, "actorName")
+    || game.i18n.localize(`${ADR.ID}.chat.unknownActor`);
   li.querySelector(".adr-actor-name")?.remove();
   li.querySelector(".adr-body")?.insertAdjacentHTML("beforebegin",
-    `<div class="adr-actor-name"><span class="adr-actor-name-text">${actorName}</span></div>`);
+    `<div class="adr-actor-name"><span class="adr-actor-name-text">${foundry.utils.escapeHTML(actorName)}</span></div>`);
 
   const rawFormula = message.getFlag(ADR.ID, "mainFormula") || "";
   const clean = rawFormula.replace(/\s+/g, "");
@@ -1057,13 +1101,16 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
   const isMulti = Array.isArray(multiPool) && multiPool.length > 0;
 
   function parseDice(formula) {
-    const m = formula.match(/^(?:([0-9]+))?(dc|d[0-9]+)(?:[x!]+)?([+\-][0-9]+)?/) || [];
+    // Nach dem Würfeltyp können "kh"/"kl" (Höchster/Niedrigster) und/oder
+    // "x"/"!" (Explodieren) stehen — beides für die Anzeige überlesen.
+    // … außerdem "b1"/"p2" (Bonus-/Strafwurf, Call of Cthulhu).
+    const m = formula.match(/^(?:([0-9]+))?(dc|df|d[0-9]+)(?:k[hl])?(?:[bp][12])?(?:[x!]+)?([+\-][0-9]+)?/) || [];
     const cnt = m[1] || "";
     const raw = m[2] || "";
     const mod = m[3] || "";
     const die = raw === "dc"
       ? game.i18n.localize(`${ADR.ID}.legend.coin`)
-      : (game.i18n.lang.startsWith("de") ? raw.replace(/^d/, "W") : raw);
+      : (adrIsFudge(raw) ? adrFudgeChatLabel() : (game.i18n.lang.startsWith("de") ? raw.replace(/^d/, "W") : raw));
     return { cnt, die, mod };
   }
 
@@ -1080,18 +1127,44 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
 
   const buildCell = (cnt, die, mod, value, individualResults = [], highlightSetting = false, criticalHtml = "") => {
     let highlight = false;
-    const isCoin = (die === game.i18n.localize(`${ADR.ID}.legend.coin`)) || (individualResults.length > 0 && individualResults.every(x => x.value === 0 || x.value === 1));
-    if (highlightSetting && !isCoin) {
-      if (individualResults.length === 1 && individualResults[0].value == 1) highlight = true;
-      if (individualResults.length > 1) {
-        const numOnes = individualResults.filter(x => x.value == 1).length;
-        if (numOnes > individualResults.length / 2) highlight = true;
+    // Münz-Erkennung NUR über das Label — eine Werte-Heuristik ("alle Werte
+    // 0/1") würde auch jeden Einzelwürfel mit Ergebnis 1 als Münze einstufen
+    // und damit genau das Einsen-Highlight unterdrücken, das hier gewollt ist.
+    const isCoin = (die === game.i18n.localize(`${ADR.ID}.legend.coin`));
+    // Fudge-Zelle: Einsen-Regel gilt nicht; stattdessen Extremfälle
+    // (alle „+" grün, alle „−" rot) über eigene Klassen.
+    const isFudgeCell = (die === adrFudgeChatLabel());
+    let fudgeClass = "";
+    if (isFudgeCell && individualResults.length) {
+      if (individualResults.every(x => Number(x.value) === 1)) fudgeClass = " adr-fudge-all-plus";
+      else if (individualResults.every(x => Number(x.value) === -1)) fudgeClass = " adr-fudge-all-minus";
+    }
+    if (highlightSetting && !isCoin && !isFudgeCell) {
+      // Bei „Höchster/Niedrigster" nur die gewerteten Würfel betrachten.
+      const counted = individualResults.filter(x => !x?.discarded);
+      if (counted.length === 1 && counted[0].value == 1) highlight = true;
+      if (counted.length > 1) {
+        const numOnes = counted.filter(x => x.value == 1).length;
+        if (numOnes > counted.length / 2) highlight = true;
       }
     }
     const isWildCell = (die === game.i18n.localize(`${ADR.ID}.legend.wildDieChat`));
     const starFlag = isWildCell
       ? message.getFlag("argas-dice-roller", "wildExploding")
       : message.getFlag("argas-dice-roller", "mainExploding");
+    // „Höchster"/„Niedrigster": Pfeil-Icon hinter dem Würfeltyp (nur Hauptzelle).
+    // Tooltip wird hier beim Betrachter lokalisiert (Hook läuft je Client).
+    const keepMode = isWildCell ? null : adrKeepModifier(message.getFlag(ADR.ID, "keepMode"));
+    let keepHTML = keepMode
+      ? ` <i class="fa-regular ${keepMode === "kh" ? "fa-square-up" : "fa-square-down"} adr-keep-icon" title="${game.i18n.localize(`${ADR.ID}.chat.${keepMode === "kh" ? "keepHighest" : "keepLowest"}`)}"></i>`
+      : "";
+    // Bonus-/Strafwurf (Call of Cthulhu): Daumen-Icon + Anzahl der Zusatzwürfel.
+    const cth = isWildCell ? null : message.getFlag(ADR.ID, "cthulhu");
+    const cthMode = adrCthulhuMode(cth?.mode);
+    if (cthMode) {
+      const n = Math.min(2, Math.max(1, Number(cth.extra) || 1));
+      keepHTML = ` <span class="adr-cthulhu-mark" title="${game.i18n.localize(`${ADR.ID}.chat.${cthMode === "bonus" ? "bonusDie" : "penaltyDie"}`)}"><i class="fa-regular ${cthMode === "bonus" ? "fa-thumbs-up" : "fa-thumbs-down"} adr-keep-icon"></i>${n}</span>`;
+    }
     // Echte Münzzelle (zur CSS-Sonderbehandlung des Vertikal-Abstands)
     const isCoinCell = (die === game.i18n.localize(`${ADR.ID}.legend.coin`));
 
@@ -1099,16 +1172,16 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
     // alle anderen Zellen unverändert "Nx Wn" + ex-Sup + Modifikator.
     const diceInfoHTML = isCoinCell
       ? game.i18n.localize(`${ADR.ID}.chat.coin-roll-label`)
-      : `${(die === game.i18n.localize(`${ADR.ID}.legend.wildDieChat`) ? "" : (cnt ? `${cnt}x ` : ""))}${die}${(starFlag ? "<sup class=\"adr-ex\">ex</sup>" : "")}${mod ? `<span class="adr-dice-mod adr-dice-mod-${mod.startsWith("+") ? "pos" : "neg"}">(${mod})</span>` : ""}`;
+      : `${(die === game.i18n.localize(`${ADR.ID}.legend.wildDieChat`) ? "" : (cnt ? `${cnt}x ` : ""))}${die}${(starFlag ? "<sup class=\"adr-ex\">ex</sup>" : "")}${keepHTML}${mod ? `<span class="adr-dice-mod adr-dice-mod-${mod.startsWith("+") ? "pos" : "neg"}">(${mod})</span>` : ""}`;
 
-    return `<div class="adr-dice-cell${isCoinCell ? " adr-coin-cell" : ""}">
+    return `<div class="adr-dice-cell${isCoinCell ? " adr-coin-cell" : ""}${isFudgeCell ? " adr-fudge-cell" : ""}">
     <div class="adr-dice-info">
       ${diceInfoHTML}
     </div>
-    <div class="adr-summary-total${highlight ? ' adr-highlight-ones' : ''}">
+    <div class="adr-summary-total${highlight ? ' adr-highlight-ones' : ''}${fudgeClass}">
       ${(die === game.i18n.localize(`${ADR.ID}.legend.coin`) && (!mod || mod === "0") && individualResults.length === 1)
         ? `~ ${game.i18n.localize(value == 1 ? `${ADR.ID}.chat.coin-tails` : `${ADR.ID}.chat.coin-heads`)} ~`
-        : (value !== undefined && value !== null ? value : `<span class="adr-dice-value">???</span>`)}
+        : (value !== undefined && value !== null ? (isFudgeCell ? adrSignedNumber(value) : value) : `<span class="adr-dice-value">???</span>`)}
       ${criticalHtml}
     </div>
   </div>`;
@@ -1169,7 +1242,7 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
   } else {
     cellsHtml = `${
       buildCell(cnt1, die1, mod1, mainResult, mainIndRes,
-        hasWild && game.settings.get("argas-dice-roller", "highlightNaturalOnes"), "")
+        game.settings.get("argas-dice-roller", "highlightNaturalOnes") && !message.getFlag(ADR.ID, "cthulhu"), "")
     }${
       hasWild
         ? `<div class="adr-iron-bar"><img src="${modulePath}/assets/layout/bar_${scifi ? "sf" : "f"}.webp" alt="Separator" /></div>${
@@ -1192,96 +1265,6 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
     const label = game.i18n.localize(`${ADR.ID}.chat.critical-failure`);
     lastRow?.insertAdjacentHTML("afterend",
       `<div class="adr-fumble-check-result">${prefix}<br><span class="adr-fumble-confirmed-text" style="font-size:0.85rem;">${label}</span></div>`);
-  }
-
-  // ── Patzer-Prüfung: Einzelwürfel ohne Wild Die zeigt 1 → GM-Button ──
-  // Bei Wildcards ist der Check sinnlos: Wildcards würden bei einer
-  // Eigenschaftsprobe immer einen Wild Die mitwerfen. Ein Einzelwürfel
-  // ohne Wild Die kann also keine Eigenschaftsprobe gewesen sein. Der
-  // Patzer-Check ist nur bei Statisten relevant. Das `isWildcard`-Flag
-  // wird beim Wurf in adr-dice-form.js gesetzt; bei alten Nachrichten
-  // ohne Flag fällt es auf `false` zurück → Verhalten wie bisher.
-  const isWildcardSpeaker = !!message.getFlag(ADR.ID, "isWildcard");
-  // SWADE-Eigenschaftsproben sind immer explodierend. Ohne Explosion kein
-  // Patzer-Verdacht → der Check-Button entfällt. Bei Multi-Pool ebenfalls
-  // immer deaktiviert (Spec).
-  const fumbleCheckNeeded = !isMulti && mainExploding && !hasWild && !isCoinRow && totalMain === 1
-    && mainIndRes[0]?.value == 1
-    && !isWildcardSpeaker
-    && game.settings.get("argas-dice-roller", "highlightNaturalOnes");
-
-  if (fumbleCheckNeeded) {
-    const fumbleCheckResult = message.getFlag(ADR.ID, "fumbleCheckResult");
-    const fumbleCheckDie = message.getFlag(ADR.ID, "fumbleCheckDie");
-    const rows = li.querySelectorAll(".adr-dice-row");
-    const lastRow = rows[rows.length - 1];
-
-    if (fumbleCheckResult === true) {
-      // Patzer bestätigt — Ergebnis rot + Ergebnis-Text
-      const summaryTotal = li.querySelector(".adr-summary-total");
-      if (summaryTotal) summaryTotal.classList.add("adr-highlight-ones");
-      // Im FumbleOverwrite-Pfad (W6=1 nach Reroll-1 beim Statisten) wird der
-      // Ergebnistext nicht separat, sondern als zusammenhängender Satz in der
-      // Hint-Region gerendert (siehe bennyFumbleOverwriteHintConfirmed).
-      if (message.getFlag(ADR.ID, "lastRerollFumbleOverwrite") !== true) {
-        const keyword = game.i18n.localize(`${ADR.ID}.requestRoll.fumbleCheckYes`);
-        const template = game.i18n.localize(`${ADR.ID}.requestRoll.fumbleCheckTextYes`);
-        lastRow?.insertAdjacentHTML("afterend",
-          `<div class="adr-fumble-check-result">${template.replace("{result}", `<span class="adr-fumble-confirmed-text">${keyword}</span>`)}</div>`);
-      }
-
-    } else if (fumbleCheckResult === false) {
-      // Kein Patzer — Ergebnis-Text
-      const keyword = game.i18n.localize(`${ADR.ID}.requestRoll.fumbleCheckNone`);
-      const template = game.i18n.localize(`${ADR.ID}.requestRoll.fumbleCheckTextNo`);
-      lastRow?.insertAdjacentHTML("afterend",
-        `<div class="adr-fumble-check-result">${template.replace("{result}", `<span class="adr-fumble-denied-text">${keyword}</span>`)}</div>`);
-
-    } else if (message.getFlag(ADR.ID, "fumbleCheckAccepted") === true) {
-      // GM hat die 1 als reguläres Ergebnis akzeptiert — kein Patzer-Check.
-
-    } else if (message.getFlag(ADR.ID, "pendingRerollFumbleDecision") === true) {
-      // Reroll-Pending-Fall: die Auswahl wird vom Pending-Hint unten gerendert.
-
-    } else if (message.getFlag(ADR.ID, "bennyUsed") === true) {
-      // Nach erfolgtem Benny-Reroll mit bereits getroffener Entscheidung —
-      // die Hint-Region kümmert sich um die Anzeige.
-
-    } else {
-      // Auswahl-Container: GM klickbar, Nicht-GM sieht ausgegraute Buttons
-      // (analog Benny-Button-Pattern via adr-not-mine + title-Tooltip).
-      const isGM = game.user.isGM;
-      const acceptLabel = game.i18n.localize(`${ADR.ID}.requestRoll.acceptResultBtn`);
-      const orLabel = game.i18n.localize(`${ADR.ID}.requestRoll.orChoice`);
-      const line1 = game.i18n.localize(`${ADR.ID}.requestRoll.fumbleCheckBtn1`);
-      const line2 = game.i18n.localize(`${ADR.ID}.requestRoll.fumbleCheckBtn2`);
-      const notMineCls = isGM ? "" : " adr-not-mine";
-      // Inline-style mit !important: schlägt jede CSS-Regel, auch Foundry-
-      // eigene !important-Defaults für button:hover-Cursor. Reines CSS reicht
-      // hier nicht, weil das System-CSS höher spezifisch ist.
-      const notMineAttrs = isGM
-        ? ""
-        : ` title="${game.i18n.localize(`${ADR.ID}.requestRoll.chatNoPermission`)}" style="cursor: not-allowed !important"`;
-      lastRow?.insertAdjacentHTML("afterend",
-        `<div class="adr-fumble-choice-container">`
-        + `<button type="button" class="adr-accept-result-btn${notMineCls}"${notMineAttrs} data-action="adr-fumble-accept-main" data-message-id="${message.id}">${acceptLabel}</button>`
-        + `<span class="adr-fumble-choice-or">${orLabel}</span>`
-        + `<button type="button" class="adr-fumble-check-btn${notMineCls}"${notMineAttrs} data-action="adr-fumble-check-main" data-message-id="${message.id}">${line1} ${line2}</button>`
-        + `</div>`);
-    }
-
-    // Scroll damit Ergebnis sichtbar ist (alle Clients)
-    if (fumbleCheckResult != null) {
-      setTimeout(() => {
-        const scrollContainer = li.closest(".chat-scroll");
-        if (scrollContainer) {
-          const liRect = li.getBoundingClientRect();
-          const containerRect = scrollContainer.getBoundingClientRect();
-          const overflow = liRect.bottom - containerRect.bottom;
-          if (overflow > 0) scrollContainer.scrollTop += overflow + 8;
-        }
-      }, 50);
-    }
   }
 
   // ── Benny-Button im freien Wurf ──
@@ -1307,10 +1290,7 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
  * das es im freien Wurf nicht gibt.
  *
  * Rückgabe:
- *   "confirmed"   — Patzer steht fest (Wildcard-Patzer ODER Statist mit
- *                   bestätigter Patzer-Prüfung). Reroll gesperrt.
- *   "needs-check" — Statist hat 1 gewürfelt, GM-W6-Check steht aus.
- *                   Reroll ist erlaubt (Patzer-Status noch nicht bestätigt).
+ *   "confirmed"   — Patzer aus einer früheren Prüfung bestätigt. Reroll gesperrt.
  *   "none"        — kein Patzer-Verdacht.
  */
 function _adrFreeRollFumbleStatus(message) {
@@ -1349,14 +1329,8 @@ function _adrFreeRollFumbleStatus(message) {
     return "none";
   }
 
-  // Statisten-Pfad: nur bei genau einem Hauptwürfel = 1 ist ein
-  // Patzer-Check sinnvoll. Wildcards ohne Wild Die können nie patzen
-  // (sie hätten bei einer Eigenschaftsprobe einen Wild Die mitgewürfelt).
-  // Zusätzlich: SWADE-Eigenschaftsproben sind immer explodierend — ohne
-  // Explosion kein Patzer-Verdacht.
-  if (f.isWildcard) return "none";
-  if (!f.mainExploding) return "none";
-  if (totalMain === 1 && mainIndRes[0]?.value == 1) return "needs-check";
+  // Ohne Wild Die keine Patzer-Prüfung im freien Wurf: ob der Wurf eine
+  // Eigenschaftsprobe war, entscheidet der SL.
   return "none";
 }
 
@@ -1386,6 +1360,8 @@ function _adrInjectFreeRollBennyButton(li, message) {
   if (!f.mainFormula) return;     // Kein freier Wurf
   if (f.fate) return;             // Schicksalswurf: kein Reroll
   if (f.requestRoll) return;      // Request-Roll: eigener Button-Pfad
+  if (adrIsFudge(f.dieType)) return;  // Fudge-Würfel: Bennys sind SWADE, Fudge ist Fate — kein Reroll
+  if (f.cthulhu) return;              // Bonus-/Strafwurf: Call of Cthulhu, kein Benny
 
   const toggleContainer = li.querySelector(".adr-individual-toggle-container");
   if (!toggleContainer) return;
@@ -1405,7 +1381,7 @@ function _adrInjectFreeRollBennyButton(li, message) {
 
   const fumbleStatus = _adrFreeRollFumbleStatus(message);
   const bennyUsed = !!f.bennyUsed;
-  const canClick = subjectCanClick(subject);
+  const canClick = subjectCanClick(subject, message);
 
   const classes = ["adr-benny-btn"];
   let title;
@@ -1443,6 +1419,11 @@ function _adrInjectFreeRollBennyButton(li, message) {
   toggleContainer.appendChild(btn);
 }
 
+/** Chat-Kürzel des Fudge-Würfels: „WF" (deutsch) bzw. „dF" (englisch) — analog W6/d6. */
+function adrFudgeChatLabel() {
+  return String(game.i18n.lang || "").startsWith("de") ? "WF" : "dF";
+}
+
 /**
  * Würfelt einen freien Wurf neu — gleiche Parameter wie der Ursprungs-
  * wurf (aus den Phase-0-Flags dieType/dieCount/appliedModifier +
@@ -1462,15 +1443,23 @@ async function _adrFreshFreeRoll(message) {
 
   const count = Number(f.dieCount) || 1;
   const type = String(f.dieType || "w6");
+  // Fudge-Würfe haben keinen Benny-Button (siehe _adrInjectFreeRollBennyButton);
+  // defensiv trotzdem abfangen, damit nie ein W6 als „Nachwurf" entsteht.
+  if (adrIsFudge(type)) return null;
+  if (f.cthulhu) return null;   // Bonus-/Strafwurf hat keinen Benny-Button — defensiv
   const faces = (type === "dc") ? 2 : (Number(String(type).replace(/^[dDwW]/, "")) || 6);
-  const isExploding = !!f.mainExploding && type !== "dc";
+  // faces !== 100 defensiv mitprüfen: W100 explodiert nie. Nachrichten aus
+  // Versionen ≤ 14.0.1 können das Flag für W100 noch fälschlich gesetzt haben.
+  // „Höchster/Niedrigster" (kh/kl): schließt Explodieren aus, wie beim Ursprungswurf.
+  const keep = (type !== "dc" && count > 1) ? adrKeepModifier(f.keepMode) : null;
+  const isExploding = !!f.mainExploding && type !== "dc" && faces !== 100 && !keep;
   const hasWildDie = (f.wildResult != null);
   const sumMod = Number(f.appliedModifier) || 0;
 
   // Haupt-Würfel
   const mainTerm = new foundry.dice.terms.Die({
     number: count, faces,
-    modifiers: isExploding ? [adrExplodingModifier()] : [],
+    modifiers: keep ? [keep] : (isExploding ? [adrExplodingModifier()] : []),
   });
   const mainTerms = [mainTerm];
   if (sumMod !== 0) {
@@ -1581,7 +1570,8 @@ function _adrExtractFreeRollData(mainRoll, wildRoll, fumbleEnabled, pool = null)
   // Bei Multi-Pool: keine Highlight-Setzung (Patzer-Mechanik per Spec aus).
   if (fumbleEnabled && !Array.isArray(pool)) {
     if (mainRoll?.dice?.length) {
-      const vals = mainRoll.dice[0].results.map(r => r.result);
+      // Verworfene Würfel (kh/kl) zählen nicht mit.
+      const vals = mainRoll.dice[0].results.filter(r => !r.discarded).map(r => r.result);
       const ones = vals.filter(x => x === 1).length;
       if (vals.length === 1 && ones === 1) mainHighlight = true;
       else if (vals.length > 1 && ones > (vals.length / 2)) mainHighlight = true;
@@ -1811,9 +1801,7 @@ function _adrApplyBennyRerollFree(flags, newData, isWildcardSpeaker) {
   // Wildcard-Patzer-Konstellation im Reroll (Wild=1 + Mehrheit Einsen,
   // mainExploding) übersteuert den Verschlechterungsschutz: alter (guter) Wurf
   // wandert in previousRolls, der neue Patzer-Wurf wird geltend mit
-  // lastRerollFumbleOverwrite=true. Eindeutig ohne W6-Check.
-  // NSC-1 fällt NICHT hier rein (Klassifikation "needs-check") — das läuft
-  // weiterhin über den Pending-Pfad mit GM-Entscheidung.
+  // lastRerollFumbleOverwrite=true.
   const newClassification = _adrClassifyHistoryFumble(newData, isWildcardSpeaker, !!flags.mainExploding);
   if (newClassification === "confirmed") {
     const histEntry = {
@@ -1853,25 +1841,7 @@ function _adrApplyBennyRerollFree(flags, newData, isWildcardSpeaker) {
   const oldEffective = (oldWild != null) ? Math.max(oldMain, oldWild) : oldMain;
   const newEffective = (newWild != null) ? Math.max(newMain, newWild) : newMain;
 
-  // NSC-Patzer-Vorrang: Statisten-Reroll mit Wert 1 (potenzieller Patzer)
-  // überschreibt den alten Wurf, auch wenn numerisch schlechter. Der GM
-  // kann anschließend per W6-Check verifizieren.
-  // SWADE-Eigenschaftsproben sind immer explodierend — ohne Explosion kein
-  // Patzer-Verdacht, also auch kein Pending-Pfad.
-  const newIsPotentialFumble = !!flags.mainExploding
-    && !isWildcardSpeaker
-    && newWild == null
-    && Array.isArray(newData.mainIndividualResults)
-    && newData.mainIndividualResults.length === 1
-    && newData.mainIndividualResults[0]?.value == 1;
-
   const overwriteByBetter = newEffective > oldEffective;
-  // SWADE-Regel: Statisten-Reroll mit Wert 1 ist potenzieller Patzer.
-  // Statt automatisch den alten Wurf zu überschreiben, geht die Karte
-  // in den Pending-Zustand: der neue Wurf ist sichtbar, aber die finale
-  // Entscheidung (Annehmen → Benny-Schutz | Patzer prüfen → W6) trifft
-  // der GM per Knopfdruck. Erst nach dem Klick wird der Stand fixiert.
-  const goesPending = newIsPotentialFumble && !overwriteByBetter;
 
   if (overwriteByBetter) {
     // Alter Wurf in History (mit seiner ursprünglichen Seq)
@@ -1902,31 +1872,6 @@ function _adrApplyBennyRerollFree(flags, newData, isWildcardSpeaker) {
     delete flags.fumbleCheckResult;
     delete flags.fumbleCheckDie;
     removals.push("fumbleCheckResult", "fumbleCheckDie");
-  } else if (goesPending) {
-    // Pending-State (invertiertes Datenmodell): alter (guter) Wurf BLEIBT
-    // geltend, der Reroll-1 wandert direkt in previousRolls. Der Hint
-    // erklärt die Situation, zwei Buttons bieten dem GM die Entscheidung:
-    //   • „Besseres Ergebnis behalten" → Schutz finalisieren (kein Swap),
-    //     verworfener Reroll-1 wird mit fumbleCheckSkipped markiert.
-    //   • „Patzer prüfen" → W6 würfeln. W6=1 → _adrPendingDecisionSwap
-    //     macht den Reroll-1 nachträglich zum geltenden Wurf (Override);
-    //     W6>1 → kein Swap, alter Wurf bleibt geltend, Reroll-1 in
-    //     previousRolls bekommt fumbleCheckResult=false + fumbleCheckDie.
-    // mainResult/rollSeq und fumbleCheckResult/Die des alten Wurfs werden
-    // nicht angefasst — sie bleiben für die finale Entscheidung erhalten.
-    flags.previousRolls.push({
-      mainResult: newData.mainResult,
-      mainIndividualResults: newData.mainIndividualResults,
-      mainHighlight: newData.mainHighlight,
-      wildResult: newData.wildResult,
-      wildIndividualResults: newData.wildIndividualResults,
-      wildHighlight: newData.wildHighlight,
-      seq: newSeq,
-    });
-    flags.pendingRerollFumbleDecision = true;
-    delete flags.lastRerollProtected;
-    delete flags.lastRerollFumbleOverwrite;
-    removals.push("lastRerollProtected", "lastRerollFumbleOverwrite");
   } else {
     // Schutz greift: alter Wurf bleibt; neuer in History mit neuer Seq
     flags.previousRolls.push({
@@ -1952,8 +1897,7 @@ function _adrApplyBennyRerollFree(flags, newData, isWildcardSpeaker) {
  * nach SWADE-Patzer-Kategorien — analog `_classifyFumble` aus
  * adr-request-roll-chat.js, aber für das Free-Roll-Flag-Schema.
  *
- *   "confirmed"   — eindeutiger Patzer (Wildcard-Patzer oder geprüfter Statisten-1)
- *   "needs-check" — Statisten-1 ohne Prüfung
+ *   "confirmed"   — eindeutiger Patzer (Wildcard-Patzer oder früher geprüfter Statisten-1)
  *   "none"        — kein Patzer-Verdacht
  *
  * `mainExploding` ist eine Top-Level-Eigenschaft der Message (gilt für
@@ -1976,10 +1920,7 @@ function _adrClassifyHistoryFumble(entry, isWildcardSpeaker, mainExploding) {
     const totalDice = totalMain + 1;
     const onesAll = onesMain + (wildResult == 1 ? 1 : 0);
     if (wildResult == 1 && onesAll > totalDice / 2) return "confirmed";
-    return "none";
   }
-  if (isWildcardSpeaker) return "none";
-  if (totalMain === 1 && mainInd[0]?.value == 1) return "needs-check";
   return "none";
 }
 
@@ -2146,7 +2087,6 @@ function _adrInjectFreeRollHint(li, message) {
   const hintEl = document.createElement("div");
   hintEl.className = "adr-benny-protected-hint";
   let hintHTML = "";
-  let needsDiscardedCheckBtn = false;
   let lastDiscarded = null;
   let renderPendingChoice = false;
 
@@ -2224,26 +2164,6 @@ function _adrInjectFreeRollHint(li, message) {
     } else {
       hintHTML = `<div class="adr-benny-protected-line">`
         + localizeHint("bennyProtectedHint") + `</div>`;
-      // „Allerdings war eine 1"-Zusatz + Check-Button entfallen, wenn
-      // der GM den Patzer-Check beim Pending bewusst übersprungen hat.
-      if (cls === "needs-check" && !checkSkipped) {
-        hintHTML += `<div class="adr-benny-protected-line adr-benny-protected-extra-one">`
-          + game.i18n.localize(`${ADR.ID}.requestRoll.bennyProtectedHintExtraOne`) + `</div>`;
-        const dcr = lastDiscarded?.fumbleCheckResult;
-        if (dcr === true || dcr === false) {
-          const tmplKey = dcr ? `${ADR.ID}.requestRoll.fumbleCheckTextYes` : `${ADR.ID}.requestRoll.fumbleCheckTextNo`;
-          const keyword = dcr
-            ? game.i18n.localize(`${ADR.ID}.requestRoll.fumbleCheckYes`)
-            : game.i18n.localize(`${ADR.ID}.requestRoll.fumbleCheckNone`);
-          const cssCls = dcr ? "adr-fumble-confirmed-text" : "adr-fumble-denied-text";
-          const tmpl = game.i18n.localize(tmplKey);
-          hintHTML += `<div class="adr-benny-protected-check-result">`
-            + tmpl.replace("{result}", `<span class="${cssCls}">${keyword}</span>`)
-            + `</div>`;
-        } else {
-          needsDiscardedCheckBtn = true;
-        }
-      }
     }
   } else if (f.dieType === "dc") {
     // Münzwurf — kein Wertvergleich, neuer Wurf gilt immer
@@ -2278,24 +2198,6 @@ function _adrInjectFreeRollHint(li, message) {
     hintEl.appendChild(choice);
   }
 
-  // Patzer-Check-Button für Discarded-Statisten-1 (Schutz-Pfad ohne Skip)
-  if (needsDiscardedCheckBtn && lastDiscarded) {
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "adr-fumble-check-btn adr-fumble-check-discarded-btn";
-    btn.dataset.action = "adr-fumble-check-discarded-free";
-    btn.dataset.messageId = message.id;
-    const line1 = game.i18n.localize(`${ADR.ID}.requestRoll.fumbleCheckBtn1`);
-    const line2 = game.i18n.localize(`${ADR.ID}.requestRoll.fumbleCheckBtn2`);
-    btn.innerHTML = `${line1} ${line2}`;
-    if (!game.user.isGM) {
-      btn.classList.add("adr-not-mine");
-      btn.title = game.i18n.localize(`${ADR.ID}.requestRoll.chatNoPermission`);
-      btn.style.setProperty("cursor", "not-allowed", "important");
-    }
-    hintEl.appendChild(btn);
-  }
-
   // Platzieren: nach der letzten Wurfzeile und (ggf.) der Critical-Hinweis-Zeile
   const rows = li.querySelectorAll(".adr-dice-row");
   const lastRow = rows[rows.length - 1];
@@ -2328,10 +2230,14 @@ function _adrInjectFreeRollHint(li, message) {
 
 function _loadHandlebarTemplates() {
   Handlebars.registerHelper("isCoin", v => v === "dc");
+  Handlebars.registerHelper("isFudge", v => v === "df");
   Handlebars.registerHelper("isD100", v => v === "d100");
   Handlebars.registerHelper("isD2",   v => v === "d2");
   Handlebars.registerHelper("eq", (a, b) => a === b);
   Handlebars.registerHelper("gt", (a, b) => a > b);
+  // Lokalisiertes Würfel-Label ("W8" / "d8") für Template-Tooltips
+  Handlebars.registerHelper("adrDieLabel",
+    sides => `${game.i18n.localize(`${ADR.ID}.requestRoll.diePrefix`)}${sides}`);
   return foundry.applications.handlebars.loadTemplates([
     ADR.DICE_FORM_PATH,
     ADR.REQUEST_ROLL_FORM_PATH,
@@ -2363,15 +2269,16 @@ const { ApplicationV2 } = foundry.applications.api;
  * — ohne Argumente, deshalb kein eigener Konstruktor.
  *
  * Die drei verwalteten Settings sind mit `config: false` registriert; dieses
- * Fenster ist die einzige UI dafür. Beim Speichern wird je Key
+ * Fenster ist die einzige UI dafür. Außerhalb des SWADE-Systems steht über
+ * den Optionen ein Warnhinweis. Beim Speichern wird je Key
  * `game.settings.set(...)` aufgerufen — die bestehenden onChange-Handler
  * (enableWildDie, enableRequestRoll) feuern dann automatisch.
  */
 class SwadeSettingsForm extends ApplicationV2 {
 
-  /** Die drei verwalteten SWADE-Setting-Keys, in Anzeigereihenfolge. */
+  /** Die beiden verwalteten SWADE-Setting-Keys, in Anzeigereihenfolge.
+   *  (Die Wild-Die-Schaltfläche wird im Untermenü „Angezeigte Schaltflächen" verwaltet.) */
   static SETTING_KEYS = [
-    ADR.CONFIG_WILD_DIE,
     ADR.CONFIG_HIGHLIGHT_ONES,
     ADR.CONFIG_REQUEST_ROLL,
   ];
@@ -2409,12 +2316,18 @@ class SwadeSettingsForm extends ApplicationV2 {
     const root = document.createElement("div");
     root.className = "adr-swade-settings standard-form";
 
-    // Je Setting eine Standard-form-group (Checkbox + Name + Hint)
+    const isSwade = game.system.id === "swade";
+    if (!isSwade) root.append(this._buildWarning());
+
+    // Je Setting eine Standard-form-group (Checkbox + Name + Hint).
+    // Probenanforderung gibt es nur auf SWADE: sonst ausgegraut und aus.
     for (const key of SwadeSettingsForm.SETTING_KEYS) {
+      const locked = !isSwade && key === ADR.CONFIG_REQUEST_ROLL;
       const input = createCheckboxInput({
         name: key,
-        value: !!game.settings.get(ADR.ID, key),
+        value: !locked && !!game.settings.get(ADR.ID, key),
       });
+      if (locked) input.disabled = true;
       const group = createFormGroup({
         input,
         label: game.i18n.localize(`${ADR.ID}.settings.${key}.name`),
@@ -2442,6 +2355,29 @@ class SwadeSettingsForm extends ApplicationV2 {
     root.append(footer);
 
     return root;
+  }
+
+  /**
+   * Warnhinweis für Fremdsysteme: Label rot/fett, Systemname kursiv,
+   * darunter eine Trennlinie zu den Optionen.
+   */
+  _buildWarning() {
+    const wrap = document.createElement("div");
+    wrap.className = "adr-swade-warning";
+
+    const p = document.createElement("p");
+    const label = document.createElement("strong");
+    label.textContent = game.i18n.localize(`${ADR.ID}.swadeSettings.warningLabel`);
+    p.append(label, " ");
+
+    const text = game.i18n.localize(`${ADR.ID}.swadeSettings.warningText`);
+    const [before, after] = text.split("{system}");
+    const em = document.createElement("em");
+    em.textContent = game.i18n.localize(`${ADR.ID}.swadeSettings.warningSystem`);
+    p.append(before ?? "", em, after ?? "");
+
+    wrap.append(p, document.createElement("hr"));
+    return wrap;
   }
 
   /** Fügt das von `_renderHTML` gebaute Element in den Fensterinhalt ein. */
@@ -2482,7 +2418,7 @@ class SwadeSettingsForm extends ApplicationV2 {
     for (const key of SwadeSettingsForm.SETTING_KEYS) {
       const checkbox = root.querySelector(`input[type="checkbox"][name="${key}"]`);
       if (!checkbox) continue;
-      const newValue = checkbox.checked;
+      const newValue = checkbox.disabled ? false : checkbox.checked;
       if (game.settings.get(ADR.ID, key) !== newValue) {
         await game.settings.set(ADR.ID, key, newValue);
       }
@@ -2493,38 +2429,261 @@ class SwadeSettingsForm extends ApplicationV2 {
 }
 
 /* ================================================================ */
+/*  Angezeigte Würfeltypen: Submenu-Fenster (registerMenu)          */
+/* ================================================================ */
+
+/**
+ * DiceTypesForm — Submenu-Fenster für das Setting `diceTypes` (welche
+ * Würfelzeilen das Würfelfenster anbietet). Aufbau wie SwadeSettingsForm:
+ * reines ApplicationV2 mit Foundrys Standard-Formularhelfern.
+ */
+class DiceTypesForm extends ApplicationV2 {
+
+  static DEFAULT_OPTIONS = {
+    id: "adr-dice-types",
+    classes: ["adr-dice-types-window"],
+    window: {
+      frame: true,
+      positioned: true,
+      title: "",
+      resizable: false,
+    },
+    position: {
+      width: 360,
+    },
+  };
+
+  get title() {
+    return game.i18n.localize(`${ADR.ID}.diceTypes.windowTitle`);
+  }
+
+  async _renderHTML(_context, _options) {
+    const { createCheckboxInput } = foundry.applications.fields;
+    const current = game.settings.get(ADR.ID, ADR.CONFIG_DICE_TYPES) ?? {};
+
+    const root = document.createElement("div");
+    root.className = "adr-dice-types standard-form";
+
+    const intro = document.createElement("p");
+    intro.className = "adr-dice-types-intro";
+    intro.textContent = game.i18n.localize(`${ADR.ID}.diceTypes.intro`);
+    root.append(intro, document.createElement("hr"));
+
+    const list = document.createElement("div");
+    list.className = "adr-dice-types-list";
+    root.append(list);
+
+    for (const type of ADR.DICE_TYPES) {
+      const input = createCheckboxInput({
+        name: type,
+        value: !!(current[type] ?? ADR.DICE_TYPES_DEFAULT[type]),
+      });
+      const row = document.createElement("label");
+      row.className = "adr-dice-types-row";
+      const text = document.createElement("span");
+      text.textContent = adrDieTypeLabel(type);
+      row.append(input, text);
+      list.append(row);
+    }
+
+    const footer = document.createElement("footer");
+    footer.className = "form-footer";
+    const saveBtn = document.createElement("button");
+    saveBtn.type = "button";
+    saveBtn.dataset.action = "adr-dice-types-save";
+    const icon = document.createElement("i");
+    icon.className = "fa-solid fa-floppy-disk";
+    saveBtn.append(icon, document.createTextNode(
+      " " + game.i18n.localize(`${ADR.ID}.swadeSettings.save`)
+    ));
+    footer.append(saveBtn);
+    root.append(footer);
+    return root;
+  }
+
+  _replaceHTML(result, content, _options) {
+    content.replaceChildren(result);
+  }
+
+  _onFirstRender(context, options) {
+    super._onFirstRender?.(context, options);
+    this.element?.addEventListener("click", (ev) => {
+      if (ev.target.closest("[data-action='adr-dice-types-save']")) this._onSave();
+    });
+  }
+
+  async _onSave() {
+    const root = this.element;
+    if (!root) return;
+    const value = {};
+    for (const type of ADR.DICE_TYPES) {
+      value[type] = !!root.querySelector(`input[type="checkbox"][name="${type}"]`)?.checked;
+    }
+    await game.settings.set(ADR.ID, ADR.CONFIG_DICE_TYPES, value);
+    this.close();
+  }
+}
+
+/* ================================================================ */
+/*  Angezeigte Schaltflächen: Submenu-Fenster (registerMenu)        */
+/* ================================================================ */
+
+/**
+ * ButtonsSettingsForm — Submenu-Fenster für die Schaltflächen des
+ * Würfelfensters (verdeckte Würfe, Explosionswürfel, Modifikatoren,
+ * Fate). Die Settings sind `config: false`; dieses Fenster ist die
+ * einzige UI dafür. Boolean-Settings als Checkbox, `explodingMode`
+ * als Auswahlliste.
+ */
+class ButtonsSettingsForm extends ApplicationV2 {
+
+  /** Allgemeine Schaltflächen (für jedes Spielsystem). */
+  static SETTING_KEYS = [
+    ADR.CONFIG_HIDDEN_ROLLS,
+    ADR.CONFIG_EXPLODING_MODE,
+    ADR.CONFIG_EXPLODING_DEFAULT,
+    ADR.CONFIG_MODIFIERS,
+    "enableFateRollButton",
+  ];
+
+  /** Systemspezifische Schaltflächen — unter einer Trennlinie: SWADE, Call of Cthulhu, D&D. */
+  static SYSTEM_SETTING_KEYS = [
+    ADR.CONFIG_WILD_DIE,
+    ADR.CONFIG_CTHULHU_DICE,
+    ADR.CONFIG_KEEP_DICE,
+  ];
+
+  static DEFAULT_OPTIONS = {
+    id: "adr-buttons-settings",
+    classes: ["adr-buttons-settings-window"],
+    window: {
+      frame: true,
+      positioned: true,
+      title: "",
+      resizable: false,
+    },
+    position: {
+      width: 760,
+    },
+  };
+
+  get title() {
+    return game.i18n.localize(`${ADR.ID}.buttons.windowTitle`);
+  }
+
+  async _renderHTML(_context, _options) {
+    const { createCheckboxInput, createSelectInput, createFormGroup } = foundry.applications.fields;
+
+    const root = document.createElement("div");
+    root.className = "adr-buttons-settings standard-form";
+
+    const addGroup = (key) => {
+      const value = game.settings.get(ADR.ID, key);
+      const choices = game.settings.settings.get(`${ADR.ID}.${key}`)?.choices;
+      const input = choices
+        ? createSelectInput({
+            name: key,
+            value,
+            options: Object.entries(choices).map(([v, l]) => ({ value: v, label: game.i18n.localize(l) })),
+          })
+        : createCheckboxInput({ name: key, value: !!value });
+      root.append(createFormGroup({
+        input,
+        label: game.i18n.localize(`${ADR.ID}.settings.${key}.name`),
+        hint: game.i18n.localize(`${ADR.ID}.settings.${key}.hint`),
+      }));
+    };
+
+    ButtonsSettingsForm.SETTING_KEYS.forEach(addGroup);
+
+    // Trennlinie + Hinweis, dann die systemspezifischen Schaltflächen.
+    root.append(document.createElement("hr"));
+    const note = document.createElement("p");
+    note.className = "adr-buttons-system-note";
+    note.textContent = game.i18n.localize(`${ADR.ID}.buttons.systemNote`);
+    root.append(note);
+    ButtonsSettingsForm.SYSTEM_SETTING_KEYS.forEach(addGroup);
+
+    const footer = document.createElement("footer");
+    footer.className = "form-footer";
+    const saveBtn = document.createElement("button");
+    saveBtn.type = "button";
+    saveBtn.dataset.action = "adr-buttons-settings-save";
+    const icon = document.createElement("i");
+    icon.className = "fa-solid fa-floppy-disk";
+    saveBtn.append(icon, document.createTextNode(
+      " " + game.i18n.localize(`${ADR.ID}.swadeSettings.save`)
+    ));
+    footer.append(saveBtn);
+    root.append(footer);
+    return root;
+  }
+
+  _replaceHTML(result, content, _options) {
+    content.replaceChildren(result);
+  }
+
+  _onFirstRender(context, options) {
+    super._onFirstRender?.(context, options);
+    this.element?.addEventListener("click", (ev) => {
+      if (ev.target.closest("[data-action='adr-buttons-settings-save']")) this._onSave();
+    });
+  }
+
+  async _onSave() {
+    const root = this.element;
+    if (!root) return;
+    for (const key of [...ButtonsSettingsForm.SETTING_KEYS, ...ButtonsSettingsForm.SYSTEM_SETTING_KEYS]) {
+      const el = root.querySelector(`[name="${key}"]`);
+      if (!el) continue;
+      const newValue = el.type === "checkbox" ? el.checked : el.value;
+      if (game.settings.get(ADR.ID, key) !== newValue) {
+        await game.settings.set(ADR.ID, key, newValue);
+      }
+    }
+    this.close();
+  }
+}
+
+/* ================================================================ */
 /*  Game Settings                                                   */
 /* ================================================================ */
 
 function _registerGameSettings() {
-  // Drei Settings sind ausschließlich SWADE-Funktionen (Wild Die,
-  // Patzer-Mechanik, Probenanforderung). Sie sind `config: false` — also
-  // nie direkt im Hauptpanel der Spieleinstellungen — und werden auf dem
-  // SWADE-System über das Submenu `swadeSettings` (SwadeSettingsForm,
-  // siehe oben) zugänglich gemacht. Auf Fremdsystemen weder Menü noch
-  // Settings sichtbar, Default deaktiviert.
+  // Drei Settings sind SWADE-Funktionen (Wild Die, Patzer-Mechanik,
+  // Probenanforderung). Sie sind `config: false` — also nie direkt im
+  // Hauptpanel der Spieleinstellungen — und werden über das Submenu
+  // `swadeSettings` (SwadeSettingsForm, siehe oben) zugänglich gemacht.
+  // Das Menü gibt es auf SWADE und den Systemen aus
+  // ADR.SWADE_MECHANICS_SYSTEMS; nur auf SWADE sind die Settings per
+  // Default aktiv. Auf allen anderen Systemen weder Menü noch Settings.
   const isSwade = game.system.id === "swade";
+
+  // name/hint/choices werden als ROHE i18n-Keys übergeben (kein localize):
+  // Die Registrierung läuft im init-Hook, Modul-Übersetzungen sind aber erst
+  // ab i18nInit geladen — localize lieferte hier nur den Key zurück. Foundrys
+  // SettingsConfig lokalisiert die Keys selbst beim Rendern (Best Practice).
 
   // Chat-Design (Dropdown): Stil der Würfelergebnis-Darstellung im Chat.
   // "fantasy" → klassische ADR-Optik, "modern" → SciFi-Optik (.scifi-
   // Klasse), "standard" → generische Foundry-Würfelkarte ohne ADR-Grafik.
   game.settings.register(ADR.ID, "chatDesign", {
-    name: game.i18n.localize("argas-dice-roller.settings.chatDesign.name"),
-    hint: game.i18n.localize("argas-dice-roller.settings.chatDesign.hint"),
+    name: "argas-dice-roller.settings.chatDesign.name",
+    hint: "argas-dice-roller.settings.chatDesign.hint",
     scope: "world",
     config: true,
     default: "fantasy",
     type: String,
     choices: {
-      fantasy: game.i18n.localize("argas-dice-roller.settings.chatDesign.choices.fantasy"),
-      modern: game.i18n.localize("argas-dice-roller.settings.chatDesign.choices.modern"),
-      standard: game.i18n.localize("argas-dice-roller.settings.chatDesign.choices.standard")
+      fantasy: "argas-dice-roller.settings.chatDesign.choices.fantasy",
+      modern: "argas-dice-roller.settings.chatDesign.choices.modern",
+      standard: "argas-dice-roller.settings.chatDesign.choices.standard"
     }
   });
 
   game.settings.register(ADR.ID, ADR.CONFIG_CLOSE_FORM, {
-    name: game.i18n.localize("argas-dice-roller.settings.closeFormOnRoll.name"),
-    hint: game.i18n.localize("argas-dice-roller.settings.closeFormOnRoll.hint"),
+    name: "argas-dice-roller.settings.closeFormOnRoll.name",
+    hint: "argas-dice-roller.settings.closeFormOnRoll.hint",
     scope: "client",
     config: true,
     default: false,
@@ -2533,10 +2692,10 @@ function _registerGameSettings() {
   });
 
   game.settings.register(ADR.ID, ADR.CONFIG_HIDDEN_ROLLS, {
-    name: game.i18n.localize("argas-dice-roller.settings.enableHiddenRolls.name"),
-    hint: game.i18n.localize("argas-dice-roller.settings.enableHiddenRolls.hint"),
+    name: "argas-dice-roller.settings.enableHiddenRolls.name",
+    hint: "argas-dice-roller.settings.enableHiddenRolls.hint",
     scope: "world",
-    config: true,
+    config: false,
     default: true,
     type: Boolean,
     onChange: v => _updateDiceForm(ADR.CONFIG_HIDDEN_ROLLS, v)
@@ -2547,53 +2706,76 @@ function _registerGameSettings() {
   // "once" = einmalig). Alleinige Quelle der Wahrheit für die
   // Explosionsmechanik.
   game.settings.register(ADR.ID, ADR.CONFIG_EXPLODING_MODE, {
-    name: game.i18n.localize("argas-dice-roller.settings.explodingMode.name"),
-    hint: game.i18n.localize("argas-dice-roller.settings.explodingMode.hint"),
+    name: "argas-dice-roller.settings.explodingMode.name",
+    hint: "argas-dice-roller.settings.explodingMode.hint",
     scope: "world",
-    config: true,
+    config: false,
     default: "multi",
     type: String,
     choices: {
-      multi: game.i18n.localize("argas-dice-roller.settings.explodingMode.choices.multi"),
-      once:  game.i18n.localize("argas-dice-roller.settings.explodingMode.choices.once"),
-      off:   game.i18n.localize("argas-dice-roller.settings.explodingMode.choices.off")
+      multi: "argas-dice-roller.settings.explodingMode.choices.multi",
+      once:  "argas-dice-roller.settings.explodingMode.choices.once",
+      off:   "argas-dice-roller.settings.explodingMode.choices.off"
     },
     onChange: v => _updateDiceForm(ADR.CONFIG_EXPLODING_MODE, v)
   });
 
   game.settings.register(ADR.ID, ADR.CONFIG_EXPLODING_DEFAULT, {
-    name: game.i18n.localize("argas-dice-roller.settings.explodingDefault.name"),
-    hint: game.i18n.localize("argas-dice-roller.settings.explodingDefault.hint"),
-    scope: "client",
-    config: true,
+    name: "argas-dice-roller.settings.explodingDefault.name",
+    hint: "argas-dice-roller.settings.explodingDefault.hint",
+    scope: "world",
+    config: false,
     default: false,
     type: Boolean,
     onChange: v => _updateDiceForm(ADR.CONFIG_EXPLODING_DEFAULT, v)
   });
 
   game.settings.register(ADR.ID, ADR.CONFIG_MODIFIERS, {
-    name: game.i18n.localize("argas-dice-roller.settings.enableModifiers.name"),
-    hint: game.i18n.localize("argas-dice-roller.settings.enableModifiers.hint"),
+    name: "argas-dice-roller.settings.enableModifiers.name",
+    hint: "argas-dice-roller.settings.enableModifiers.hint",
     scope: "world",
-    config: true,
+    config: false,
     default: true,
     type: Boolean,
     onChange: v => _updateDiceForm(ADR.CONFIG_MODIFIERS, v)
   });
 
-  game.settings.register(ADR.ID, "enableFateRollButton", {
-    name: game.i18n.localize("argas-dice-roller.settings.enableFateRollButton.name"),
-    hint: game.i18n.localize("argas-dice-roller.settings.enableFateRollButton.hint"),
+  // „Höchster"/„Niedrigster" (Vorteil/Nachteil, Boon/Bane): N Würfel werfen,
+  // nur der höchste bzw. niedrigste zählt. Standard aus — systemabhängig.
+  game.settings.register(ADR.ID, ADR.CONFIG_KEEP_DICE, {
+    name: "argas-dice-roller.settings.enableKeepDice.name",
+    hint: "argas-dice-roller.settings.enableKeepDice.hint",
     scope: "world",
-    config: true,
+    config: false,
+    default: ADR.KEEP_DICE_SYSTEMS.includes(game.system.id),
+    type: Boolean,
+    onChange: v => _updateDiceForm(ADR.CONFIG_KEEP_DICE, v)
+  });
+
+  // Bonus-/Strafwurf (Call of Cthulhu 7e): Zusatz-Zehnerwürfel beim W100.
+  game.settings.register(ADR.ID, ADR.CONFIG_CTHULHU_DICE, {
+    name: "argas-dice-roller.settings.enableCthulhuDice.name",
+    hint: "argas-dice-roller.settings.enableCthulhuDice.hint",
+    scope: "world",
+    config: false,
+    default: ADR.CTHULHU_DICE_SYSTEMS.includes(game.system.id),
+    type: Boolean,
+    onChange: v => _updateDiceForm(ADR.CONFIG_CTHULHU_DICE, v)
+  });
+
+  game.settings.register(ADR.ID, "enableFateRollButton", {
+    name: "argas-dice-roller.settings.enableFateRollButton.name",
+    hint: "argas-dice-roller.settings.enableFateRollButton.hint",
+    scope: "world",
+    config: false,
     default: true,
     type: Boolean,
     onChange: () => _updateDiceForm("enableFateRollButton", null)
   });
 
   game.settings.register(ADR.ID, ADR.CONFIG_MAXDICE_COUNT, {
-    name: game.i18n.localize("argas-dice-roller.settings.maxDiceCount.name"),
-    hint: game.i18n.localize("argas-dice-roller.settings.maxDiceCount.hint"),
+    name: "argas-dice-roller.settings.maxDiceCount.name",
+    hint: "argas-dice-roller.settings.maxDiceCount.hint",
     scope: "client",
     config: true,
     default: 6,
@@ -2606,8 +2788,8 @@ function _registerGameSettings() {
   });
 
   game.settings.register(ADR.ID, ADR.CONFIG_1ST_COLUMN, {
-    name: game.i18n.localize("argas-dice-roller.settings.enableFirstColumn.name"),
-    hint: game.i18n.localize("argas-dice-roller.settings.enableFirstColumn.hint"),
+    name: "argas-dice-roller.settings.enableFirstColumn.name",
+    hint: "argas-dice-roller.settings.enableFirstColumn.hint",
     scope: "client",
     config: true,
     default: true,
@@ -2615,39 +2797,37 @@ function _registerGameSettings() {
     onChange: v => _updateDiceForm(ADR.CONFIG_1ST_COLUMN, v)
   });
 
-  game.settings.register(ADR.ID, ADR.CONFIG_COINS, {
-    name: game.i18n.localize("argas-dice-roller.settings.enableCoins.name"),
-    hint: game.i18n.localize("argas-dice-roller.settings.enableCoins.hint"),
-    scope: "client",
-    config: true,
-    default: true,
-    type: Boolean,
-    onChange: v => _updateDiceForm(ADR.CONFIG_COINS, v)
+  // Angezeigte Würfeltypen: weltweit, nur SL, ausschließlich über das
+  // Submenu `diceTypes` (DiceTypesForm) erreichbar.
+  game.settings.register(ADR.ID, ADR.CONFIG_DICE_TYPES, {
+    scope: "world",
+    config: false,
+    default: { ...ADR.DICE_TYPES_DEFAULT },
+    type: Object,
+    onChange: v => _updateDiceForm(ADR.CONFIG_DICE_TYPES, v)
   });
 
-  game.settings.register(ADR.ID, ADR.CONFIG_D2, {
-    name: game.i18n.localize("argas-dice-roller.settings.enableD2Rolls.name"),
-    hint: game.i18n.localize("argas-dice-roller.settings.enableD2Rolls.hint"),
-    scope: "client",
-    config: true,
-    default: false,
-    type: Boolean,
-    onChange: v => _updateDiceForm(ADR.CONFIG_D2, v)
+  game.settings.registerMenu(ADR.ID, "diceTypes", {
+    name: `${ADR.ID}.diceTypes.menuName`,
+    hint: `${ADR.ID}.diceTypes.menuHint`,
+    label: `${ADR.ID}.diceTypes.menuLabel`,
+    icon: "fa-solid fa-dice-d20",
+    type: DiceTypesForm,
+    restricted: true,
   });
 
-  game.settings.register(ADR.ID, ADR.CONFIG_D100, {
-    name: game.i18n.localize("argas-dice-roller.settings.enableD100Rolls.name"),
-    hint: game.i18n.localize("argas-dice-roller.settings.enableD100Rolls.hint"),
-    scope: "client",
-    config: true,
-    default: true,
-    type: Boolean,
-    onChange: v => _updateDiceForm(ADR.CONFIG_D100, v)
+  game.settings.registerMenu(ADR.ID, "buttons", {
+    name: `${ADR.ID}.buttons.menuName`,
+    hint: `${ADR.ID}.buttons.menuHint`,
+    label: `${ADR.ID}.buttons.menuLabel`,
+    icon: "fa-solid fa-toggle-on",
+    type: ButtonsSettingsForm,
+    restricted: true,
   });
 
   game.settings.register(ADR.ID, ADR.CONFIG_WILD_DIE, {
-    name: game.i18n.localize("argas-dice-roller.settings.enableWildDie.name"),
-    hint: game.i18n.localize("argas-dice-roller.settings.enableWildDie.hint"),
+    name: "argas-dice-roller.settings.enableWildDie.name",
+    hint: "argas-dice-roller.settings.enableWildDie.hint",
     scope: "world",
     config: false,
     default: isSwade,
@@ -2656,8 +2836,8 @@ function _registerGameSettings() {
   });
 
   game.settings.register(ADR.ID, ADR.CONFIG_HIGHLIGHT_ONES, {
-    name: game.i18n.localize("argas-dice-roller.settings.highlightNaturalOnes.name"),
-    hint: game.i18n.localize("argas-dice-roller.settings.highlightNaturalOnes.hint"),
+    name: "argas-dice-roller.settings.highlightNaturalOnes.name",
+    hint: "argas-dice-roller.settings.highlightNaturalOnes.hint",
     scope: "world",
     config: false,
     default: isSwade,
@@ -2665,8 +2845,8 @@ function _registerGameSettings() {
   });
 
   game.settings.register(ADR.ID, ADR.CONFIG_REQUEST_ROLL, {
-    name: game.i18n.localize("argas-dice-roller.settings.enableRequestRoll.name"),
-    hint: game.i18n.localize("argas-dice-roller.settings.enableRequestRoll.hint"),
+    name: "argas-dice-roller.settings.enableRequestRoll.name",
+    hint: "argas-dice-roller.settings.enableRequestRoll.hint",
     scope: "world",
     config: false,
     default: isSwade,
@@ -2675,13 +2855,14 @@ function _registerGameSettings() {
   });
 
   // SWADE-Submenu: bündelt die drei Settings oben hinter einem eigenen
-  // Eintrag mit Button in den Spieleinstellungen. Nur auf dem SWADE-System
-  // registriert — sonst gäbe es auf Fremdsystemen einen leeren Menüeintrag.
-  // `restricted: true` → nur Spielleiter (entspricht „nur SL").
-  if (isSwade) {
+  // Eintrag mit Button in den Spieleinstellungen. Nur auf den Systemen aus
+  // ADR.SWADE_MECHANICS_SYSTEMS registriert — sonst gäbe es einen
+  // funktionslosen Menüeintrag. `restricted: true` → nur Spielleiter.
+  if (adrSwadeMechanicsOffered()) {
     game.settings.registerMenu(ADR.ID, "swadeSettings", {
-      name: game.i18n.localize(`${ADR.ID}.swadeSettings.menuName`),
-      label: game.i18n.localize(`${ADR.ID}.swadeSettings.menuLabel`),
+      name: `${ADR.ID}.swadeSettings.menuName`,
+      hint: `${ADR.ID}.swadeSettings.menuHint`,
+      label: `${ADR.ID}.swadeSettings.menuLabel`,
       icon: "fa-solid fa-dice",
       type: SwadeSettingsForm,
       restricted: true,
@@ -2708,13 +2889,23 @@ function _updateDiceForm(key, value) {
       break;
     case ADR.CONFIG_WILD_DIE: globalDiceForm.showWildToggle = value; break;
     case ADR.CONFIG_MODIFIERS: globalDiceForm.showModifiers = value; break;
+    case ADR.CONFIG_KEEP_DICE:
+      globalDiceForm.showKeepToggle = value;
+      if (!value) globalDiceForm.keepMode = null;
+      break;
+    case ADR.CONFIG_CTHULHU_DICE:
+      globalDiceForm.showCthulhuToggle = value;
+      if (!value) { globalDiceForm.cthulhuMode = null; globalDiceForm.cthulhuCount = 1; }
+      break;
     case ADR.CONFIG_1ST_COLUMN: globalDiceForm.enableFirstColumn = value; break;
     case ADR.CONFIG_CLOSE_FORM: globalDiceForm.closeFormOnRoll = value; break;
-    case ADR.CONFIG_COINS: globalDiceForm.enableCoins = value; break;
-    case ADR.CONFIG_D2: globalDiceForm.enableD2 = value; break;
-    case ADR.CONFIG_D100: globalDiceForm.enableD100 = value; break;
+    case ADR.CONFIG_DICE_TYPES: globalDiceForm.diceTypes = value; break;
   }
-  globalDiceForm.render(true);
+  // Nur ein OFFENES Fenster neu rendern — render(true) würde ein vom Nutzer
+  // geschlossenes Würfelfenster sonst wieder aufreißen (bei World-Settings
+  // sogar auf allen Clients, die es je geöffnet hatten). Der Zustand ist
+  // oben trotzdem gesetzt und greift beim nächsten Öffnen.
+  if (globalDiceForm.rendered) globalDiceForm.render(true);
 }
 
 /** ADR: optionaler Reload nach Einstellungsänderung (lokalisiert)
@@ -2753,9 +2944,10 @@ function ADR_confirmReload() {
   });
 
   const renderPromise = dlg.render({ force: true });
-  // bringToTop nach Render — defensiv, falls API in Major-Versionen wechselt
+  // bringToFront nach Render (ApplicationV2-API; v1 hieß es bringToTop) —
+  // Optional Chaining defensiv, falls die API in Major-Versionen wechselt
   renderPromise.then(() => {
-    try { dlg.bringToTop?.(); } catch (e) { /* */ }
+    try { dlg.bringToFront?.(); } catch (e) { /* */ }
   });
   return renderPromise;
 }

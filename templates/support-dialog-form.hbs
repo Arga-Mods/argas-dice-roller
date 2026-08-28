@@ -51,7 +51,7 @@
                 class="adr-trait-btn {{#if (eq ../selectedTraitKey key)}}{{#if (eq ../selectedTraitType 'attribute')}}selected{{/if}}{{/if}}"
                 data-action="adr-support-select-trait"
                 data-trait-type="attribute" data-trait-key="{{key}}" data-trait-name="{{name}}"
-                title="W{{dieSides}}">
+                title="{{adrDieLabel dieSides}}">
           {{name}}
         </button>
         {{/each}}
@@ -66,7 +66,7 @@
                 class="adr-trait-btn {{#if isUntrained}}adr-trait-untrained-skill{{/if}} {{#if (eq ../selectedTraitKey key)}}{{#if (eq ../selectedTraitType 'skill')}}selected{{/if}}{{/if}}"
                 data-action="adr-support-select-trait"
                 data-trait-type="skill" data-trait-key="{{key}}" data-trait-name="{{name}}"
-                title="W{{dieSides}}">
+                title="{{adrDieLabel dieSides}}">
           {{name}}
         </button>
         {{/each}}
@@ -80,7 +80,7 @@
                 class="adr-trait-btn {{#if isUntrained}}adr-trait-untrained-skill{{/if}} {{#if (eq ../selectedTraitKey key)}}{{#if (eq ../selectedTraitType 'skill')}}selected{{/if}}{{/if}}"
                 data-action="adr-support-select-trait"
                 data-trait-type="skill" data-trait-key="{{key}}" data-trait-name="{{name}}"
-                title="W{{dieSides}}">
+                title="{{adrDieLabel dieSides}}">
           {{name}}
         </button>
         {{/each}}

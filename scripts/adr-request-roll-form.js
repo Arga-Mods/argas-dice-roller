@@ -539,7 +539,7 @@ export class RequestRollForm extends HandlebarsApplicationMixin(ApplicationV2) {
       dramaticPreview,
       dramaticParticipantCount,
       dramaticTargetMarkers,
-      modulePath: game.modules.get(ADR.ID)?.path || `modules/${ADR.ID}`,
+      modulePath: `modules/${ADR.ID}`,
       selectedTraitKey,
       selectedTraitType,
       untrainedLabel: game.i18n.localize(`${ADR.ID}.requestRoll.untrained`),
@@ -840,6 +840,8 @@ export class RequestRollForm extends HandlebarsApplicationMixin(ApplicationV2) {
     this.dramaticMarkers = 3;
     this.dramaticRounds = 3;
     this.dramaticTargetOverride = null;
+    // Actor-/Token-Referenzen nicht über das Schließen hinaus halten
+    this._npcTokenData.clear();
 
     super._onClose(options);
   }
@@ -1065,10 +1067,18 @@ export class RequestRollForm extends HandlebarsApplicationMixin(ApplicationV2) {
       const npcData = this._npcTokenData.get(actorId);
       let trait = { ...this.selectedTraits.get(actorId) };
 
-      // Bei Gruppenprobe: prüfe ob Akteur den Trait tatsächlich hat
+      // Bei Gruppenprobe: prüfe ob Akteur den Trait tatsächlich hat.
+      // WICHTIG: trait.key stammt aus der vereinigten Gruppenliste und ist
+      // die Item-ID der Fertigkeit EINES Trägers — eingebettete Item-IDs
+      // unterscheiden sich aber pro Akteur. Deshalb hier die akteurseigene
+      // Fertigkeit über den Namen auflösen und deren ID in den Entry
+      // schreiben; sonst liefe actor.items.get(key) bei allen anderen ins
+      // Leere (Anzeige W4 + ungeübter Wurf trotz vorhandener Fertigkeit).
       if (this.mode === "group" && trait.type === "skill") {
-        const hasSkill = actor.items.some(i => i.type === "skill" && i.name === trait.name);
-        if (!hasSkill) {
+        const ownSkill = actor.items.find(i => i.type === "skill" && i.name === trait.name);
+        if (ownSkill) {
+          trait.key = ownSkill.id;
+        } else {
           trait = {
             type: "untrained",
             key: "untrained",
