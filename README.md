@@ -1,3 +1,4 @@
+
 <p align="center">
   <img src="https://img.shields.io/endpoint?url=https://foundryshields.com/version?url=https://raw.githubusercontent.com/Arga-Mods/argas-dice-roller/main/module.json" alt="Foundry Version">
   <a href="https://github.com/Arga-Mods/argas-dice-roller/releases/latest"><img src="https://img.shields.io/github/v/release/Arga-Mods/argas-dice-roller?display_name=tag&sort=semver&label=Latest%20Release&color=4287f5" alt="Latest Release"></a>
@@ -5,9 +6,9 @@
 
 # Arga's Dice Roller
 
-At its core, ADR is a system-agnostic dice module for Foundry VTT that also gives the GM the option to pick a random player via a Fate Roll.
+This is a system-agnostic dice module for Foundry VTT. ADR also gives the GM additional options, such as picking a random player via a Fate Roll.
 
-In addition, ADR can enable extensive features and dice mechanics for the **Savage Worlds Adventure Edition (SWADE)** game system, such as Critical Failures, Benny rerolls, Request Rolls, and Dramatic Tasks.
+In addition, ADR offers extra dice functions for various game systems: Advantage / Disadvantage for D&D 5e (and similar systems such as Level Up or SW5e), Boon / Bane for Dragonbane, Fudge dice for Fate, Bonus / Penalty dice for Call of Cthulhu 7e, and extensive mechanics for the Savage Worlds Adventure Edition (SWADE) such as Critical Failures, Benny rerolls, Request Rolls, and Dramatic Tasks.
 
 <table align="center">
   <tr>
@@ -17,6 +18,19 @@ In addition, ADR can enable extensive features and dice mechanics for the **Sava
   <tr>
     <td align="center"><em>Dice Roller Default (GM)</em></td>
     <td align="center"><em>Dice Roller SWADE (GM)</em></td>
+  </tr>
+</table>
+
+<br>
+
+<table align="center">
+  <tr>
+    <td align="center"><img src="screenshots/dice-roller_fudge.png" height="70"></td>
+    <td align="center"><img src="screenshots/dice-roller_other.png" height="60"></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Optional Fudge dice</em></td>
+    <td align="center"><em>Further optional features</em></td>
   </tr>
 </table>
 
@@ -57,9 +71,21 @@ Regardless of the game system, ***Arga's Dice Roller*** offers the following fea
 - ***Mixed Rolls:*** Holding the Ctrl key while clicking a die button lets you combine several die types (e.g. 2× d8 and 1× d6). Releasing the Ctrl key then triggers the roll.
 - ***Exploding Dice:*** When a die rolls its maximum, it is rolled again and the results are added together. You can configure whether dice may explode multiple times or only once. In the chat, dice that are able to explode are marked with a superscript "ex".
 - ***Modifiers:*** The optional modifier buttons range from -6 to +6 and can be applied cumulatively. Alternatively, you can enter the modifier freely (up to two digits). The modifier does not affect the individual dice, only the total result (and the result of the SWADE Wild Die). The modifiers in effect are highlighted in color on the chat card.
-- ***Highest / Lowest:*** Two optional buttons (on by default for D&D 5e, Level Up, SW5e and Dragonbane) roll all dice but count only the highest or the lowest one — advantage/disadvantage, boon/bane. Discarded dice are shown struck through on the chat card.
-- ***Bonus / Penalty Die:*** Two optional buttons (on by default for Call of Cthulhu 7e) add one or two extra tens dice to a d100 roll; the bonus die keeps the lowest tens, the penalty die the highest.
-- ***Displayed Buttons (GM only):*** One submenu where the GM switches the buttons for hidden rolls, exploding dice, modifiers, Wild Die, Highest/Lowest, Bonus/Penalty die and the Fate roll on or off for the whole world.
+- ***Highest / Lowest:*** Two optional buttons (on by default for D&D, Level Up, SW5e and Dragonbane) roll all dice but count only the highest or the lowest one — advantage/disadvantage, boon/bane. Discarded dice are shown struck through on the chat card.
+- ***Bonus / Penalty Die:*** Two optional buttons (on by default for Call of Cthulhu) add one or two extra tens dice to a d100 roll; the bonus die keeps the lowest tens, the penalty die the highest.
+- ***Detailed Settings:*** In several submenus, the GM can configure which dice types and which buttons are shown in the dice window.
+
+<table align="center">
+  <tr>
+    <td align="center"><img src="screenshots/dice-roller_settings.png" height="400"></td>
+  </tr>
+  <tr>
+    <td align="center"><em>Game Settings Options</em></td>
+  </tr>
+</table>
+
+<br>
+
 - ***Individual Results:*** Every chat card with a dice roll has a button for displaying the individual results. For example, when several different dice have been rolled, or when a roll has been rerolled with a Benny in SWADE, it can sometimes matter which die produced which result.
 - ***Fate Roll (GM only):*** On the canvas, the GM selects all the tokens to choose randomly between. After pressing the "Fate Roll" button, one of the selected tokens is picked at random and its name is announced in the chat.
 
