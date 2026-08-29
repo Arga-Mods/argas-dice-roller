@@ -8,7 +8,7 @@
 
 This is a system-agnostic dice module for Foundry VTT. ADR also gives the GM additional options, such as picking a random player via a Fate Roll.
 
-In addition, ADR offers extra dice functions for various game systems: Advantage / Disadvantage for D&D 5e (and similar systems such as Level Up or SW5e), Boon / Bane for Dragonbane, Fudge dice for Fate, Bonus / Penalty dice for Call of Cthulhu 7e, and extensive mechanics for the Savage Worlds Adventure Edition (SWADE) such as Critical Failures, Benny rerolls, Request Rolls, and Dramatic Tasks.
+In addition, ADR offers extra dice functions for various game systems: Advantage / Disadvantage for D&D 5e (and similar systems such as Level Up, SW5e, Shadowdark or Tales of the Valiant), Boon / Bane for Dragonbane, Fudge dice for Fate, Bonus / Penalty dice for Call of Cthulhu 7e, and extensive mechanics for the Savage Worlds Adventure Edition (SWADE) such as Critical Failures, Benny rerolls, Request Rolls, and Dramatic Tasks.
 
 <table align="center">
   <tr>
@@ -53,7 +53,7 @@ For the chat display, the *Fantasy* and *Modern* theme graphics are available. A
 
 ## General Features
 Regardless of the game system, ***Arga's Dice Roller*** offers the following features:
-- ***Dice Window:*** Clicking the orange d20 icon in the left control panel opens the dice window with the standard dice d4, d6, d8, d10, d12, and d20. The GM decides in the submenu *Displayed dice types* which rows are offered — e.g. d6 only for Shadowrun; optionally available: coin toss, d2, d100, and Fudge dice (dF, showing +, blank or − per die).
+- ***Dice Window:*** Clicking the orange d20 icon in the left control panel opens the dice window with the standard dice d4, d6, d8, d10, d12, and d20. The GM decides in the submenu *Displayed dice types* which rows are offered — e.g. d6 only for Shadowrun; optionally available: coin toss, d2, d100, and Fudge dice (dF, showing +, blank or − per die). In Fate and Fudge worlds (*Fate Core Official*, *FateX*, *Fudge RPG*), the Fudge dice row is enabled by default.
 
 <table align="center">
   <tr>
@@ -71,7 +71,7 @@ Regardless of the game system, ***Arga's Dice Roller*** offers the following fea
 - ***Mixed Rolls:*** Holding the Ctrl key while clicking a die button lets you combine several die types (e.g. 2× d8 and 1× d6). Releasing the Ctrl key then triggers the roll.
 - ***Exploding Dice:*** When a die rolls its maximum, it is rolled again and the results are added together. You can configure whether dice may explode multiple times or only once. In the chat, dice that are able to explode are marked with a superscript "ex".
 - ***Modifiers:*** The optional modifier buttons range from -6 to +6 and can be applied cumulatively. Alternatively, you can enter the modifier freely (up to two digits). The modifier does not affect the individual dice, only the total result (and the result of the SWADE Wild Die). The modifiers in effect are highlighted in color on the chat card.
-- ***Highest / Lowest:*** Two optional buttons (on by default for D&D, Level Up, SW5e and Dragonbane) roll all dice but count only the highest or the lowest one — advantage/disadvantage, boon/bane. Discarded dice are shown struck through on the chat card.
+- ***Highest / Lowest:*** Two optional buttons (on by default for D&D, Level Up, SW5e, Dragonbane, Shadowdark and Tales of the Valiant) roll all dice but count only the highest or the lowest one — advantage/disadvantage, boon/bane. Discarded dice are shown struck through on the chat card.
 - ***Bonus / Penalty Die:*** Two optional buttons (on by default for Call of Cthulhu) add one or two extra tens dice to a d100 roll; the bonus die keeps the lowest tens, the penalty die the highest.
 - ***Detailed Settings:*** In several submenus, the GM can configure which dice types and which buttons are shown in the dice window.
 
