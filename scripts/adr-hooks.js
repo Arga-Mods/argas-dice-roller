@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Copyright (C) 2026 Arga-Mods */
 
-import { ADR, adrSwadeMechanicsOffered, adrDieTypeLabel, adrIsFudge, adrSignedNumber, adrKeepModifier, adrCthulhuMode } from "./adr-constants.js";
+import { ADR, adrSwadeMechanicsOffered, adrDieTypeLabel, adrDiceTypesDefault, adrIsFudge, adrSignedNumber, adrKeepModifier, adrCthulhuMode } from "./adr-constants.js";
 import { DiceForm, buildHiddenInfoHTML, adrExplodingModifier, adrBuildDieResults } from "./adr-dice-form.js";
 import { RequestRollForm } from "./adr-request-roll-form.js";
 import {
@@ -2242,6 +2242,7 @@ class DiceTypesForm extends ApplicationV2 {
   async _renderHTML(_context, _options) {
     const { createCheckboxInput } = foundry.applications.fields;
     const current = game.settings.get(ADR.ID, ADR.CONFIG_DICE_TYPES) ?? {};
+    const defaults = adrDiceTypesDefault();
 
     const root = document.createElement("div");
     root.className = "adr-dice-types standard-form";
@@ -2258,7 +2259,7 @@ class DiceTypesForm extends ApplicationV2 {
     for (const type of ADR.DICE_TYPES) {
       const input = createCheckboxInput({
         name: type,
-        value: !!(current[type] ?? ADR.DICE_TYPES_DEFAULT[type]),
+        value: !!(current[type] ?? defaults[type]),
       });
       const row = document.createElement("label");
       row.className = "adr-dice-types-row";
@@ -2565,7 +2566,7 @@ function _registerGameSettings() {
   game.settings.register(ADR.ID, ADR.CONFIG_DICE_TYPES, {
     scope: "world",
     config: false,
-    default: { ...ADR.DICE_TYPES_DEFAULT },
+    default: adrDiceTypesDefault(),
     type: Object,
     onChange: v => _updateDiceForm(ADR.CONFIG_DICE_TYPES, v)
   });

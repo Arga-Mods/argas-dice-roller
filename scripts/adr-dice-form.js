@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 /* Copyright (C) 2026 Arga-Mods */
 
-import { ADR, adrIsFudge, adrSignedNumber, adrBuildFudgeResults, adrKeepModifier, adrCthulhuMode, adrEvalCthulhu } from "./adr-constants.js";
+import { ADR, adrDiceTypesDefault, adrIsFudge, adrSignedNumber, adrBuildFudgeResults, adrKeepModifier, adrCthulhuMode, adrEvalCthulhu } from "./adr-constants.js";
 import {
   _fireTraitRollHook,
   _renderDicePrecomputed,
@@ -172,7 +172,8 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
   /* --------------------------------------------------------- */
 
   _getDiceTypes() {
-    return ADR.DICE_TYPES.filter(t => this.diceTypes?.[t] ?? ADR.DICE_TYPES_DEFAULT[t]);
+    const defaults = adrDiceTypesDefault();
+    return ADR.DICE_TYPES.filter(t => this.diceTypes?.[t] ?? defaults[t]);
   }
 
   /* --------------------------------------------------------- */

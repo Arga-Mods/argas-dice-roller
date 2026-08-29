@@ -26,12 +26,18 @@ export const ADR = {
   SOCKET: "module.argas-dice-roller",
   SWADE_MECHANICS_SYSTEMS: ["swade", "worldbuilding", "custom-system-builder"],
   // Systeme, in denen die jeweilige Schaltfläche standardmäßig eingeschaltet ist.
-  KEEP_DICE_SYSTEMS: ["dnd5e", "a5e", "sw5e", "dragonbane"],
+  KEEP_DICE_SYSTEMS: ["dnd5e", "a5e", "sw5e", "dragonbane", "shadowdark", "black-flag"],
   CTHULHU_DICE_SYSTEMS: ["CoC7"],
+  FUDGE_DICE_SYSTEMS: ["fate-core-official", "fatex", "fudge-rpg"],
   // "dc" = Münze, "df" = Fudge-Würfel (Foundry-FateDie, Ergebnis −1/0/+1 je Würfel).
   DICE_TYPES: ["dc", "d2", "d4", "d6", "d8", "d10", "d12", "d20", "d100", "df"],
   DICE_TYPES_DEFAULT: { dc: true, d2: false, d4: true, d6: true, d8: true, d10: true, d12: true, d20: true, d100: true, df: false },
 };
+
+/** Voreinstellung der Würfeltypen; in Fate-/Fudge-Systemen sind Fudge-Würfel vorab aktiv. */
+export function adrDiceTypesDefault() {
+  return { ...ADR.DICE_TYPES_DEFAULT, df: ADR.FUDGE_DICE_SYSTEMS.includes(game.system.id) };
+}
 
 /** Anzeigename eines Würfeltyps: „Münzwurf", „Fudge-Würfel (dF)" bzw. „W6"/„d6". */
 export function adrDieTypeLabel(type) {
