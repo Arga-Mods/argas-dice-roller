@@ -32,6 +32,12 @@ In addition, ADR offers extra dice functions for various game systems: Advantage
     <td align="center"><em>Optional Fudge dice</em></td>
     <td align="center"><em>Further optional features</em></td>
   </tr>
+  <tr>
+    <td align="center" colspan="2"><img src="screenshots/dice-roller_modifiers.png" height="60"></td>
+  </tr>
+  <tr>
+    <td align="center" colspan="2"><em>Optional additional modifiers (±10 / ±20)</em></td>
+  </tr>
 </table>
 
 <br>
