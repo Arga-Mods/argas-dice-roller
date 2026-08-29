@@ -948,6 +948,9 @@ input[type="number"][name="argas-dice-roller.maxDiceCount"] {
   flex: 0 0 auto;
   white-space: nowrap;
 }
+.adr-buttons-settings .form-group.adr-sub-setting {
+  margin-left: 18px;
+}
 .adr-buttons-settings hr {
   margin: 12px 0 6px 0;
 }

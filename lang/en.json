@@ -344,6 +344,10 @@
         "name": "Button \"Modifiers\"",
         "hint": "Add dice modifiers, either by typing a value or via buttons."
       },
+      "enableExtraModifiers": {
+        "name": "Unlock additional modifiers",
+        "hint": "Adds buttons for the modifiers ±10 and ±20."
+      },
       "enableKeepDice": {
         "name": "\"Highest / Lowest\" buttons (e.g. D&D or Dragonbane)",
         "hint": "Two buttons in the dice window: all dice are rolled, but only the highest or lowest one counts."

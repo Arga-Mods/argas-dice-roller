@@ -148,6 +148,7 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
     // Wild-Die-Schaltfläche ist in jedem System verfügbar (Standard nur in SWADE an).
     this.showWildToggle = game.settings.get(ADR.ID, ADR.CONFIG_WILD_DIE);
     this.showModifiers = game.settings.get(ADR.ID, ADR.CONFIG_MODIFIERS);
+    this.showExtraModifiers = game.settings.get(ADR.ID, ADR.CONFIG_EXTRA_MODIFIERS);
     // Über Buttons gewählte Modifikatoren – nur für Button-Optik und Toggle-
     // Logik. Alleinige Quelle für den Wurf ist manualModifier (Wert des
     // händischen Eingabefelds, bei Button-Klicks aus der Button-Summe gespiegelt).
@@ -196,6 +197,7 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
       showKeepToggle: this.showKeepToggle,
       showCthulhuToggle: this.showCthulhuToggle,
       showModifiers: this.showModifiers,
+      showExtraModifiers: this.showExtraModifiers,
       modifierDisplay: this._formatModifierForInput(this.manualModifier),
       user: game.user,
       enableFateRollButton: game.settings.get(ADR.ID, "enableFateRollButton"),

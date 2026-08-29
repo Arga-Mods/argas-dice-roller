@@ -344,6 +344,10 @@
         "name": "Schaltfläche \"Modifikatoren\"",
         "hint": "Füge Würfel-Modifikationen hinzu, entweder durch manuelle Eingabe oder durch Buttons."
       },
+      "enableExtraModifiers": {
+        "name": "Zusätzliche Modifikatoren freischalten",
+        "hint": "Fügt Buttons für die Modifikatoren ±10 und ±20 hinzu."
+      },
       "enableKeepDice": {
         "name": "Schaltflächen \"Höchster / Niedrigster\" (z.B. D&D oder Dragonbane)",
         "hint": "Zwei Schaltflächen im Würfelfenster: Alle Würfel werden geworfen, aber nur der höchste bzw. niedrigste zählt."

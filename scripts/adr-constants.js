@@ -15,6 +15,7 @@ export const ADR = {
   CONFIG_DICE_TYPES: "diceTypes",
   CONFIG_HIGHLIGHT_ONES: "highlightNaturalOnes",
   CONFIG_MODIFIERS: "enableModifiers",
+  CONFIG_EXTRA_MODIFIERS: "enableExtraModifiers",
   CONFIG_REQUEST_ROLL: "enableRequestRoll",
   CONFIG_KEEP_DICE: "enableKeepDice",
   CONFIG_CTHULHU_DICE: "enableCthulhuDice",

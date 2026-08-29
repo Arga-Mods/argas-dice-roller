@@ -2323,7 +2323,14 @@ class ButtonsSettingsForm extends ApplicationV2 {
     ADR.CONFIG_EXPLODING_MODE,
     ADR.CONFIG_EXPLODING_DEFAULT,
     ADR.CONFIG_MODIFIERS,
+    ADR.CONFIG_EXTRA_MODIFIERS,
     "enableFateRollButton",
+  ];
+
+  /** Unterpunkte, eingerückt unter ihrer jeweiligen Hauptschaltfläche. */
+  static SUB_SETTING_KEYS = [
+    ADR.CONFIG_EXPLODING_DEFAULT,
+    ADR.CONFIG_EXTRA_MODIFIERS,
   ];
 
   /** Systemspezifische Schaltflächen (SWADE, Call of Cthulhu, D&D) unter einer Trennlinie. */
@@ -2367,11 +2374,13 @@ class ButtonsSettingsForm extends ApplicationV2 {
             options: Object.entries(choices).map(([v, l]) => ({ value: v, label: game.i18n.localize(l) })),
           })
         : createCheckboxInput({ name: key, value: !!value });
-      root.append(createFormGroup({
+      const group = createFormGroup({
         input,
         label: game.i18n.localize(`${ADR.ID}.settings.${key}.name`),
         hint: game.i18n.localize(`${ADR.ID}.settings.${key}.hint`),
-      }));
+      });
+      if (ButtonsSettingsForm.SUB_SETTING_KEYS.includes(key)) group.classList.add("adr-sub-setting");
+      root.append(group);
     };
 
     ButtonsSettingsForm.SETTING_KEYS.forEach(addGroup);
@@ -2506,6 +2515,16 @@ function _registerGameSettings() {
     default: true,
     type: Boolean,
     onChange: v => _updateDiceForm(ADR.CONFIG_MODIFIERS, v)
+  });
+
+  game.settings.register(ADR.ID, ADR.CONFIG_EXTRA_MODIFIERS, {
+    name: "argas-dice-roller.settings.enableExtraModifiers.name",
+    hint: "argas-dice-roller.settings.enableExtraModifiers.hint",
+    scope: "world",
+    config: false,
+    default: false,
+    type: Boolean,
+    onChange: v => _updateDiceForm(ADR.CONFIG_EXTRA_MODIFIERS, v)
   });
 
   // „Höchster"/„Niedrigster" (Vorteil/Nachteil): Default systemabhängig.
@@ -2651,6 +2670,15 @@ function _updateDiceForm(key, value) {
       break;
     case ADR.CONFIG_WILD_DIE: globalDiceForm.showWildToggle = value; break;
     case ADR.CONFIG_MODIFIERS: globalDiceForm.showModifiers = value; break;
+    case ADR.CONFIG_EXTRA_MODIFIERS:
+      globalDiceForm.showExtraModifiers = value;
+      // Gewählte ±10/±20 dürfen nicht unsichtbar in der Summe bleiben; eine
+      // händische Eingabe (modifierLocked) bleibt unangetastet.
+      if (!value && !globalDiceForm.modifierLocked) {
+        globalDiceForm.modifiers = globalDiceForm.modifiers.filter(m => Math.abs(m) < 10);
+        globalDiceForm.manualModifier = globalDiceForm.modifiers.reduce((a, b) => a + b, 0);
+      }
+      break;
     case ADR.CONFIG_KEEP_DICE:
       globalDiceForm.showKeepToggle = value;
       if (!value) globalDiceForm.keepMode = null;

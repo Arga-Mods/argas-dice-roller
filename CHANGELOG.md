@@ -6,6 +6,7 @@
 
 - **Fudge dice** — Added a dice function for the *Fate* game system. Enabled by default when a Fate or Fudge game system is active (*Fate Core Official*, *FateX*, *Fudge RPG*).
 - **Bonus / penalty dice (*Call of Cthulhu*)** — Added a dice function for the *Call of Cthulhu* game system.
+- **Additional modifiers** — An optional setting adds buttons for the modifiers ±10 and ±20 to the modifier bar.
 - **Highest / Lowest (advantage / disadvantage, boon / bane)** — Added a dice function for game systems in which sometimes only the highest or the lowest die result counts (e.g. *D&D*, *Level Up*, *SW5e*, *Dragonbane*, *Shadowdark* or *Tales of the Valiant*). Enabled by default in these systems.
 
 ### Changed
