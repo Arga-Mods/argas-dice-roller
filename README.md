@@ -102,7 +102,7 @@ Regardless of the game system, ***Arga's Dice Roller*** offers the following fea
 
 ## Features for Savage Worlds (SWADE)
 When the SWADE system is active, additional buttons are unlocked automatically and the dice mechanics of Savage Worlds are applied:
-- ***Wild Die:*** An additional d6 that can always explode. It is rolled alongside the Trait dice and produces its own result. The better result counts for the roll. Both dice are listed separately in the chat.
+- ***Wild Die:*** An additional d6 that can always explode (the button is on by default in SWADE worlds, but can be enabled for any system). It is rolled alongside the Trait dice and produces its own result. The better result counts for the roll. Both dice are listed separately in the chat.
 - ***Benny Reroll:*** Actors can reroll their roll by spending a Benny. By the rules, however, the new result cannot be worse than the previous one — unless the new roll is a Critical Failure. When a roll has been rerolled with a Benny, this is documented in the chat and the Benny button receives a green border.
 - ***Fumble Detection:*** When the module detects a Critical Failure, the Benny reroll is disabled. *(GM only:)* If an Extra rolls a 1 on a check, the GM has the option to either accept the roll or check for a Critical Failure with a d6. ***NOTE:*** To save space, the SWADE term "Critical Failure" has been replaced with "Fumble" in some places.
 
