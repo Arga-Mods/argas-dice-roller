@@ -671,6 +671,11 @@ li.chat-message.adr-chat .message-header .adr-header-label {
   text-transform: none !important;
   flex: 1 1 auto !important;
   min-width: 0 !important;
+  /* Kopfzeile ist einzeilig mit overflow hidden — ein Umbruch im Label
+     verschwände unsichtbar in der zweiten Zeile. */
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 
 /* --- Message-Content: System-Hintergründe/Rahmen/Schrift blockieren --- */

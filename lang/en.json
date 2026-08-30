@@ -77,12 +77,6 @@
       "selfRoll": "~ Private Roll ~\n(visible only to you)",
       "gmToPlayerRoll": "~ Private GM Roll ~\n(visible only to GM)"
     },
-    "dialogs": {
-      "reload": {
-        "title": "Reload required",
-        "content": "Some changed settings require reloading the application to take effect. Reload now?"
-      }
-    },
     "requestRoll": {
       "legendMode": "Mode",
       "legend": "Dice Checks",
@@ -97,7 +91,9 @@
       "modeDramatic": "Dramatic Task",
       "modeDramaticHint": "Starts a dedicated dramatic task flow with presets, rounds, and marker tracking.",
       "sectionPCs": "Player Characters",
+      "noPlayerCharacters": "No player characters available. Only actors of type “Character” with a player set as owner appear here.",
       "sectionNPCs": "NPCs (on current scene)",
+      "sectionOwnedNPCs": "NPCs (player-owned)",
       "attributes": "Attributes",
       "skills": "Skills",
       "legendTraits": "Traits",
@@ -119,7 +115,7 @@
       "chatNoPermission": "No permission",
       "chatComplete": "Complete",
       "bennyTooltip": "Reroll with Benny",
-      "bennyTooltipNPC": "Reroll with GM Benny",
+      "bennyTooltipNPC": "Reroll with Benny (NPC's Bennies, otherwise GM Benny)",
       "fumbleCheckBtn1": "Check for fumble",
       "fumbleCheckBtn2": "with d6?",
       "fumbleCheckNone": "<u>no</u> critical failure",
@@ -215,6 +211,8 @@
       "dramaticMarkerLabel": "Tokens",
       "dramaticJokerLabel": "Joker +2",
       "dramaticComplicationLabel": "Complication −2",
+      "dramaticComplicationLine": "(−2 due to Complication. A failure causes the entire task to fail)",
+      "dramaticJokerLine": "(+2 due to Joker)",
       "dramaticSkipButton": "Skip",
       "dramaticSkippedLabel": "Skipped",
       "dramaticOptionsLabel": "Options:",

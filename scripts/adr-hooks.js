@@ -48,6 +48,17 @@ function _adrIsHiddenMessage(message) {
 let globalRequestRollForm;
 
 Hooks.once("init", async () => {
+  // Foundry bindet seinen Zeitstempel-Timer beim Anlegen des Chat-Logs an die
+  // Prototyp-Methode; die Erweiterung muss deshalb vor dem Anlegen greifen.
+  const ChatLog = foundry.applications?.sidebar?.tabs?.ChatLog;
+  if (ChatLog?.prototype?.updateTimestamps) {
+    const original = ChatLog.prototype.updateTimestamps;
+    ChatLog.prototype.updateTimestamps = function (...args) {
+      const result = original.apply(this, args);
+      adrApplyCompactTimestamps();
+      return result;
+    };
+  }
   await _loadHandlebarTemplates();
   _registerGameSettings();
 });
@@ -732,6 +743,39 @@ function _adrBuildMultiPoolDetailsHTML(multiPoolResults, wildResult, wildIndRes,
   return html;
 }
 
+/* ================================================================ */
+/*  Kompakte Zeitangabe in ADR-Chatkarten                            */
+/* ================================================================ */
+
+/**
+ * „vor 5m 32s" statt Foundrys „vor 5 Min., 32 Sek." — die lange Form
+ * verdrängt das Kopfzeilen-Label in eine zweite, unsichtbare Zeile.
+ * Höchstens zwei Einheiten, wie bei Foundry.
+ */
+function adrCompactTimeSince(timestamp) {
+  let seconds = Math.max(0, Math.floor((Date.now() - Number(timestamp)) / 1000));
+  const units = [["d", 86400], ["h", 3600], ["m", 60], ["s", 1]];
+  const parts = [];
+  for (const [label, size] of units) {
+    const n = Math.floor(seconds / size);
+    if (n > 0 || (label === "s" && parts.length === 0)) {
+      parts.push(`${n}${label}`);
+      seconds -= n * size;
+    }
+    if (parts.length === 2) break;
+  }
+  const since = parts.join(" ");
+  return game.i18n.has("TIME.Since") ? game.i18n.format("TIME.Since", { since }) : `${since} ago`;
+}
+
+function adrApplyCompactTimestamps(root = document) {
+  for (const li of root.querySelectorAll(".chat-message.adr-chat[data-message-id]")) {
+    const message = game.messages.get(li.dataset.messageId);
+    const stamp = li.querySelector("time.message-timestamp");
+    if (message?.timestamp && stamp) stamp.textContent = adrCompactTimeSince(message.timestamp);
+  }
+}
+
 Hooks.on("renderChatMessageHTML", (message, html) => {
   const li = html.closest("li.chat-message") ?? html;
 
@@ -746,6 +790,8 @@ Hooks.on("renderChatMessageHTML", (message, html) => {
       header.prepend(adrLabel);
     }
     adrLabel.textContent = label;
+    const stamp = header.querySelector("time.message-timestamp");
+    if (stamp && message.timestamp) stamp.textContent = adrCompactTimeSince(message.timestamp);
 
     const h4 = header.querySelector("h4");
     if (h4) h4.style.setProperty("display", "none", "important");
@@ -2566,10 +2612,7 @@ function _registerGameSettings() {
     default: 6,
     type: Number,
     range: { min: 1, max: 30, step: 1 },
-    onChange: (v) => {
-      _updateDiceForm(ADR.CONFIG_MAXDICE_COUNT, v);
-      ADR_confirmReload();
-    }
+    onChange: (v) => _updateDiceForm(ADR.CONFIG_MAXDICE_COUNT, v)
   });
 
   game.settings.register(ADR.ID, ADR.CONFIG_1ST_COLUMN, {
@@ -2696,38 +2739,3 @@ function _updateDiceForm(key, value) {
   if (globalDiceForm.rendered) globalDiceForm.render(true);
 }
 
-/**
- * Optionaler Reload-Dialog nach Einstellungsänderung. ApplicationV2 vergibt
- * Z-Indices nach Fokus-Reihenfolge — bei offenem Würfelfenster kann der
- * DialogV2 darunter landen, daher explizite Instanz plus `bringToFront()`.
- */
-function ADR_confirmReload() {
-  const title   = game.i18n.localize(`${ADR.ID}.dialogs.reload.title`);
-  const content = `<p>${game.i18n.localize(`${ADR.ID}.dialogs.reload.content`)}</p>`;
-
-  const dlg = new foundry.applications.api.DialogV2({
-    window: { title },
-    content,
-    buttons: [
-      {
-        action: "yes",
-        label: game.i18n.localize("Yes"),
-        default: true,
-        callback: () => window.location.reload()
-      },
-      {
-        action: "no",
-        label: game.i18n.localize("No"),
-        callback: () => {}
-      }
-    ],
-    rejectClose: false
-  });
-
-  const renderPromise = dlg.render({ force: true });
-  // Optional Chaining defensiv gegen API-Wechsel in Major-Versionen.
-  renderPromise.then(() => {
-    try { dlg.bringToFront?.(); } catch (e) { /* */ }
-  });
-  return renderPromise;
-}

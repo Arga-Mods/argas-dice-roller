@@ -72,7 +72,7 @@
       {{/if}}
       {{else}}
       <div class="adr-dramatic-row2">
-        <span class="adr-dramatic-trait-text"><span class="adr-dramatic-arrow">&rarr;</span><span class="adr-dramatic-trait-content">{{traitName}} <span class="adr-dramatic-values">{{#if isUntrained}}<em>(<span class="adr-dramatic-die">{{traitDieLabel}}</span>{{#if isWildcard}}<span class="adr-dramatic-sep">·</span><span class="adr-dramatic-wild">WD</span>{{/if}})-2</em>{{else}}(<span class="adr-dramatic-die">{{traitDieLabel}}</span>{{#if isWildcard}}<span class="adr-dramatic-sep">·</span><span class="adr-dramatic-wild">WD</span>{{/if}}){{/if}}</span>{{#if roundState.card.isJoker}} <span class="adr-dramatic-joker-bonus">(+2)</span>{{/if}}{{#if ../showModifier}} <span class="adr-dramatic-mod {{dramaticModClass}}">({{../modifierStr}})</span>{{/if}}</span></span>
+        <span class="adr-dramatic-trait-text"><span class="adr-dramatic-arrow">&rarr;</span><span class="adr-dramatic-trait-content">{{traitName}} <span class="adr-dramatic-values">{{#if isUntrained}}<em>(<span class="adr-dramatic-die">{{traitDieLabel}}</span>{{#if isWildcard}}<span class="adr-dramatic-sep">·</span><span class="adr-dramatic-wild">WD</span>{{/if}})-2</em>{{else}}(<span class="adr-dramatic-die">{{traitDieLabel}}</span>{{#if isWildcard}}<span class="adr-dramatic-sep">·</span><span class="adr-dramatic-wild">WD</span>{{/if}}){{/if}}</span>{{#if ../showModifier}} <span class="adr-dramatic-mod {{dramaticModClass}}">({{../modifierStr}})</span>{{/if}}</span></span>
         <span class="adr-dramatic-action">
           {{#if dramaticShowResult}}
             <button type="button"
@@ -101,6 +101,13 @@
           {{/unless}}{{/if}}
         </span>
       </div>
+      {{/if}}
+
+      {{#if roundState.card.isComplication}}
+      <div class="adr-dramatic-complication-line">{{localize "argas-dice-roller.requestRoll.dramaticComplicationLine"}}</div>
+      {{/if}}
+      {{#if roundState.card.isJoker}}
+      <div class="adr-dramatic-joker-line">{{localize "argas-dice-roller.requestRoll.dramaticJokerLine"}}</div>
       {{/if}}
 
       {{#if dramaticHasReceivedSupport}}

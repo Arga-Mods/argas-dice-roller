@@ -8,6 +8,7 @@
 - **Bonus / penalty dice (*Call of Cthulhu*)** — Added a dice function for the *Call of Cthulhu* game system.
 - **Additional modifiers** — An optional setting adds buttons for the modifiers ±10 and ±20 to the modifier bar.
 - **Highest / Lowest (advantage / disadvantage, boon / bane)** — Added a dice function for game systems in which sometimes only the highest or the lowest die result counts (e.g. *D&D*, *Level Up*, *SW5e*, *Dragonbane*, *Shadowdark* or *Tales of the Valiant*). Enabled by default in these systems.
+- **Request Roll** — Player-owned NPCs now have their own category and can also take part in group rolls.
 
 ### Changed
 
@@ -15,6 +16,12 @@
 - **SWADE mechanics** — The SWADE fumble mechanic can now be enabled for the free-form game systems *Simple World-Building* and *Custom System Builder*.
 - **Sidebar button** — The button in the scene controls has been slightly adjusted.
 - **Game settings** — The menus in the game settings have been completely reworked and made clearer.
+- **Bennies for GM rerolls** — The rules have been reworked. If the GM rerolls e.g. for a Wild Card NPC, the NPC's own Bennies are used first and only then the GM's.
+- **Window sizing** — The dice window and the request-roll window are now never taller than the screen and scroll when space is short — also with UI scaling.
+- **Chat card header** — Timestamps now use a compact format ("5m 32s ago"), so the card title no longer gets pushed out of the header.
+- **Dramatic Task** — A drawn Joker or Club is now announced in the participant's entry ("+2 due to Joker" / "−2 due to Complication") instead of a small suffix next to the trait.
+- **Fumble rule** — Whether a roll can fumble now depends on the roll itself (Wild Die = Wild Card rule, single die = Extra's d6 check) instead of who owns the actor.
+- **Group roll** — When no player characters exist, the request-roll window now explains why the list is empty instead of showing an empty box.
 
 ### Bug fixes
 

@@ -77,12 +77,6 @@
       "selfRoll": "~ Privater Wurf ~\n(sichtbar nur für Dich)",
       "gmToPlayerRoll": "~ Privater SL-Wurf ~\n(sichtbar nur für SL)"
     },
-    "dialogs": {
-      "reload": {
-        "title": "Neuladen erforderlich",
-        "content": "Einige der geänderten Einstellungen erfordern ein Neuladen der Anwendung, damit sie wirksam werden. Möchtest du jetzt neu laden?"
-      }
-    },
     "requestRoll": {
       "legendMode": "Modus",
       "legend": "Würfelproben",
@@ -97,7 +91,9 @@
       "modeDramatic": "Dramatische Aufgabe",
       "modeDramaticHint": "Startet eine eigenständige Dramatische Aufgabe mit Presets, Runden- und Markerlogik.",
       "sectionPCs": "Spielercharaktere",
+      "noPlayerCharacters": "Keine Spielercharaktere vorhanden. Hier erscheinen nur Akteure vom Typ „Charakter“, bei denen ein Spieler als Besitzer eingetragen ist.",
       "sectionNPCs": "NSC (auf der aktuellen Szene)",
+      "sectionOwnedNPCs": "NSC (in Spielerbesitz)",
       "attributes": "Attribute",
       "skills": "Fertigkeiten",
       "legendTraits": "Eigenschaften",
@@ -119,7 +115,7 @@
       "chatNoPermission": "Keine Berechtigung",
       "chatComplete": "Abgeschlossen",
       "bennyTooltip": "Probe mittels Benny wiederholen",
-      "bennyTooltipNPC": "Probe mittels GM-Benny wiederholen",
+      "bennyTooltipNPC": "Probe mittels Benny wiederholen (Bennys des NSC, sonst SL-Benny)",
       "fumbleCheckBtn1": "mit W6 auf",
       "fumbleCheckBtn2": "Patzer prüfen?",
       "fumbleCheckNone": "<u>kein</u> kritischer Fehlschlag",
@@ -215,6 +211,8 @@
       "dramaticMarkerLabel": "Marker",
       "dramaticJokerLabel": "Joker +2",
       "dramaticComplicationLabel": "Komplikation −2",
+      "dramaticComplicationLine": "(−2 durch Komplikation. Ein Fehlschlag führt zum Scheitern der gesamten Aufgabe)",
+      "dramaticJokerLine": "(+2 durch Joker)",
       "dramaticSkipButton": "Aussetzen",
       "dramaticSkippedLabel": "Ausgesetzt",
       "dramaticOptionsLabel": "Optionen:",

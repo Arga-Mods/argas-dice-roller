@@ -142,19 +142,16 @@ export function _classifyFumble(diceDetails, isNPC) {
   const wildFirsts = _getFirstDiceValues(diceDetails.wild);
   const hasWild = wildFirsts.length > 0;
 
-  if (!isNPC) {
-    // Spielercharakter: Patzer nur mit Wild Die möglich
-    if (!hasWild) return "none";
+  // Die Regel folgt dem Wurf, nicht dem Besitz: SWADE gibt nur Wildcards einen
+  // Wild Die, Statisten würfeln einzeln — unabhängig davon, wer sie führt.
+  if (hasWild) {
     const allFirsts = [...mainFirsts, ...wildFirsts];
     const totalDice = allFirsts.length;
     const onesCount = allFirsts.filter(v => v === 1).length;
     return (wildFirsts[0] === 1 && onesCount > totalDice / 2) ? "confirmed" : "none";
-  } else {
-    // Nicht-SC: Patzer nur bei einzelnem Würfel mit Ergebnis 1
-    if (hasWild) return "none";
-    if (mainFirsts.length !== 1) return "none";
-    return mainFirsts[0] === 1 ? "needs-check" : "none";
   }
+  if (mainFirsts.length !== 1) return "none";
+  return mainFirsts[0] === 1 ? "needs-check" : "none";
 }
 
 function _appliedModifierParts(appliedMod) {
@@ -2067,14 +2064,14 @@ Hooks.once("ready", () => {
       const actor = _resolveActor(actorId);
       if (!actor) return;
 
-      // Bennies prüfen via Subject (NSC → GM-Benny, SC → Akteur-Benny).
+      // Benny-Subjekt: erst der Akteur, bei NSC ohne Bennys der klickende SL.
       const isNPC = !!entry.isNPC;
       const subject = requestRollSubject(actor, isNPC);
       if (!subject) return;
       if (subjectBennies(subject) <= 0) {
         ui.notifications.warn(game.i18n.localize(
-          isNPC ? `${ADR.ID}.requestRoll.warn.noGMBennies`
-                : `${ADR.ID}.requestRoll.warn.noBennies`
+          subject.kind === "gm" ? `${ADR.ID}.requestRoll.warn.noGMBennies`
+                              : `${ADR.ID}.requestRoll.warn.noBennies`
         ));
         return;
       }
@@ -2094,8 +2091,8 @@ Hooks.once("ready", () => {
       const spent = await subjectSpendBenny(subject);
       if (!spent) {
         ui.notifications.warn(game.i18n.localize(
-          isNPC ? `${ADR.ID}.requestRoll.warn.noGMBennies`
-                : `${ADR.ID}.requestRoll.warn.noBennies`
+          subject.kind === "gm" ? `${ADR.ID}.requestRoll.warn.noGMBennies`
+                              : `${ADR.ID}.requestRoll.warn.noBennies`
         ));
         return;
       }
@@ -2209,14 +2206,14 @@ Hooks.once("ready", () => {
     const actor = _resolveActor(actorId);
     if (!actor) return;
 
-    // Bennies prüfen via Subject (NSC → GM-Benny, SC → Akteur-Benny).
+    // Benny-Subjekt: erst der Akteur, bei NSC ohne Bennys der klickende SL.
     const isNPC = !!entry.isNPC;
     const subject = requestRollSubject(actor, isNPC);
     if (!subject) return;
     if (subjectBennies(subject) <= 0) {
       ui.notifications.warn(game.i18n.localize(
-        isNPC ? `${ADR.ID}.requestRoll.warn.noGMBennies`
-              : `${ADR.ID}.requestRoll.warn.noBennies`
+        subject.kind === "gm" ? `${ADR.ID}.requestRoll.warn.noGMBennies`
+                            : `${ADR.ID}.requestRoll.warn.noBennies`
       ));
       return;
     }
@@ -2227,8 +2224,8 @@ Hooks.once("ready", () => {
     const spent = await subjectSpendBenny(subject);
     if (!spent) {
       ui.notifications.warn(game.i18n.localize(
-        isNPC ? `${ADR.ID}.requestRoll.warn.noGMBennies`
-              : `${ADR.ID}.requestRoll.warn.noBennies`
+        subject.kind === "gm" ? `${ADR.ID}.requestRoll.warn.noGMBennies`
+                            : `${ADR.ID}.requestRoll.warn.noBennies`
       ));
       return;
     }
@@ -2846,7 +2843,7 @@ async function _updateRequestMessageBenny(message, entryIndex, resultTotal, dice
  * Baut die Benny-Hinweis-Zeile als DOM-Element (`null`, wenn kein Hinweis nötig).
  *
  * @param {string}   actorId             – data-actor-id für Discarded-Check-Btn
- * @param {boolean}  isNPC               – beeinflusst Patzer-Klassifikation
+ * @param {boolean}  isNPC               – Tooltip-Text (Bennys des NSC, sonst SL)
  * @param {Array}    previousRolls       – Liste verworfener Würfe
  * @param {boolean}  lastRerollProtected – Schutz hat zuletzt gegriffen
  * @param {string|null} namedActor       – wenn gesetzt: Named-Varianten der i18n-Keys

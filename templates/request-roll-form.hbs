@@ -104,6 +104,7 @@
   <div class="app adr-toggle-box adr-actor-select-box">
     <fieldset class="adr-field-set">
       <legend>{{localize "argas-dice-roller.requestRoll.sectionPCs"}}</legend>
+      {{#if playerActors.length}}
       <div class="adr-actor-grid" style="--adr-cols: {{playerCols}};">
         {{#each playerActors}}
         <div class="adr-actor-chip {{#if checked}}adr-actor-chip-checked{{/if}} {{#if highlighted}}adr-actor-chip-highlighted{{/if}}"
@@ -114,9 +115,31 @@
         </div>
         {{/each}}
       </div>
+      {{else}}
+      <div class="adr-actor-grid-empty">{{localize "argas-dice-roller.requestRoll.noPlayerCharacters"}}</div>
+      {{/if}}
     </fieldset>
   </div>
 
+  {{#if ownedNPCActors.length}}
+  <div class="app adr-toggle-box adr-actor-select-box adr-owned-npc-select-box">
+    <fieldset class="adr-field-set">
+      <legend>{{localize "argas-dice-roller.requestRoll.sectionOwnedNPCs"}}</legend>
+      <div class="adr-actor-grid" style="--adr-cols: {{ownedNPCCols}};">
+        {{#each ownedNPCActors}}
+        <div class="adr-actor-chip {{#if checked}}adr-actor-chip-checked{{/if}} {{#if highlighted}}adr-actor-chip-highlighted{{/if}}"
+             data-action="highlight-group-actor" data-actor-id="{{id}}">
+          <input type="checkbox" {{#if checked}}checked{{/if}} tabindex="-1" />
+          <img class="adr-actor-chip-img" src="{{img}}" alt="" />
+          <span class="adr-actor-chip-name">{{name}}</span>
+        </div>
+        {{/each}}
+      </div>
+    </fieldset>
+  </div>
+  {{/if}}
+
+  {{#if playerActors.length}}
   <div class="app adr-toggle-box adr-traits-box">
     <fieldset class="adr-field-set adr-traits-fieldset">
       <legend>{{localize "argas-dice-roller.requestRoll.legendTraitsGroup"}}</legend>
@@ -166,6 +189,7 @@
 
     </fieldset>
   </div>
+  {{/if}}
 
   {{else}}
   {{!-- ══════════════════════════════════════════════════════════════ --}}
@@ -244,6 +268,80 @@
   </div>
   {{/if}}
   {{/each}}
+
+  {{#if ownedNPCActors.length}}
+  <div class="app adr-toggle-box adr-actor-select-box adr-owned-npc-select-box">
+    <fieldset class="adr-field-set">
+      <legend>{{localize "argas-dice-roller.requestRoll.sectionOwnedNPCs"}}</legend>
+      <div class="adr-actor-grid" style="--adr-cols: {{ownedNPCCols}};">
+        {{#each ownedNPCActors}}
+        <div class="adr-actor-chip {{#if checked}}adr-actor-chip-checked{{/if}} {{#if active}}adr-actor-chip-active{{/if}}">
+          <span class="adr-actor-chip-check-slot" data-action="uncheck-actor" data-actor-id="{{id}}">
+            <input type="checkbox" {{#if checked}}checked{{/if}} tabindex="-1" />
+          </span>
+          <div class="adr-actor-chip-label" data-action="activate-actor" data-actor-id="{{id}}">
+            <img class="adr-actor-chip-img" src="{{img}}" alt="" />
+            <span class="adr-actor-chip-name">{{name}}</span>
+          </div>
+        </div>
+        {{/each}}
+      </div>
+    </fieldset>
+  </div>
+
+  {{#each ownedNPCActors}}
+  {{#if active}}
+  <div class="app adr-toggle-box adr-traits-box">
+    <fieldset class="adr-field-set adr-traits-fieldset">
+      <legend>{{localize "argas-dice-roller.requestRoll.legendTraits"}} — {{name}}</legend>
+
+      <div class="adr-traits-section-header">{{localize "argas-dice-roller.requestRoll.attributes"}}</div>
+      <div class="adr-traits-row">
+        {{#each traits.attributes}}
+        <button type="button"
+                class="adr-trait-btn {{#if (eq ../selectedTrait.key key)}}{{#if (eq ../selectedTrait.type 'attribute')}}selected{{/if}}{{/if}}"
+                data-action="select-trait" data-actor-id="{{../id}}"
+                data-trait-type="attribute" data-trait-key="{{key}}" data-trait-name="{{name}}"
+                title="{{adrDieLabel dieSides}}">
+          {{name}}
+        </button>
+        {{/each}}
+      </div>
+
+      <div class="adr-traits-section-header">{{localize "argas-dice-roller.requestRoll.skills"}}</div>
+
+      {{#if traits.coreSkills.length}}
+      <div class="adr-traits-row">
+        {{#each traits.coreSkills}}
+        <button type="button"
+                class="adr-trait-btn {{#if isUntrained}}adr-trait-untrained-skill{{/if}} {{#if (eq ../selectedTrait.key key)}}{{#if (eq ../selectedTrait.type 'skill')}}selected{{/if}}{{/if}}"
+                data-action="select-trait" data-actor-id="{{../id}}"
+                data-trait-type="skill" data-trait-key="{{key}}" data-trait-name="{{name}}"
+                title="{{adrDieLabel dieSides}}">
+          {{name}}
+        </button>
+        {{/each}}
+      </div>
+      {{/if}}
+
+      {{#if traits.otherSkills.length}}
+      <div class="adr-traits-grid">
+        {{#each traits.otherSkills}}
+        <button type="button"
+                class="adr-trait-btn {{#if isUntrained}}adr-trait-untrained-skill{{/if}} {{#if (eq ../selectedTrait.key key)}}{{#if (eq ../selectedTrait.type 'skill')}}selected{{/if}}{{/if}}"
+                data-action="select-trait" data-actor-id="{{../id}}"
+                data-trait-type="skill" data-trait-key="{{key}}" data-trait-name="{{name}}"
+                title="{{adrDieLabel dieSides}}">
+          {{name}}
+        </button>
+        {{/each}}
+      </div>
+      {{/if}}
+    </fieldset>
+  </div>
+  {{/if}}
+  {{/each}}
+  {{/if}}
 
   {{#if showNPCs}}
   <div class="app adr-toggle-box adr-actor-select-box adr-npc-select-box">

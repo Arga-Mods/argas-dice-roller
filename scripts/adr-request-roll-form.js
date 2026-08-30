@@ -217,6 +217,16 @@ export class RequestRollForm extends HandlebarsApplicationMixin(ApplicationV2) {
     return game.actors.filter(a => a.hasPlayerOwner && a.type === "character");
   }
 
+  /**
+   * NSC in Spielerbesitz (Begleiter, Reittiere …): eigene Sparte in allen
+   * Modi, unabhängig von der Szene; bei der Gruppenprobe nie automatisch
+   * mitgewählt.
+   */
+  _getPlayerOwnedNPCs() {
+    return game.actors.filter(a =>
+      a.hasPlayerOwner && a.type !== "character" && a.type !== "vehicle" && a.type !== "group");
+  }
+
   _getCanvasNPCTokens() {
     if (!canvas.scene) return [];
     const tokens = canvas.tokens.placeables
@@ -263,7 +273,11 @@ export class RequestRollForm extends HandlebarsApplicationMixin(ApplicationV2) {
    * Würfelpräfix ("W" / "D") aus Lokalisierung (requestRoll.diePrefix).
    */
   _buildUnifiedTraitsAllPCs() {
-    const allPCs = this._getPlayerActors();
+    // NSC in Spielerbesitz zählen erst mit, wenn sie angehakt sind.
+    const allPCs = [
+      ...this._getPlayerActors(),
+      ...this._getPlayerOwnedNPCs().filter(a => this.selectedActors.has(a.id)),
+    ];
     if (allPCs.length === 0) return { attributes: [], skills: [] };
 
     const checkedIds = [...this.selectedActors];
@@ -436,6 +450,26 @@ export class RequestRollForm extends HandlebarsApplicationMixin(ApplicationV2) {
       return data;
     });
 
+    const ownedNPCActors = this._getPlayerOwnedNPCs().map(actor => {
+      const checked = this.selectedActors.has(actor.id);
+      const highlighted = isGroupMode && this.highlightedGroupActors.has(actor.id);
+      const active = (!isGroupMode) ? (this.activeActorId === actor.id) : checked;
+      const data = {
+        id: actor.id,
+        name: actor.prototypeToken?.name || actor.name,
+        img: actor.prototypeToken?.texture?.src || actor.img || "",
+        checked,
+        highlighted,
+        active,
+        selected: checked,
+      };
+      if (!isGroupMode && active) {
+        data.traits = this._getActorTraits(actor);
+        data.selectedTrait = this.selectedTraits.get(actor.id) ?? null;
+      }
+      return data;
+    });
+
     // NPCs bei Individual, Vergleich UND Dramatisch anzeigen (Token-basiert)
     const showNPCs = this.mode === "single" || this.mode === "opposed" || this.mode === "dramatic";
     const npcActors = showNPCs ? this._getCanvasNPCTokens().map(npcToken => {
@@ -513,9 +547,11 @@ export class RequestRollForm extends HandlebarsApplicationMixin(ApplicationV2) {
       isSingleMode,
       isDramaticMode,
       playerActors,
+      ownedNPCActors,
       npcActors,
       showNPCs,
       playerCols: _actorGridColumns(playerActors.length),
+      ownedNPCCols: _actorGridColumns(ownedNPCActors.length),
       npcCols: _actorGridColumns(npcActors.length),
       unifiedAttributes: unified.attributes,
       unifiedCoreSkills: unified.coreSkills,
@@ -851,6 +887,13 @@ export class RequestRollForm extends HandlebarsApplicationMixin(ApplicationV2) {
     if (toolbar) {
       const rect = toolbar.getBoundingClientRect();
       this.setPosition({ left: rect.right + 18 * scale, top: rect.top + 42 * scale });
+    }
+    // Foundry klemmt `top` nur für die unskalierte Höhe; die sichtbare
+    // (skalierte) Unterkante muss selbst in den Bildschirm geholt werden.
+    const bounds = el.getBoundingClientRect();
+    const overflow = bounds.bottom - window.innerHeight;
+    if (overflow > 0) {
+      this.setPosition({ top: Math.max(0, (this.position.top ?? bounds.top) - overflow) });
     }
   }
 

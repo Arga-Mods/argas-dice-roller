@@ -25,10 +25,8 @@ import { ADR } from "./adr-constants.js";
  * Akteur-Modus. Bei Akteur-Modus muss speaker.actor existieren, sonst
  * null (kein Reroll-Ziel).
  *
- * NSC-Sonderfall: Ein Akteur ohne Player-Owner (hasPlayerOwner === false) hat
- * keine eigenen Bennys; in dem Fall wird das Subjekt zum GM-User umgeleitet.
- * Familiars/Begleiter eines Spielers haben einen Player-Owner und bleiben
- * im Akteur-Modus (Spieler-Benny).
+ * NSC-Sonderfall: Hat ein NSC keine Bennys, zahlt der klickende SL aus seinen
+ * eigenen (siehe _gmPaysForNPC); Spieler können nur Akteur-Bennys ausgeben.
  */
 export function freeRollSubject(message) {
   const speaker = message.speaker || {};
@@ -42,30 +40,31 @@ export function freeRollSubject(message) {
   if (!speaker.actor) return null;
   const actor = game.actors.get(speaker.actor);
   if (!actor) return null;
-  // NSC-Akteur ohne Player-Owner → GM-Bennys nutzen (analog Probenanforderung)
-  if (!actor.hasPlayerOwner) {
-    const gmUser = authorIsGM ? author : game.user;
-    return { kind: "gm", user: gmUser, name: gmUser?.name || "GM", forNPC: true, npcName: actor.name };
+  if (_gmPaysForNPC(actor)) {
+    return { kind: "gm", user: game.user, name: game.user?.name || "GM", forNPC: true, npcName: actor.name };
   }
   return { kind: "actor", actor, name: actor.name };
 }
 
 /**
- * Subjekt für Probenanforderung aus Entry + aufgelöstem Akteur.
- *
- * NSC → GM-Subjekt (Bennies des aktuell klickenden GM-Users).
- * SC  → Akteur-Subjekt (Bennies des Akteurs).
- *
- * Hinweis: Bei NSCs ist der aktive Benutzer faktisch immer der GM, weil nur
- * der GM den Reroll-Button für NSCs klicken kann (Berechtigungsfilter läuft
- * vorher in der UI-Schicht).
+ * Bennys zahlt zuerst der Akteur selbst. Nur ein NSC ohne Bennys wird vom
+ * klickenden SL bezahlt; für Charaktere springt der SL nie ein.
+ */
+function _gmPaysForNPC(actor) {
+  if (!game.user?.isGM) return false;
+  if (actor.type === "character") return false;
+  return Number(actor.system?.bennies?.value ?? 0) <= 0;
+}
+
+/**
+ * Subjekt für Probenanforderung aus Entry + aufgelöstem Akteur: der Akteur
+ * selbst, oder der klickende SL, wenn ein NSC keine Bennys hat (siehe
+ * _gmPaysForNPC). `isNPC` dient nur als Rückfall, wenn der Akteur fehlt.
  */
 export function requestRollSubject(actor, isNPC) {
-  if (isNPC) {
-    const gmUser = game.user;
-    return { kind: "gm", user: gmUser, name: gmUser?.name || "GM" };
-  }
-  if (!actor) return null;
+  const gmSubject = { kind: "gm", user: game.user, name: game.user?.name || "GM" };
+  if (!actor) return isNPC ? gmSubject : null;
+  if (_gmPaysForNPC(actor)) return gmSubject;
   return { kind: "actor", actor, name: actor.name };
 }
 

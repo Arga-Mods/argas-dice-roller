@@ -9,8 +9,6 @@
     #3e3e3e url("/ui/denim075.png") repeat !important;
   opacity: 1 !important;
   backdrop-filter: none !important;
-  /* Fenster nie höher als der Viewport — kleine Bildschirme: Inhalt scrollt statt rauszuragen */
-  max-height: calc(100vh - 40px);
 }
 .adr-request-roll-window .window-content {
   background: #b5a68c url("/ui/parchment.jpg") repeat !important;
@@ -18,8 +16,9 @@
   opacity: 1 !important;
   backdrop-filter: none !important;
   transform: translateZ(0);
-  /* Scrollleiste erscheint nur, wenn der Inhalt das Fenster überragt */
-  overflow-y: auto;
+  /* Scrollleiste erscheint nur, wenn der Inhalt das Fenster überragt;
+     die Höhenbegrenzung des Fensters steht in argas-dice-roller.css. */
+  overflow-y: auto !important;
 }
 
 .adr-request-roll-window .adr-request-wrapper {
@@ -1712,8 +1711,20 @@ li.chat-message.adr-chat.scifi .adr-group-toggle-container .adr-individual-detai
 
 /* Zeile 3: Optionen / Marker / Skipped / Fumble */
 /* Empfangene Support-Boni am Ziel (zwischen row2 und row3) */
-.adr-dramatic-received-support {
+/* Kartenhinweis (Kreuz = Komplikation, Joker): volle Breite, zentriert über den Optionen */
+.adr-dramatic-complication-line,
+.adr-dramatic-joker-line {
   grid-row: 3;
+  grid-column: 1 / -1;
+  text-align: center;
+  font-size: 0.85rem;
+  padding: 2px 0;
+}
+.adr-dramatic-complication-line { color: #d10000; }
+.adr-dramatic-joker-line { color: #1a8a1a; }
+
+.adr-dramatic-received-support {
+  grid-row: 4;
   grid-column: 1 / -1;
   font-size: 0.8rem;
   line-height: 1.3;
@@ -1802,7 +1813,7 @@ li.chat-message.adr-chat.scifi .adr-group-toggle-container .adr-individual-detai
 }
 
 .adr-dramatic-row3 {
-  grid-row: 4;
+  grid-row: 5;
   grid-column: 1 / -1;
   font-size: 0.8rem;
   color: #6a6a6a;
@@ -2279,6 +2290,14 @@ li.chat-message.adr-chat.scifi .adr-group-toggle-container .adr-individual-detai
   text-align: center;
   font-style: italic;
   color: #555;
+}
+
+.adr-actor-grid-empty {
+  padding: 8px 4px;
+  text-align: center;
+  font-style: italic;
+  color: inherit;
+  opacity: 0.85;
 }
 
 /* Aktions-Buttons am Ende */

@@ -288,6 +288,13 @@ export class DiceForm extends HandlebarsApplicationMixin(ApplicationV2) {
       const rect = toolbar.getBoundingClientRect();
       this.setPosition({ left: rect.right + 18 * scale, top: rect.top + 42 * scale });
     }
+    // Foundry klemmt `top` nur für die unskalierte Höhe; die sichtbare
+    // (skalierte) Unterkante muss selbst in den Bildschirm geholt werden.
+    const bounds = el.getBoundingClientRect();
+    const overflow = bounds.bottom - window.innerHeight;
+    if (overflow > 0) {
+      this.setPosition({ top: Math.max(0, (this.position.top ?? bounds.top) - overflow) });
+    }
   }
 
   /** Elternelement mit --ui-scale finden und MutationObserver starten */
